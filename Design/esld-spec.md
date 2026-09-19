@@ -4,7 +4,7 @@
 **Scope:** Text-based description of electrical single line diagrams at any scale — residential, commercial, industrial, and utility distribution — across AC and DC, LV through transmission voltages, with switchboards, bus sections, ties, transformers, protection and metering, multiple sources, operating states, and interlocks.
 **Lineage:** Generalizes the RSLD v0.1 residential seed ([deepseek.md](deepseek.md)). ESLD is a strict superset in intent; RSLD's residential library and rules become a code profile plus type pack on top of ESLD. See Appendix A for the change list.
 
-This document is implementation-neutral. It defines the language, its abstract semantics, and the interchange model. It does not prescribe a parser generator, runtime, renderer, or host language. A companion document, [esld-implementation.md](esld-implementation.md), plans a reference toolchain.
+This document is implementation-neutral. It defines the language, its abstract semantics, and the interchange model. It does not prescribe a parser generator, runtime, renderer, or host language. A companion document, [esld-implementation.md](esld-implementation.md), plans **BusBar**, the Rust reference toolchain.
 
 ---
 
@@ -655,8 +655,8 @@ A board MUST declare or inherit:
 board MV_SWBD : board {
   vs = MV;
 
-  bus A { incomers = [CB_IA.out]; rating_a = 1250A; }
-  bus B { incomers = [CB_IB.out]; rating_a = 1250A; }
+  bus A { incomers = [GRID_A.out]; rating_a = 1250A; }
+  bus B { incomers = [GRID_B.out]; rating_a = 1250A; }
 
   tie TIE_MV : breaker { rating_a = 630A; breaking_ka = 25kA; technology = vcb; }
   connect A -- TIE_MV -- B;
@@ -665,7 +665,7 @@ board MV_SWBD : board {
 
 Rules:
 
-- External feeds MUST terminate on a section reference (`MV_SWBD.A`) or the board's `bus` port, and MUST appear in that section's (or the board's, for single-section boards) `incomers` list — else **R-110**.
+- Any feed crossing into a board from outside MUST name its **source-side port** in the target section's — or, for single-section boards, the board's — `incomers` list, else **R-110**. The feed may terminate on a section reference (`MV_SWBD.A`), the board's `bus` port, or a device inside the board (e.g. `GRID.out -> CB.in` into an incomer breaker).
 - Internal circuits attach to a section via the `bus` property and are not gated by `incomers`.
 - A protective, switching, or measurement device declared inside a board without explicit connections attaches implicitly to the sole section's busbar at its `in` port. In a multi-section board, implicit attach of devices is an error (R-113), same as for circuits.
 - A circuit in a multi-section board without `bus = ...` is **R-113** (error). In a single-section board it attaches to the implicit section.
@@ -726,7 +726,7 @@ circuit GARAGE_FEED {
 connect MAIN.GARAGE_FEED.out -> GARAGE.in;
 ```
 
-The sub-board's incomers list (if declared) MUST include `MAIN.GARAGE_FEED.out`. Nesting depth is unbounded; implementations SHOULD warn beyond 3 levels for LV boards.
+The sub-board's incomers list (if declared) MUST include `MAIN.GARAGE_FEED.out`. Nesting depth is unbounded; implementations SHOULD warn beyond 3 levels for LV boards. A sub-board fed from a parent-board circuit whose protection device can disconnect the feeder satisfies R-307 via that feeder; a dedicated board main switch is then optional.
 
 ---
 
@@ -1222,8 +1222,8 @@ board MV_SWBD : board {
 
   vt VT_A : vt { primary_v = 11000V; secondary_v = 110V; kind = inductive; measures = A; }
 
-  bus A { incomers = [CB_IA.out]; rating_a = 1250A; }
-  bus B { incomers = [CB_IB.out]; rating_a = 1250A; }
+  bus A { incomers = [GRID_A.out]; rating_a = 1250A; }
+  bus B { incomers = [GRID_B.out]; rating_a = 1250A; }
 
   tie TIE_MV : breaker { rating_a = 630A; breaking_ka = 31.5kA; technology = vcb; }
   connect A -- TIE_MV -- B;
@@ -1241,6 +1241,8 @@ board MV_SWBD : board {
 
 connect GRID_A.out -> CB_IA.in;
 connect GRID_B.out -> CB_IB.in;
+connect CB_IA.out -> MV_SWBD.A;
+connect CB_IB.out -> MV_SWBD.B;
 
 // ---------- Transformation ----------
 transformer TX_A : transformer {
