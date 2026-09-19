@@ -161,7 +161,10 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             }
             c if c.is_ascii_digit() => {
                 let start = i;
-                while i < bytes.len() && (bytes[i].is_ascii_digit() || bytes[i] == b'.') {
+                while i < bytes.len()
+                    && (bytes[i].is_ascii_digit()
+                        || (bytes[i] == b'.' && bytes.get(i + 1) != Some(&b'.')))
+                {
                     i += 1;
                 }
                 let number = &src[start..i];

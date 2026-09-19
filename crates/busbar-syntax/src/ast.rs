@@ -70,11 +70,13 @@ fn normalize_unit(unit: &str) -> (f64, String) {
     let Some(first) = unit.chars().next() else {
         return (1.0, String::new());
     };
+    // 'µ' is multi-byte in UTF-8 — slice by the first char's length.
+    let tail = &unit[first.len_utf8()..];
     let (mult, rest) = match first {
-        'k' | 'K' => (1e3, &unit[1..]),
-        'M' => (1e6, &unit[1..]),
-        'm' => (1e-3, &unit[1..]),
-        'u' | 'µ' => (1e-6, &unit[1..]),
+        'k' | 'K' => (1e3, tail),
+        'M' => (1e6, tail),
+        'm' => (1e-3, tail),
+        'u' | 'µ' => (1e-6, tail),
         _ => (1.0, unit),
     };
     // Only treat the prefix as such for known base units.

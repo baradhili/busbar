@@ -71,7 +71,6 @@ const fn multi(name: &'static str, dir: PortDir) -> PortDef {
     }
 }
 
-const POWER_IN: &[PortDef] = &[p("in", PortDir::In)];
 const IN_OUT: &[PortDef] = &[p("in", PortDir::In), p("out", PortDir::Out)];
 const POLES_DEFAULT: &[(&str, &str)] = &[("poles", "1")];
 
@@ -151,7 +150,7 @@ registry! {
     "ngr" => Passive, &[p("a", PortDir::Bidi), p("b", PortDir::Bidi)], &[];
     "reactor" => Passive, &[p("a", PortDir::Bidi), p("b", PortDir::Bidi)], &[];
     "earth" => Passive, &[p("e", PortDir::None)], &[];
-    "capacitor_bank" => Load, POWER_IN, &[];
+    "capacitor_bank" => Load, &[opt("in", PortDir::In)], &[];
 
     // Loads (§8.8) — load `in` ports are optional: an unfed load is R-105
     // (warning), not R-103; dual feeds are caught by R-104.

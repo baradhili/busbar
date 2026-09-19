@@ -100,7 +100,7 @@ impl Fmt {
     }
 
     fn comment(&mut self, text: &str, line: u32) {
-        if line == self.last_line && self.last.is_some() && !self.pending_nl {
+        if line == self.last_line && self.last.is_some() {
             // Trailing comment: stays on the statement's line.
             self.out.push(' ');
             self.out.push_str(text);
