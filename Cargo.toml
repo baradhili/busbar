@@ -36,6 +36,7 @@ priority = -1
 all = { level = "warn", priority = -1 }
 
 [dev-dependencies]
+busbar-syntax = { path = "crates/busbar-syntax" }
 cucumber = "0.21"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 

@@ -77,20 +77,24 @@ struct BusbarWorld {
 // busbar-syntax / busbar-check / the formatter, and the suites go green
 // without touching the feature files.
 
-fn parse(_source: &str) -> Result<(), String> {
-    Err("busbar-syntax is not implemented yet (M1)".into())
+fn parse(source: &str) -> Result<(), String> {
+    busbar_syntax::parse_or_string(source).map(|_| ())
 }
 
 fn check(_source: &str) -> Result<Vec<Diagnostic>, String> {
     Err("busbar-check is not implemented yet (M3)".into())
 }
 
-fn format_once(_source: &str) -> Result<String, String> {
-    Err("`busbar fmt` is not implemented yet (M1)".into())
+fn format_once(source: &str) -> Result<String, String> {
+    busbar_syntax::fmt::format(source).map_err(|e| format!("line {}: {}", e.line, e.message))
 }
 
-fn asts_equal(_original: &str, _formatted: &str) -> Result<bool, String> {
-    Err("AST equality is not implemented yet (busbar-ir, M1/M2)".into())
+fn asts_equal(original: &str, formatted: &str) -> Result<bool, String> {
+    let a = busbar_syntax::fmt::significant_tokens(original)
+        .map_err(|e| format!("line {}: {}", e.line, e.message))?;
+    let b = busbar_syntax::fmt::significant_tokens(formatted)
+        .map_err(|e| format!("line {}: {}", e.line, e.message))?;
+    Ok(a == b)
 }
 
 /// Panics with the pending-operation cause when the seam is not
