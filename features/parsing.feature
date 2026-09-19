@@ -9,6 +9,7 @@ Feature: Parsing
     Examples:
       | file |
       | valid/minimal.esld |
+      | valid/board-connects.esld |
       | valid/voltsys-blocks.esld |
       | valid/sample1.esld |
       | valid/sample2.esld |

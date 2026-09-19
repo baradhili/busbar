@@ -321,6 +321,9 @@ impl Parser {
     /// Parses a value; merges `Number` + following `Ident` into a quantity
     /// when whitespace-separated (`230 V`, spec §4.6).
     fn value(&mut self) -> Result<ValueNode, ParseError> {
+        if self.peek().is_none() {
+            return Err(self.error("expected value, found end of input"));
+        }
         let line = self.line();
         // Unary minus on numeric values (`>= -5kW`).
         if self.at_sym("-") {
@@ -488,6 +491,7 @@ impl Parser {
                     span: Span { line },
                 }));
             } else if self.at_ident("connect") {
+                self.pos += 1; // past the keyword; connect() starts at the first endpoint
                 items.push(BoardItem::Connect(self.connect(line)?));
             } else if self.at_ident("note") {
                 self.pos += 1;
@@ -576,6 +580,7 @@ impl Parser {
                     CircuitItem::Controller(device)
                 });
             } else if self.at_ident("connect") {
+                self.pos += 1; // past the keyword; connect() starts at the first endpoint
                 items.push(CircuitItem::Connect(self.connect(line)?));
             } else if self.at_ident("note") {
                 self.pos += 1;

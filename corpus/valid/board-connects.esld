@@ -1,0 +1,29 @@
+// Regression fixture: `connect` statements inside board and circuit bodies
+// (the spec §18.1 style, e.g. bus ties declared in-board). The keyword must
+// be consumed before endpoint parsing begins.
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs              = LV;
+  incomers        = [GRID.out];
+  busbar_rating_a = 100A;
+
+  main_switch MSB : main_switch { rating_a = 63A; };
+
+  circuit LIGHTS {
+    protection : rcbo { rating_a = 10A; };
+    loads      = [LAMP];
+    connect MAIN.LIGHTS.out -> EXT_JUNCTION.a;
+  };
+
+  connect MSB.out -> MAIN.bus;
+};
+
+junction EXT_JUNCTION : junction { rating_a = 63A; };
+lighting LAMP : lighting { kw = 0.1kW; };
+
+connect GRID.out -> MAIN.MSB.in;
