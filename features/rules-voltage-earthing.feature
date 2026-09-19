@@ -18,3 +18,4 @@ Feature: Voltage, phase, frequency, earthing rules (R-2xx)
       | invalid/r206-neutral-without-neutral.esld | R-206 | error | 17 |
       | invalid/r207-earthing-tie.esld | R-207 | error | 35 |
       | invalid/r208-parallel-transformers-vector.esld | R-208 | warning | 12 |
+      | invalid/r208-qualified-endpoints.esld | R-208 | warning | 19 |
