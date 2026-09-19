@@ -375,8 +375,13 @@ impl Ir {
             if let Some(ctl) = &circuit.controller {
                 self.nodes.insert(ctl.tag.clone(), ctl.clone());
             }
-            let Some(prot) = &circuit.protection else {
-                continue;
+            // The busbar feeds protection if present, else the controller
+            // (controller-only circuits still produce connectivity);
+            // circuits with neither have no expansion at all.
+            let head = match (&circuit.protection, &circuit.controller) {
+                (Some(p), _) => p.tag.clone(),
+                (None, Some(c)) => c.tag.clone(),
+                (None, None) => continue,
             };
             let section = circuit.section.clone().or_else(|| {
                 self.boards
@@ -386,7 +391,7 @@ impl Ir {
             let Some(section) = section else { continue };
             self.edges.push(Edge {
                 from: section,
-                to: format!("{}.in", prot.tag),
+                to: format!("{head}.in"),
                 arrow: ast::Arrow::Fwd,
                 line: circuit.line,
             });
@@ -394,8 +399,8 @@ impl Ir {
                 .controller
                 .as_ref()
                 .map(|c| c.tag.clone())
-                .unwrap_or_else(|| prot.tag.clone());
-            if let Some(ctl) = &circuit.controller {
+                .unwrap_or(head);
+            if let (Some(prot), Some(ctl)) = (&circuit.protection, &circuit.controller) {
                 self.edges.push(Edge {
                     from: format!("{}.out", prot.tag),
                     to: format!("{}.in", ctl.tag),
