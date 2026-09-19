@@ -1,0 +1,9 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+voltsys MV = 11kV, 3ph, 50Hz;
+
+grid GRID : grid { vs = MV; supply_a = 400A; };
+load LAMP : load { kw = 0.1kW; vs = LV; };
+
+connect GRID.out -> LAMP.in;

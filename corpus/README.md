@@ -15,3 +15,14 @@ not in sidecar files.
 
 `valid/sample1.esld` and `valid/sample2.esld` are the converted RSLD seed
 examples (`Design/deepseek.md` §16.1/§16.2, conversion per spec Appendix A).
+
+## Fixture conventions
+
+- Invalid fixtures are named `r<code>-<slug>.esld`, one rule per file,
+  minimal but otherwise valid — the accompanying `Examples:` row in
+  `features/rules-*.feature` asserts the rule code, severity, and 1-based
+  anchor line, plus "no other errors" (warnings are permitted).
+- Anchor lines are exact: when editing a fixture, re-check the line number
+  in the feature file (`grep -n` is your friend).
+- Valid fixtures must parse and check clean; they are shared by
+  `parsing.feature` and `roundtrip.feature`.

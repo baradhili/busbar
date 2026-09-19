@@ -1,0 +1,14 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+board MAIN : board {
+  vs = LV;
+
+  circuit LIGHTS {
+    protection : rcbo { rating_a = 10A; };
+    loads      = [LAMP];
+  };
+};
+
+lighting LAMP : lighting { kw = 0.1kW; };

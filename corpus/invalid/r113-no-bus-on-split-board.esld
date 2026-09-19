@@ -1,0 +1,28 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+generator GEN1 : generator { vs = LV; kva = 5kVA; duty = standby; };
+
+board MAIN : board {
+  vs = LV;
+
+  bus A { incomers = [GRID.out]; rating_a = 100A; }
+  bus B { incomers = [GEN1.out]; rating_a = 100A; }
+
+  isolator SW_A : isolator { rating_a = 63A; };
+  isolator SW_B : isolator { rating_a = 63A; };
+
+  circuit FEED {
+    protection : rcbo { rating_a = 10A; };
+    loads      = [LAMP];
+  };
+};
+
+lighting LAMP : lighting { kw = 0.1kW; };
+
+connect GRID.out -> MAIN.SW_A.in;
+connect MAIN.SW_A.out -> MAIN.A;
+connect GEN1.out -> MAIN.SW_B.in;
+connect MAIN.SW_B.out -> MAIN.B;

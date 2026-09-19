@@ -1,0 +1,35 @@
+profile "esld/1.0";
+
+voltsys LV3 = 400V, 3ph, 50Hz;
+
+code "fixture" {
+  phase_imbalance_max_pct = 20;
+}
+
+grid GRID : grid { vs = LV3; supply_a = 63A; };
+
+board MAIN : board {
+  vs              = LV3;
+  incomers        = [GRID.out];
+  busbar_rating_a = 100A;
+
+  main_switch MSB : main_switch { rating_a = 63A; poles = 3; };
+
+  circuit SOCKETS_L1 {
+    phase      = L1;
+    protection : rcbo { rating_a = 20A; };
+    loads      = [SOCK_A];
+  };
+
+  circuit SOCKETS_L2 {
+    phase      = L2;
+    protection : rcbo { rating_a = 20A; };
+    loads      = [SOCK_B];
+  };
+};
+
+socket SOCK_A : socket { kw = 9kW; points = 10; };
+socket SOCK_B : socket { kw = 1kW; points = 2; };
+
+connect GRID.out -> MAIN.MSB.in;
+connect MAIN.MSB.out -> MAIN.bus;

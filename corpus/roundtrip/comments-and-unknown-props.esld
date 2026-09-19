@@ -1,0 +1,22 @@
+// Leading comment — must survive round-trip.
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz; // Trailing comment.
+
+grid GRID : grid {
+  vs             = LV;
+  supply_a       = 63A;
+  vendor_unknown = "preserve-me";
+};
+
+/* Block comment
+   spanning lines. */
+load LAMP : load {
+  kw       = 0.1kW;
+  custom_n = 42;
+  custom_q = 300mA;
+};
+
+connect GRID.out -> LAMP.in;
+
+layout { rank = source_to_load; }

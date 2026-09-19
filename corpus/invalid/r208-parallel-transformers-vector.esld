@@ -1,0 +1,48 @@
+profile "esld/1.0";
+
+voltsys MV = 11kV, 3ph, 50Hz;
+voltsys LV = 400V, 3ph, 50Hz;
+
+grid GRID : grid { vs = MV; supply_a = 400A; fault_mva = 250MVA; };
+
+transformer TX1 : transformer {
+  kva = 1000kVA; vs_in = MV; vs_out = LV; vector = "Dyn11"; impedance_pct = 6;
+};
+
+transformer TX2 : transformer {
+  kva = 1000kVA; vs_in = MV; vs_out = LV; vector = "Dyn1"; impedance_pct = 6;
+};
+
+board MVB : board {
+  vs              = MV;
+  incomers        = [GRID.out];
+  busbar_rating_a = 1250A;
+
+  main_switch MSW_MV : main_switch { rating_a = 630A; poles = 3; };
+};
+
+board LVB : board {
+  vs              = LV;
+  incomers        = [TX1.secondary, TX2.secondary];
+  busbar_rating_a = 2000A;
+
+  main_switch MSW_1 : main_switch { rating_a = 2000A; poles = 3; };
+  main_switch MSW_2 : main_switch { rating_a = 2000A; poles = 3; };
+
+  circuit LIGHTS {
+    phase      = L1;
+    protection : rcbo { rating_a = 10A; };
+    loads      = [LAMP];
+  };
+};
+
+lighting LAMP : lighting { kw = 0.1kW; };
+
+connect GRID.out -> MVB.MSW_MV.in;
+connect MVB.MSW_MV.out -> MVB.bus;
+connect MVB.bus -> TX1.primary;
+connect MVB.bus -> TX2.primary;
+connect TX1.secondary -> LVB.MSW_1.in;
+connect LVB.MSW_1.out -> LVB.bus;
+connect TX2.secondary -> LVB.MSW_2.in;
+connect LVB.MSW_2.out -> LVB.bus;

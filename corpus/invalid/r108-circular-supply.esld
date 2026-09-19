@@ -1,0 +1,24 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+board A : board {
+  vs       = LV;
+  incomers = [B.FEED_B.out];
+
+  circuit FEED_A {
+    protection : rcbo { rating_a = 10A; };
+  };
+};
+
+board B : board {
+  vs       = LV;
+  incomers = [A.FEED_A.out];
+
+  circuit FEED_B {
+    protection : rcbo { rating_a = 10A; };
+  };
+};
+
+connect A.FEED_A.out -> B.in;
+connect B.FEED_B.out -> A.in;

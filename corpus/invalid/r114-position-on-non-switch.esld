@@ -1,0 +1,9 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+load LAMP : load { kw = 0.1kW; };
+
+state "test" {
+  LAMP = closed;
+}

@@ -1,0 +1,9 @@
+profile "esld/1.0";
+
+voltsys LV_AU = 230V, 1ph, 50Hz;
+voltsys LV_EU = { nominal = 230V; phases = 1ph; frequency = 50Hz; neutral = yes; earthing = "TN-C-S"; };
+voltsys LV_3P = { nominal = 400V; phases = 3ph; frequency = 50Hz; neutral = yes; earthing = "TN-S"; };
+voltsys SPLIT = { nominal = 240V; phases = split; frequency = 60Hz; neutral = yes; earthing = "TN-C-S"; leg_volts = 120V; };
+voltsys AUX_DC = { nominal = 48V; phases = dc; neutral = no; earthing = isolated; };
+
+note "Parse-only fixture: voltsys positional and block forms.";

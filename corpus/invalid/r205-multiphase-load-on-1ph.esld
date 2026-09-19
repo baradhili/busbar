@@ -1,0 +1,23 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs              = LV;
+  incomers        = [GRID.out];
+  busbar_rating_a = 100A;
+
+  main_switch MSB : main_switch { rating_a = 63A; };
+
+  circuit RANGE {
+    protection : rcbo { rating_a = 32A; };
+    loads      = [STOVE];
+  };
+};
+
+oven STOVE : oven { kw = 7kW; phases = [L1, L2, L3]; };
+
+connect GRID.out -> MAIN.MSB.in;
+connect MAIN.MSB.out -> MAIN.bus;

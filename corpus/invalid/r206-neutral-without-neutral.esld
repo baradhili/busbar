@@ -1,0 +1,17 @@
+profile "esld/1.0";
+
+voltsys NO_N = { nominal = 400V; phases = 3ph; frequency = 50Hz; neutral = no; earthing = isolated; };
+
+grid GRID : grid { vs = NO_N; supply_a = 63A; };
+
+board MAIN : board {
+  vs              = NO_N;
+  incomers        = [GRID.out];
+  busbar_rating_a = 100A;
+
+  main_switch MSB : main_switch { rating_a = 63A; poles = 3; };
+};
+
+connect GRID.out -> MAIN.MSB.in;
+connect MAIN.MSB.out -> MAIN.bus;
+connect MAIN.n -> MAIN.pe;

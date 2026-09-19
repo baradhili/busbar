@@ -1,0 +1,33 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs              = LV;
+  incomers        = [GRID.out];
+  busbar_rating_a = 100A;
+
+  main_switch MSB : main_switch { rating_a = 63A; };
+
+  circuit LIGHTS {
+    protection : rcbo { rating_a = 10A; };
+    loads      = [LAMP];
+  };
+
+  circuit GARAGE_FEED {
+    protection : rcbo { rating_a = 40A; };
+  };
+};
+
+board GARAGE : board {
+  vs              = LV;
+  incomers        = [MAIN.GARAGE_FEED.out];
+  busbar_rating_a = 63A;
+};
+
+lighting LAMP : lighting { kw = 0.1kW; };
+
+connect GRID.out -> MAIN.MSB.in;
+connect MAIN.MSB.out -> MAIN.bus;

@@ -1,0 +1,9 @@
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+load LAMP : load { kw = 0.1kW; };
+load ORPHAN : load { kw = 1kW; };
+
+connect GRID.out -> LAMP.in;

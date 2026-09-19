@@ -1,0 +1,35 @@
+profile "esld/1.0";
+
+voltsys TN = { nominal = 400V; phases = 3ph; frequency = 50Hz; neutral = yes; earthing = "TN-S"; };
+voltsys TT = { nominal = 400V; phases = 3ph; frequency = 50Hz; neutral = yes; earthing = "TT"; };
+
+grid GRID : grid { vs = TN; supply_a = 63A; fault_mva = 10MVA; };
+
+transformer TX1 : transformer {
+  kva = 10kVA; vs_in = TN; vs_out = TT; vector = "Yyn0"; impedance_pct = 4;
+};
+
+board A : board {
+  vs              = TN;
+  incomers        = [GRID.out];
+  busbar_rating_a = 63A;
+
+  main_switch MSW_A : main_switch { rating_a = 63A; poles = 3; };
+};
+
+board B : board {
+  vs              = TT;
+  incomers        = [TX1.secondary];
+  busbar_rating_a = 63A;
+
+  main_switch MSW_B : main_switch { rating_a = 63A; poles = 3; };
+};
+
+tie CB_TIE : breaker { rating_a = 63A; breaking_ka = 10kA; };
+
+connect GRID.out -> A.MSW_A.in;
+connect A.MSW_A.out -> A.bus;
+connect GRID.out -> TX1.primary;
+connect TX1.secondary -> B.MSW_B.in;
+connect B.MSW_B.out -> B.bus;
+connect A.bus -- CB_TIE -- B.bus;

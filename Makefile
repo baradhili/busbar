@@ -27,3 +27,8 @@ wasm:
 
 clean:
 	cargo clean
+
+# Phase 1 acceptance suites: intentionally red until M1/M3 land.
+.PHONY: cucumber-phase1
+cucumber-phase1:
+	BUSBAR_PHASE1=1 cargo test --test cucumber

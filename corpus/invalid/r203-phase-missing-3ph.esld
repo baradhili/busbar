@@ -1,0 +1,23 @@
+profile "esld/1.0";
+
+voltsys LV3 = 400V, 3ph, 50Hz;
+
+grid GRID : grid { vs = LV3; supply_a = 63A; };
+
+board MAIN : board {
+  vs              = LV3;
+  incomers        = [GRID.out];
+  busbar_rating_a = 100A;
+
+  main_switch MSB : main_switch { rating_a = 63A; poles = 3; };
+
+  circuit SOCKETS {
+    protection : rcbo { rating_a = 20A; rcd_ma = 30mA; };
+    loads      = [SOCK_1];
+  };
+};
+
+socket SOCK_1 : socket { kw = 1kW; points = 2; };
+
+connect GRID.out -> MAIN.MSB.in;
+connect MAIN.MSB.out -> MAIN.bus;
