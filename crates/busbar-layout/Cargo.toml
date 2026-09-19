@@ -8,5 +8,9 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+busbar-ir = { path = "../busbar-ir" }
+busbar-syntax = { path = "../busbar-syntax" }
+
 [lints]
 workspace = true
