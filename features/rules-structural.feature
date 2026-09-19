@@ -1,9 +1,7 @@
-@phase1
 Feature: Structural validation rules (R-1xx)
   Spec §15, R-100 table: R-101..R-114. Fixtures in corpus/invalid/, one
   document per rule. Warnings may accompany the expected diagnostic; the
-  "no other errors" step constrains errors only. Red until busbar-check
-  lands (M3); run with BUSBAR_PHASE1=1.
+  "no other errors" step constrains errors only.
 
   Scenario: Converted seed sample 1 checks clean
     Given the document "valid/sample1.esld"

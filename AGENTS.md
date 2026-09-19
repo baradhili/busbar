@@ -38,7 +38,6 @@ Naming: the *tool* is BusBar; the *language* is ESLD. Don't rename either.
 make build          # cargo build --workspace
 make test           # cargo test --workspace (includes the Cucumber suite)
 make cucumber       # cargo test --test cucumber   (features only)
-make cucumber-phase1 # Phase 1 suites — RED by design until M1/M3 land
 make lint           # cargo clippy --workspace --all-targets -- -D warnings
 make fmt-check      # cargo fmt --all -- --check
 make wasm           # cargo build -p busbar-wasm --target wasm32-unknown-unknown
@@ -50,12 +49,10 @@ job (`.github/workflows/ci.yml`).
 
 ### Test suite states
 
-Scenarios tagged `@phase1` (parsing, round-trip, R-1xx, R-2xx) are filtered
-out of the default run and the CI gate — the implementation crates don't
-exist yet. `BUSBAR_PHASE1=1` (or `make cucumber-phase1`) runs them and they
-fail with `pending implementation: … (M1/M3)` causes. As milestones land,
-delegate the seam functions at the top of `tests/cucumber.rs` to the real
-crates; when Phase 1 is fully green, remove the filter and the tag.
+Phase 1 (parsing, round-trip, R-1xx, R-2xx) is green and runs in the
+default gate. Scenarios for unimplemented areas (R-3xx+, solver) stay
+commented out in `features/` until their milestones land; the seam
+functions at the top of `tests/cucumber.rs` delegate to the crates.
 
 ## Conventions
 

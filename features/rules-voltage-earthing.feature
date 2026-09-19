@@ -1,8 +1,6 @@
-@phase1
 Feature: Voltage, phase, frequency, earthing rules (R-2xx)
   Spec §15, R-200 table: R-201..R-208. R-201 fires on nominal-voltage or
   phase-configuration mismatches; R-202 on frequency mismatches alone.
-  Red until busbar-check lands (M3); run with BUSBAR_PHASE1=1.
 
   Scenario Outline: Invalid documents report exactly the expected rule
     Given the document "<file>"

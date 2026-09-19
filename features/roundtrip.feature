@@ -1,8 +1,6 @@
-@phase1
 Feature: Round-trip stability
   Spec §17.1: parse(serialize(parse(text))) == parse(text), with comments
-  and unknown properties preserved. Red until busbar fmt lands (M1);
-  run with BUSBAR_PHASE1=1.
+  and unknown properties preserved.
 
   Scenario Outline: Formatting is idempotent and semantics-preserving
     Given the document "<file>"

@@ -1,10 +1,8 @@
 //! Cucumber acceptance harness — run with `cargo test --test cucumber`.
 //!
-//! By default, scenarios tagged `@phase1` are filtered out so the workspace
-//! gate stays green while implementation milestones are outstanding. Set
-//! `BUSBAR_PHASE1=1` to include them: the Phase 1 suites are intentionally
-//! red until `busbar-syntax` (M1) and `busbar-check` (M3) land, failing with
-//! a clear "not implemented yet" cause rather than silently passing.
+//! All features run by default — Phase 1 (parsing, round-trip, R-1xx,
+//! R-2xx) is green. New, not-yet-implemented areas should keep their
+//! scenarios commented out in `features/` until their milestones land.
 //!
 //! Feature files live in `features/`; corpus documents in `corpus/`.
 
@@ -69,20 +67,28 @@ struct BusbarWorld {
     expected_code: Option<String>,
 }
 
-// -- Phase 1 API seam -------------------------------------------------------
-//
-// Until the crates exist, every operation returns a "not implemented" error,
-// so @phase1 scenarios fail with an actionable cause instead of vacuously
-// passing. As milestones land, these functions become thin delegations to
-// busbar-syntax / busbar-check / the formatter, and the suites go green
-// without touching the feature files.
+// -- Toolchain seam --------------------------------------------------------
+// Thin delegations to the implementation crates. R-3xx/R-4xx scenarios
+// stay commented out until M4; solver steps delegate to busbar-solve at M6.
 
 fn parse(source: &str) -> Result<(), String> {
     busbar_syntax::parse_or_string(source).map(|_| ())
 }
 
-fn check(_source: &str) -> Result<Vec<Diagnostic>, String> {
-    Err("busbar-check is not implemented yet (M3)".into())
+fn check(source: &str, base_dir: Option<&std::path::Path>) -> Result<Vec<Diagnostic>, String> {
+    busbar_check::check(source, base_dir).map(|diags| {
+        diags
+            .into_iter()
+            .map(|d| Diagnostic {
+                code: d.code,
+                severity: match d.severity {
+                    busbar_check::Severity::Error => Severity::Error,
+                    busbar_check::Severity::Warning => Severity::Warning,
+                },
+                line: d.line,
+            })
+            .collect()
+    })
 }
 
 fn format_once(source: &str) -> Result<String, String> {
@@ -135,7 +141,11 @@ async fn parse_it(world: &mut BusbarWorld) {
 #[cucumber::when(regex = r"^I check it$")]
 async fn check_it(world: &mut BusbarWorld) {
     let source = source_of(world).to_owned();
-    world.check = Some(check(&source));
+    let dir = world
+        .path
+        .as_ref()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+    world.check = Some(check(&source, dir.as_deref()));
 }
 
 #[cucumber::when(regex = r"^I format it$")]

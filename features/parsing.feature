@@ -1,7 +1,5 @@
-@phase1
 Feature: Parsing
   The ESLD grammar (spec §6): statements, values, quantities, includes.
-  Red until busbar-syntax lands (M1); run with BUSBAR_PHASE1=1.
 
   Scenario Outline: Valid documents parse cleanly
     Given the document "<file>"
