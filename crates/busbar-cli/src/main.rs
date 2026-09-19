@@ -11,6 +11,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("check") => cmd_check(&args[1..]),
         Some("fmt") => cmd_fmt(&args[1..]),
+        Some("render") => cmd_render(&args[1..]),
         Some("--version" | "-V") => {
             println!(
                 "busbar {} / spec esld/1.0 (draft)",
@@ -28,6 +29,7 @@ USAGE:
 COMMANDS:
   check    Parse + validate; report diagnostics
   fmt      Canonical formatting (round-trip safe)
+  render   Deterministic SVG drawing (--symbols iec)
   -V       Version",
                 env!("CARGO_PKG_VERSION")
             );
@@ -116,6 +118,72 @@ fn cmd_fmt(args: &[String]) -> ExitCode {
             }
             Err(e) => {
                 eprintln!("error: {}: line {}: {}", path.display(), e.line, e.message);
+                failed = true;
+            }
+        }
+    }
+    if failed {
+        ExitCode::FAILURE
+    } else {
+        ExitCode::SUCCESS
+    }
+}
+
+fn cmd_render(args: &[String]) -> ExitCode {
+    let mut symbols = "iec".to_owned();
+    let mut out: Option<String> = None;
+    let mut files: Vec<String> = Vec::new();
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--symbols" => {
+                i += 1;
+                let Some(sym) = args.get(i) else {
+                    eprintln!("error: --symbols requires a value");
+                    return ExitCode::from(2);
+                };
+                symbols = sym.clone();
+            }
+            "-o" | "--out" => {
+                i += 1;
+                let Some(path) = args.get(i) else {
+                    eprintln!("error: {} requires a value", args[i - 1]);
+                    return ExitCode::from(2);
+                };
+                out = Some(path.clone());
+            }
+            other if other.starts_with('-') => {
+                eprintln!("error: unknown option {other}");
+                return ExitCode::from(2);
+            }
+            file => files.push(file.to_owned()),
+        }
+        i += 1;
+    }
+    if files.is_empty() {
+        return ExitCode::from(2);
+    }
+
+    let mut failed = false;
+    for file in &files {
+        let Ok(source) = std::fs::read_to_string(file) else {
+            eprintln!("error: cannot read {file}");
+            failed = true;
+            continue;
+        };
+        match busbar_render::render_str(&source, &symbols) {
+            Ok(svg) => {
+                let out_path = out.clone().unwrap_or_else(|| {
+                    format!("{}.svg", file.strip_suffix(".esld").unwrap_or(file))
+                });
+                if let Err(e) = std::fs::write(&out_path, svg) {
+                    eprintln!("error: cannot write {out_path}: {e}");
+                    failed = true;
+                }
+            }
+            Err(e) => {
+                eprintln!("error: {file}: {e}");
                 failed = true;
             }
         }

@@ -10,6 +10,7 @@ publish = false
 
 [dependencies]
 busbar-check = { path = "../busbar-check" }
+busbar-render = { path = "../busbar-render" }
 busbar-syntax = { path = "../busbar-syntax" }
 
 [lints]
