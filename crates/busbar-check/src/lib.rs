@@ -490,6 +490,52 @@ impl Ctx<'_> {
                 );
             }
         }
+        // Spec §9.2: in a multi-section board, a device that requires
+        // busbar power (a non-optional In port) and has no explicit
+        // connections is an implicit-attach error. Measurement and relay
+        // devices are exempt — their ports are optional because they
+        // associate via signal links, not busbar power.
+        for node in self.ir.nodes.values() {
+            let Some(parent) = &node.parent else {
+                continue;
+            };
+            let Some(board) = self.ir.boards.get(parent) else {
+                continue;
+            };
+            if board.sections.len() <= 1 {
+                continue;
+            }
+            if node.tag.ends_with(".protection") || node.tag.ends_with(".controller") {
+                continue; // inline devices attach via their circuit's bus
+            }
+            let Some(def) = busbar_ir::types::lookup(&node.type_name) else {
+                continue; // unknown types are R-101's business
+            };
+            let needs_power = def
+                .ports
+                .iter()
+                .any(|p| !p.optional && p.dir == PortDir::In);
+            if !needs_power {
+                continue;
+            }
+            let wired = self.ir.edges.iter().any(|e| {
+                [&e.from, &e.to].iter().any(|t| {
+                    self.ir
+                        .resolve_endpoint(t)
+                        .is_some_and(|(entity, _, _)| entity == node.tag)
+                })
+            });
+            if !wired {
+                self.error(
+                    "R-113",
+                    node.line,
+                    format!(
+                        "device `{}` ({}) requires busbar power but has no connections on multi-section board `{}` — declare a `bus` or wire it",
+                        node.tag, node.type_name, parent
+                    ),
+                );
+            }
+        }
     }
 
     fn r114_state_targets(&mut self) {
