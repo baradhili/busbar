@@ -64,6 +64,8 @@ struct BusbarWorld {
     check: Option<Result<Vec<Diagnostic>, String>>,
     fmt_first: Option<Result<String, String>>,
     fmt_second: Option<Result<String, String>>,
+    render_first: Option<Result<String, String>>,
+    render_second: Option<Result<String, String>>,
     /// Diagnostic asserted by the last "it reports" step, so the
     /// following "no other errors" step excludes exactly it.
     expected: Option<Diagnostic>,
@@ -131,6 +133,8 @@ async fn the_document(world: &mut BusbarWorld, rel: String) {
     world.check = None;
     world.fmt_first = None;
     world.fmt_second = None;
+    world.render_first = None;
+    world.render_second = None;
     world.expected = None;
 }
 
@@ -233,6 +237,51 @@ async fn formatted_ast_equal(world: &mut BusbarWorld) {
         let comparison = asts_equal(original, formatted);
         let equal = *unwrap_or_panic(&comparison);
         assert!(equal, "formatting changed the AST");
+    }
+}
+
+#[cucumber::when(regex = r#"^I render it with symbols "([^"]+)"$"#)]
+async fn render_it(world: &mut BusbarWorld, symbols: String) {
+    let source = source_of(world).to_owned();
+    world.render_first = Some(busbar_render::render_str(&source, &symbols));
+}
+
+#[cucumber::when(regex = r"^I render it again$")]
+async fn render_it_again(world: &mut BusbarWorld) {
+    let source = source_of(world).to_owned();
+    world.render_second = Some(busbar_render::render_str(&source, "iec"));
+}
+
+#[cucumber::then(regex = r#"^the SVG hash is "([0-9a-f]{64})"$"#)]
+async fn svg_hash_is(world: &mut BusbarWorld, expected: String) {
+    let svg = unwrap_or_panic(world.render_first.as_ref().expect("render not run"));
+    use sha2::Digest as _;
+    let digest = sha2::Sha256::digest(svg.as_bytes());
+    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    assert_eq!(hex, expected, "golden SVG hash mismatch");
+}
+
+#[cucumber::then(regex = r"^both rendered outputs are byte-identical$")]
+async fn rendered_outputs_identical(world: &mut BusbarWorld) {
+    let first = unwrap_or_panic(world.render_first.as_ref().expect("first render missing"));
+    let second = unwrap_or_panic(world.render_second.as_ref().expect("second render missing"));
+    assert_eq!(first, second, "renderer is not byte-deterministic");
+}
+
+#[cucumber::then(regex = r"^the render succeeds$")]
+async fn render_succeeds(world: &mut BusbarWorld) {
+    unwrap_or_panic(world.render_first.as_ref().expect("render not run"));
+}
+
+#[cucumber::then(regex = r#"^the render fails mentioning "([^"]+)"$"#)]
+async fn render_fails_mentioning(world: &mut BusbarWorld, needle: String) {
+    let result = world.render_first.as_ref().expect("render not run");
+    match result {
+        Ok(svg) => panic!("expected render failure, got {} bytes", svg.len()),
+        Err(cause) => assert!(
+            cause.contains(&needle),
+            "failure {cause:?} does not mention {needle:?}"
+        ),
     }
 }
 

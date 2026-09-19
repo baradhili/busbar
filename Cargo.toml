@@ -37,7 +37,9 @@ all = { level = "warn", priority = -1 }
 
 [dev-dependencies]
 busbar-check = { path = "crates/busbar-check" }
+busbar-render = { path = "crates/busbar-render" }
 busbar-syntax = { path = "crates/busbar-syntax" }
+sha2 = "0.10" 
 cucumber = "0.21"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 

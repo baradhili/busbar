@@ -50,8 +50,8 @@ job (`.github/workflows/ci.yml`).
 
 ### Test suite states
 
-Implemented features (parsing, round-trip, R-1xx, R-2xx) are green and
-run in the default gate. Scenarios for areas whose milestones have not
+Implemented features (parsing, round-trip, R-1xx, R-2xx, rendering)
+are green and run in the default gate. Scenarios for areas whose milestones have not
 landed are tagged `@incomplete` and excluded from the default run and
 CI — run them with `make cucumber-incomplete` (or
 `BUSBAR_INCOMPLETE=1`); they fail honestly on undefined steps until
