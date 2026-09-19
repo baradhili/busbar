@@ -4,7 +4,7 @@
 |---|---|---|
 | [deepseek.md](deepseek.md) | Seed (RSLD v0.1) | Original residential single-line-diagram language draft. Historical starting point. |
 | [esld-spec.md](esld-spec.md) | Draft v0.1 | **ESLD — general-purpose Electrical Single Line Diagram language.** Grammar, IR, type library (LV→HV, AC/DC), bus sections/ties, states & interlocks, protection model, validation catalog, rendering contract. Supersedes the RSLD scope (see its Appendix A). |
-| [esld-implementation.md](esld-implementation.md) | Draft v0.1 | Reference toolchain plan: Rust core + CLI first, same core to WASM/JS (`@esld/core`), conformance corpus, milestones M0–M8. |
+| [esld-implementation.md](esld-implementation.md) | Draft v0.1 | **BusBar** toolchain plan (working name). Rust implementation (decided), `busbar` CLI first, same core to WASM/JS (`@busbar/core`), Cucumber/Gherkin acceptance & conformance suite, milestones M0–M8. |
 
 ## Reading order
 
