@@ -10,3 +10,7 @@ publish = false
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "busbar"
+path = "src/main.rs"
