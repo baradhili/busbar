@@ -89,3 +89,12 @@ fn trailing_comment_stays_on_the_statement_line() {
     let out = busbar_syntax::fmt::format(src).expect("formats");
     assert_eq!(out, "a = 1; // note\n");
 }
+
+#[test]
+fn trailing_comment_after_closing_brace_stays_on_its_line() {
+    // A block-closing } sets the pending newline (5e6ebe2) — the comment
+    // must still bind to that line, not drop to the next one.
+    let src = "state \"x\" {\n  A = open;\n} // mode\n";
+    let out = busbar_syntax::fmt::format(src).expect("formats");
+    assert_eq!(out, "state \"x\" {\n  A = open;\n} // mode\n");
+}
