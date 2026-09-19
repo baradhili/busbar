@@ -667,6 +667,7 @@ Rules:
 
 - External feeds MUST terminate on a section reference (`MV_SWBD.A`) or the board's `bus` port, and MUST appear in that section's (or the board's, for single-section boards) `incomers` list — else **R-110**.
 - Internal circuits attach to a section via the `bus` property and are not gated by `incomers`.
+- A protective, switching, or measurement device declared inside a board without explicit connections attaches implicitly to the sole section's busbar at its `in` port. In a multi-section board, implicit attach of devices is an error (R-113), same as for circuits.
 - A circuit in a multi-section board without `bus = ...` is **R-113** (error). In a single-section board it attaches to the implicit section.
 - Feeding `BOARD.in` is equivalent to feeding `BOARD.bus` and exists for RSLD compatibility; multi-section boards SHOULD use explicit section references.
 
@@ -1011,7 +1012,7 @@ Rule IDs are stable. Implementations MUST report the ID and source span. Code-de
 | R-110 | External feed not listed in `incomers` | error |
 | R-111 | Connection to a non-existent port | error |
 | R-112 | Include cycle or missing include | error |
-| R-113 | Circuit without `bus` on a multi-section board | error |
+| R-113 | Circuit or board-declared device without `bus` on a multi-section board | error |
 | R-114 | State/interlock position on a non-switch node | error |
 
 ### R-200 — Voltage, phase, frequency, earthing

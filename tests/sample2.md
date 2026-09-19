@@ -1,0 +1,167 @@
+// Sample 2 — PV + battery hybrid with backup essentials board.
+// Converted from the RSLD seed (Design/deepseek.md §16.2) to ESLD v0.1
+// per Design/esld-spec.md Appendix A. The seed's deliberate dual feed
+// into ESSENTIALS.in (its "design pressure point") is resolved here
+// with an ATS, which the seed's closing note called for.
+
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+code "AS/NZS 4777.2:2020" {
+  anti_islanding_required = yes;
+  export_limit_default    = 5kW;
+  pv_backfeed_limit_pct   = 100;
+};
+
+grid GRID : grid {
+  vs             = LV;
+  supply_a       = 63A;
+  fault_mva      = 1.38MVA;   // 6kA at 230V
+  export_allowed = yes;
+};
+
+pv_array PV1 : pv_array {
+  kw_peak = 6.6kW;
+  strings = 2;
+  voc     = 400V;
+  isc     = 10A;
+};
+
+battery BATT1 : battery {
+  kwh          = 10kWh;
+  kw_charge    = 5kW;
+  kw_discharge = 5kW;
+  chemistry    = LFP;
+  soc_min      = 20%;
+};
+
+inverter INV1 : inverter {
+  kind           = hybrid;
+  vs             = LV;
+  kw             = 5kW;
+  island_capable = yes;
+  export_limit   = 5kW;
+  transfer_ms    = 20ms;
+};
+
+// Essential-load transfer: inverter backup preferred (in1); the MAIN
+// feed (in2) is the maintenance bypass for when the inverter is offline.
+ats ATS1 : ats {
+  priority          = [INV1, GRID];
+  transfer_s        = 20ms;
+  break_before_make = yes;
+};
+
+board MAIN : board {
+  vs              = LV;
+  // GRID reaches MAIN only through INV1.ac_out.
+  incomers        = [INV1.ac_out];
+  priority        = [INV1, BATT1, GRID];
+  busbar_rating_a = 100A;
+  ways            = 24;
+
+  main_switch MSB : main_switch { rating_a = 63A; poles = 2; };
+  meter M1 : meter { kind = bidirectional; };
+
+  circuit ESSENTIALS_FEED {
+    protection : rcbo { rating_a = 32A; curve = C; rcd_ma = 30mA; };
+    cable      = { csa = 6mm2; cores = 3; };
+  };
+
+  circuit LIGHTS {
+    protection : rcbo { rating_a = 10A; curve = B; rcd_ma = 30mA; };
+    loads      = [LIGHT_LOUNGE, LIGHT_BED];
+  };
+
+  circuit SOCKETS {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads      = [SOCK_KITCHEN, SOCK_LOUNGE];
+  };
+
+  circuit OVEN {
+    protection : mcb { rating_a = 32A; curve = C; };
+    loads      = [OVEN1];
+  };
+
+  circuit EVSE_CIRCUIT {
+    protection : rcbo { rating_a = 32A; curve = C; rcd_ma = 6mA; rcd_type = B; };
+    cable      = { csa = 6mm2; cores = 3; };
+    loads      = [EVSE1];
+  };
+};
+
+board ESSENTIALS : board {
+  vs              = LV;
+  incomers        = [ATS1.out];
+  busbar_rating_a = 63A;
+  ways            = 12;
+
+  circuit ESS_LIGHTS {
+    protection : rcbo { rating_a = 10A; curve = B; rcd_ma = 30mA; };
+    essential  = yes;
+    loads      = [LIGHT_HALL, LIGHT_STAIRS];
+  };
+
+  circuit ESS_SOCKETS {
+    protection : rcbo { rating_a = 16A; curve = C; rcd_ma = 30mA; };
+    essential  = yes;
+    loads      = [SOCK_FRIDGE, SOCK_NBN, SOCK_TV];
+  };
+
+  circuit ESS_HWS {
+    protection : mcb { rating_a = 16A; curve = C; };
+    essential  = no;
+    loads      = [HWS1];
+  };
+};
+
+evse EVSE1 : evse { kw = 7kW; phases = 1; mode = 3; v2x_capable = no; };
+hws  HWS1  : hws  { kw = 3.6kW; litres = 250; controlled_load = yes; };
+
+// Loads
+lighting LIGHT_LOUNGE  : lighting { kw = 0.12kW; points = 2; };
+lighting LIGHT_BED     : lighting { kw = 0.12kW; points = 2; };
+socket  SOCK_KITCHEN   : socket  { kw = 2.4kW; points = 4; };
+socket  SOCK_LOUNGE    : socket  { kw = 1.6kW; points = 3; };
+oven    OVEN1          : oven    { kw = 7.2kW; };
+lighting LIGHT_HALL    : lighting { kw = 0.06kW; points = 1; };
+lighting LIGHT_STAIRS  : lighting { kw = 0.06kW; points = 1; };
+socket  SOCK_FRIDGE    : socket  { kw = 0.3kW; points = 1; };
+socket  SOCK_NBN       : socket  { kw = 0.05kW; points = 1; };
+socket  SOCK_TV        : socket  { kw = 0.4kW; points = 2; };
+
+connect PV1.out        -> INV1.dc_in;
+connect BATT1.dc_bidi  -> INV1.dc_in;
+connect GRID.out       -> INV1.ac_in;
+connect INV1.ac_out    -> MAIN.MSB.in;
+connect MAIN.MSB.out   -> MAIN.bus;
+connect INV1.backup_out -> ATS1.in1;
+connect MAIN.ESSENTIALS_FEED.out -> ATS1.in2;
+connect ATS1.out       -> ESSENTIALS.bus;
+
+layout {
+  rank = source_to_load;
+  flow = top_to_bottom;
+  MAIN       { orientation = horizontal; busbar = top; }
+  ESSENTIALS { column = 2; }
+};
+
+scenario "Grid loss at night, battery 90%" {
+  set GRID.status = offline;
+  set BATT1.soc   = 90%;
+  set PV1.irradiance = 0W/m2;
+
+  expect energized(ESSENTIALS);
+  expect islanded(INV1);
+  expect de_energized(MAIN.OVEN);
+  expect power_at(GRID.out) >= 0kW;     // no export
+}
+
+scenario "Midday export limited" {
+  set GRID.status    = online;
+  set BATT1.soc      = 100%;
+  set PV1.irradiance = 1000W/m2;
+
+  expect power_at(GRID.out) >= -5kW;    // export <= 5kW
+}
