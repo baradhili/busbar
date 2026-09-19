@@ -38,6 +38,7 @@ Naming: the *tool* is BusBar; the *language* is ESLD. Don't rename either.
 make build          # cargo build --workspace
 make test           # cargo test --workspace (includes the Cucumber suite)
 make cucumber       # cargo test --test cucumber   (features only)
+make cucumber-incomplete # @incomplete scenarios — RED until milestones land
 make lint           # cargo clippy --workspace --all-targets -- -D warnings
 make fmt-check      # cargo fmt --all -- --check
 make wasm           # cargo build -p busbar-wasm --target wasm32-unknown-unknown
@@ -49,10 +50,13 @@ job (`.github/workflows/ci.yml`).
 
 ### Test suite states
 
-Phase 1 (parsing, round-trip, R-1xx, R-2xx) is green and runs in the
-default gate. Scenarios for unimplemented areas (R-3xx+, solver) stay
-commented out in `features/` until their milestones land; the seam
-functions at the top of `tests/cucumber.rs` delegate to the crates.
+Implemented features (parsing, round-trip, R-1xx, R-2xx) are green and
+run in the default gate. Scenarios for areas whose milestones have not
+landed are tagged `@incomplete` and excluded from the default run and
+CI — run them with `make cucumber-incomplete` (or
+`BUSBAR_INCOMPLETE=1`); they fail honestly on undefined steps until
+implemented, then lose the tag. When adding steps for a new area,
+define them in `tests/cucumber.rs` and untag its scenarios.
 
 ## Conventions
 

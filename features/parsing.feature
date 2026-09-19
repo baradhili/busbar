@@ -14,6 +14,3 @@ Feature: Parsing
       | valid/sample1.esld |
       | valid/sample2.esld |
 
-  # Scenario: Every fenced esld block in the spec parses
-  #   Blocked on tagging the spec's ESLD fences as ```esld so the extractor
-  #   can tell them apart from ```ebnf / ```json blocks. Lands with M1.

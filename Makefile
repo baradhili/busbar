@@ -27,3 +27,9 @@ wasm:
 
 clean:
 	cargo clean
+
+# Incomplete-area scenarios (@incomplete): intentionally red until their
+# milestones land. Opt-in only — never part of the CI gate.
+.PHONY: cucumber-incomplete
+cucumber-incomplete:
+	BUSBAR_INCOMPLETE=1 cargo test --test cucumber

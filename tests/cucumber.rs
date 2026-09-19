@@ -1,8 +1,10 @@
 //! Cucumber acceptance harness — run with `cargo test --test cucumber`.
 //!
-//! All features run by default — Phase 1 (parsing, round-trip, R-1xx,
-//! R-2xx) is green. New, not-yet-implemented areas should keep their
-//! scenarios commented out in `features/` until their milestones land.
+//! All implemented features run by default. Scenarios for areas whose
+//! milestones have not landed are tagged `@incomplete` and excluded from
+//! the default run and CI; set `BUSBAR_INCOMPLETE=1` to include them —
+//! they fail honestly (undefined steps or missing fixtures) until their
+//! milestone lands, at which point the tag is removed.
 //!
 //! Feature files live in `features/`; corpus documents in `corpus/`.
 
@@ -243,5 +245,32 @@ async fn scenario_passes(_world: &mut BusbarWorld) {}
 
 #[tokio::main]
 async fn main() {
-    BusbarWorld::run("features").await;
+    // gherkin does not propagate feature-level tags to scenarios, so the
+    // filter checks both levels (learned the hard way).
+    // fail_on_skipped: an undefined step is a failure, never a silent
+    // skip, so the opt-in run is honestly red while areas are incomplete.
+    let incomplete = std::env::var_os("BUSBAR_INCOMPLETE").is_some_and(|v| v != "0");
+    let filter = |feature: &cucumber::gherkin::Feature,
+                  _rule: Option<&cucumber::gherkin::Rule>,
+                  scenario: &cucumber::gherkin::Scenario| {
+        let tagged = || {
+            feature
+                .tags
+                .iter()
+                .chain(scenario.tags.iter())
+                .any(|t| t == "incomplete")
+        };
+        !tagged()
+    };
+    if incomplete {
+        BusbarWorld::cucumber()
+            .fail_on_skipped()
+            .run_and_exit("features")
+            .await;
+    } else {
+        BusbarWorld::cucumber()
+            .fail_on_skipped()
+            .filter_run_and_exit("features", filter)
+            .await;
+    }
 }
