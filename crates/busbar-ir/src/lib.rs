@@ -428,9 +428,12 @@ impl Ir {
         let parts: Vec<&str> = text.split('.').collect();
         let mut current = parts[0].to_owned();
         if self.nodes.get(&current)?.kind != Some(NodeKind::Container) {
-            // Plain top-level node: everything after the tag is a port.
+            // Non-container node: everything after the tag is a port. The
+            // owning board is the node's parent, so board-local references
+            // (`MSB.out` inside MAIN) still count as internal.
             let port = parts.get(1).map(|p| p.to_string());
-            return Some((current, port, None));
+            let owner = self.nodes.get(&current).and_then(|n| n.parent.clone());
+            return Some((current, port, owner));
         }
         let mut idx = 1;
         while idx < parts.len() {

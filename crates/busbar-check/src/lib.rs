@@ -862,14 +862,19 @@ impl Ctx<'_> {
             if node.type_name != "transformer" {
                 continue;
             }
+            let is_port_of = |text: &str, tag: &str, port: &str| {
+                self.ir
+                    .resolve_endpoint(text)
+                    .is_some_and(|(entity, p, _)| entity == tag && p.as_deref() == Some(port))
+            };
             let primary_board = self.ir.edges.iter().find_map(|e| {
-                (e.to == format!("{}.primary", node.tag))
+                is_port_of(&e.to, &node.tag, "primary")
                     .then(|| self.ir.resolve_endpoint(&e.from))
                     .flatten()
                     .and_then(|(_, _, b)| b)
             });
             let secondary_board = self.ir.edges.iter().find_map(|e| {
-                (e.from == format!("{}.secondary", node.tag))
+                is_port_of(&e.from, &node.tag, "secondary")
                     .then(|| self.ir.resolve_endpoint(&e.to))
                     .flatten()
                     .and_then(|(_, _, b)| b)
