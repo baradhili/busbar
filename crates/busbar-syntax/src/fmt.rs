@@ -42,9 +42,20 @@ fn render(tokens: &[Token]) -> String {
                 f.out.push('}');
                 f.last = Some("}".to_string());
                 f.last_line = token.line;
+                // A closing brace ends its statement unless a `;` binds to
+                // it (`};`), handled below.
+                f.pending_nl = true;
             }
             Tok::Sym(";") => {
-                f.push(";", token.line);
+                if f.pending_nl && f.last.as_deref() == Some("}") {
+                    // `};` — the semicolon binds to the closing brace.
+                    f.pending_nl = false;
+                    f.out.push(';');
+                    f.last = Some(";".to_string());
+                    f.last_line = token.line;
+                } else {
+                    f.push(";", token.line);
+                }
                 f.pending_nl = true;
             }
             _ => f.push(&token.text(), token.line),
