@@ -32,6 +32,26 @@ fn unspaced_numeric_range_lexes() {
 }
 
 #[test]
+fn decimal_numbers_split_from_range_operator() {
+    // Single decimal points stay in the number; the dot pair still forms
+    // the range operator: `1.5..7.25` -> 1.5, .., 7.25.
+    let doc = busbar_syntax::parse("group H = [1.5..7.25];").expect("range parses");
+    let busbar_syntax::ast::Statement::Group { list, .. } = &doc.statements[0] else {
+        panic!("expected group");
+    };
+    let busbar_syntax::ast::Value::List(items) = &list.value else {
+        panic!("expected list");
+    };
+    let busbar_syntax::ast::Value::Range(lo, hi) = &items[0].value else {
+        panic!("expected range");
+    };
+    let (lo_v, _) = lo.value.quantity().expect("low quantity");
+    let (hi_v, _) = hi.value.quantity().expect("high quantity");
+    assert!((lo_v - 1.5).abs() < 1e-12);
+    assert!((hi_v - 7.25).abs() < 1e-12);
+}
+
+#[test]
 fn truncated_value_is_an_error_not_a_panic() {
     let err = busbar_syntax::parse("board B { x =").expect_err("must fail");
     assert!(err.message.contains("value"), "got: {}", err.message);
