@@ -87,6 +87,7 @@ dependencies = [
 name = "busbar"
 version = "0.1.0"
 dependencies = [
+ "busbar-check",
  "busbar-syntax",
  "cucumber",
  "tokio",
@@ -95,14 +96,25 @@ dependencies = [
 [[package]]
 name = "busbar-check"
 version = "0.1.0"
+dependencies = [
+ "busbar-ir",
+ "busbar-syntax",
+]
 
 [[package]]
 name = "busbar-cli"
 version = "0.1.0"
+dependencies = [
+ "busbar-check",
+ "busbar-syntax",
+]
 
 [[package]]
 name = "busbar-ir"
 version = "0.1.0"
+dependencies = [
+ "busbar-syntax",
+]
 
 [[package]]
 name = "busbar-layout"
