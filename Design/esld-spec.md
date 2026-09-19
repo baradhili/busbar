@@ -1019,9 +1019,9 @@ Rule IDs are stable. Implementations MUST report the ID and source span. Code-de
 
 | ID | Rule | Severity |
 |---|---|---|
-| R-201 | Voltage system mismatch across an edge (no converter boundary) | error |
-| R-202 | Frequency mismatch across an edge | error |
-| R-203 | Phase missing on a multi-phase board | error |
+| R-201 | Voltage-system mismatch across an edge (nominal voltage or phase configuration; no converter boundary) | error |
+| R-202 | Frequency mismatch across an edge (same nominal voltage and phase configuration) | error |
+| R-203 | Single-phase circuit without `phase` on a multi-phase board | error |
 | R-204 | Phase imbalance exceeds code threshold | warning |
 | R-205 | Multi-phase load on a single-phase system | error |
 | R-206 | Neutral connected where no neutral exists | error |
