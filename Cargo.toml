@@ -1,0 +1,42 @@
+# BusBar — ESLD toolchain workspace.
+#
+# The root package hosts the Cucumber acceptance harness (tests/cucumber.rs,
+# features/) per Design/esld-implementation.md §6. All implementation lives in
+# crates/*; see that crate list for the pipeline order.
+
+[package]
+name = "busbar"
+description = "BusBar — Electrical Single Line Diagram (ESLD) toolchain (workspace root; hosts the acceptance harness)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/baradhili/busbar"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[dev-dependencies]
+cucumber = "0.21"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[[test]]
+name = "cucumber"
+path = "tests/cucumber.rs"
+harness = false

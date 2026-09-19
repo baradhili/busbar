@@ -1,0 +1,2 @@
+# Defaults for now; the formatter's canonical style is defined by `busbar fmt`
+# once busbar-syntax lands (Design/esld-implementation.md §5.1).

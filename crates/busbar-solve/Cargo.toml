@@ -1,0 +1,12 @@
+[package]
+name = "busbar-solve"
+description = "Operating states, interlocks, scenarios, and reachability (spec §10.7, §13, §14)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
