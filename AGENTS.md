@@ -76,6 +76,21 @@ crates; when Phase 1 is fully green, remove the filter and the tag.
 
 ## Before you commit
 
+1. **CodeRabbit review** (`cr` from `~/.local/bin`):
+
+   ```
+   export PATH="$HOME/.local/bin:$PATH"
+   cr review --uncommitted --include-untracked   # staged + unstaged + new files
+   ```
+
+   Address findings (fix, or justify why not) **before committing**. For an
+   already-made commit under review, use `cr review --committed`. First-time
+   use requires auth: `cr auth login` interactively, or
+   `cr auth login --api-key "cr-…"` in non-interactive environments.
+
+2. Local gate:
+
 ```
 make lint && make fmt-check && make test
 ```
+
