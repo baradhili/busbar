@@ -45,8 +45,12 @@ inverter INV1 : inverter {
   transfer_ms    = 20ms;
 };
 
-// Essential-load transfer: inverter backup preferred (in1); the MAIN
-// feed (in2) is the maintenance bypass for when the inverter is offline.
+// Essential-load transfer: inverter backup preferred (in1). The MAIN
+// feed (in2) is grid pass-through via INV1.ac_out — NOT an independent
+// maintenance bypass (GRID reaches MAIN only through the inverter).
+// On a GRID outage INV1 islands and keeps in1 alive; on an INV1 outage
+// both ATS inputs are dead and ESSENTIALS stays de-energized — a true
+// bypass would need a grid path upstream of INV1.
 ats ATS1 : ats {
   priority          = [INV1, GRID];
   transfer_s        = 20ms;

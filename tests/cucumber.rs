@@ -62,9 +62,9 @@ struct BusbarWorld {
     check: Option<Result<Vec<Diagnostic>, String>>,
     fmt_first: Option<Result<String, String>>,
     fmt_second: Option<Result<String, String>>,
-    /// Code asserted by the last "it reports" step, so the following
-    /// "no other errors" step knows what to exclude.
-    expected_code: Option<String>,
+    /// Diagnostic asserted by the last "it reports" step, so the
+    /// following "no other errors" step excludes exactly it.
+    expected: Option<Diagnostic>,
 }
 
 // -- Toolchain seam --------------------------------------------------------
@@ -129,7 +129,7 @@ async fn the_document(world: &mut BusbarWorld, rel: String) {
     world.check = None;
     world.fmt_first = None;
     world.fmt_second = None;
-    world.expected_code = None;
+    world.expected = None;
 }
 
 #[cucumber::when(regex = r"^I parse it$")]
@@ -192,23 +192,27 @@ async fn reports_rule(world: &mut BusbarWorld, code: String, severity: Severity,
         "expected {severity} {code} at line {line} of {}, got {diagnostics:?}",
         world.path.as_ref().expect("no path").display()
     );
-    world.expected_code = Some(code);
+    world.expected = Some(Diagnostic {
+        code,
+        severity,
+        line,
+    });
 }
 
 #[cucumber::then(regex = r"^it reports no other errors$")]
 async fn reports_no_other_errors(world: &mut BusbarWorld) {
     let expected = world
-        .expected_code
+        .expected
         .clone()
         .expect("`it reports` step not run first");
     let diagnostics = unwrap_or_panic(world.check.as_ref().expect("`When I check it` not run"));
     let others: Vec<_> = diagnostics
         .iter()
-        .filter(|d| d.severity == Severity::Error && d.code != expected)
+        .filter(|d| d.severity == Severity::Error && **d != expected)
         .collect();
     assert!(
         others.is_empty(),
-        "expected {expected} to be the only error, also got {others:?}"
+        "expected {expected:?} to be the only error, also got {others:?}"
     );
 }
 
@@ -239,25 +243,5 @@ async fn scenario_passes(_world: &mut BusbarWorld) {}
 
 #[tokio::main]
 async fn main() {
-    let phase1 = std::env::var_os("BUSBAR_PHASE1").is_some_and(|v| v != "0");
-
-    if phase1 {
-        // Everything, including the intentionally-red Phase 1 suites.
-        BusbarWorld::run("features").await;
-    } else {
-        // Default gate: skip @phase1 so the suite stays green while the
-        // implementation milestones are outstanding. Feature-level tags
-        // are not propagated to scenarios by gherkin, so check both.
-        BusbarWorld::filter_run("features", |feature, _rule, scenario| {
-            let tagged = || {
-                feature
-                    .tags
-                    .iter()
-                    .chain(scenario.tags.iter())
-                    .any(|t| t == "phase1")
-            };
-            !tagged()
-        })
-        .await;
-    }
+    BusbarWorld::run("features").await;
 }
