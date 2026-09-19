@@ -3,6 +3,32 @@
 //! operator, and trailing-comment placement after statements.
 
 #[test]
+fn unit_prefixes_normalize_and_passthrough() {
+    // Prefix tail is sliced by len_utf8; multipliers and unprefixed units
+    // are preserved. mm2 must NOT be read as m-prefixed m2.
+    let cases = [
+        ("5", "kW", 5000.0, "W"),
+        ("250", "mV", 0.25, "V"),
+        ("2", "MVA", 2e6, "VA"),
+        ("3", "kA", 3000.0, "A"),
+        ("63", "A", 63.0, "A"),
+        ("2.5", "mm2", 2.5, "mm2"),
+    ];
+    for (number, unit_text, want, unit_want) in cases {
+        let v = busbar_syntax::ast::Value::Quantity {
+            number: number.to_owned(),
+            unit: unit_text.to_owned(),
+        };
+        let (val, unit) = v.quantity().expect("quantity");
+        assert!(
+            (val - want).abs() < 1e-9,
+            "{number}{unit_text}: got {val}{unit}, want {want}{unit_want}"
+        );
+        assert_eq!(unit, unit_want, "{number}{unit_text}");
+    }
+}
+
+#[test]
 fn micro_unit_prefix_does_not_panic() {
     // 'µ' is multi-byte; Value::quantity() used to slice at byte 1.
     let doc = busbar_syntax::parse("voltsys A = { nominal = 10µV; };").expect("parses");
