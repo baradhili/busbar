@@ -92,7 +92,7 @@ SLD/ (repo "busbar")
 │   ├── roundtrip/              # fmt(parse(x)) == fmt(parse(fmt(parse(x))))
 │   ├── render/                 # golden SVG hashes
 │   └── solve/                  # scenario expectation fixtures
-├── features/                   # Gherkin features (Cucumber, §6)
+├── features/                   # Gherkin features + steps.rs (Cucumber, §6)
 │   ├── parsing.feature
 │   ├── rules-structural.feature        # R-1xx
 │   ├── rules-voltage-earthing.feature  # R-2xx
@@ -104,11 +104,10 @@ SLD/ (repo "busbar")
 │   ├── render.feature
 │   ├── solve.feature
 │   └── spec-examples.feature
-├── tests/                      # Cucumber step definitions (harness target)
 └── tools/                      # spec-example extractor, snapshot normalizer
 ```
 
-Note: the seed samples currently at `tests/sample1.md` / `tests/sample2.md` move to `corpus/valid/sample1.esld` / `sample2.esld` when the workspace lands; `tests/` then holds the Cucumber step definitions.
+Note: the seed samples formerly at `tests/sample1.md` / `tests/sample2.md` moved to `corpus/valid/sample1.esld` / `sample2.esld` when the workspace landed; the Cucumber step definitions live at `features/steps.rs`, co-located with the Gherkin files.
 
 ### 4.2 Pipeline
 
@@ -351,7 +350,7 @@ Acceptance and conformance testing is written in **Cucumber**: features in Gherk
 ### 6.1 Wiring
 
 - Crate: `cucumber` (rust-cucumber), async steps on `tokio`.
-- Feature files in `features/`; step definitions in a `harness = false` test target (`tests/cucumber.rs`), run as `cargo test --test cucumber` — no special binary in CI.
+- Feature files and step definitions co-located in `features/` (`steps.rs` is a `harness = false` test target), run as `cargo test --test cucumber` — no special binary in CI.
 - A `World` struct carries state between steps (source text → parsed document → diagnostics / render output / solve result).
 - Tags select subsets: `@wasm`, `@render`, `@slow`.
 
@@ -438,7 +437,7 @@ CI matrix: Linux/macOS/Windows run the full feature suite natively; one Node job
 
 ### 6.4 Fixture provenance
 
-`corpus/valid/sample1.esld` and `corpus/valid/sample2.esld` are the converted seed examples (today `tests/sample1.md` / `tests/sample2.md`; they move and change extension when the workspace lands). Every other case is authored against the rule it exercises — one minimal document per rule ID where practical.
+`corpus/valid/sample1.esld` and `corpus/valid/sample2.esld` are the converted seed examples (formerly `tests/sample1.md` / `tests/sample2.md`; moved and renamed when the workspace landed). Every other case is authored against the rule it exercises — one minimal document per rule ID where practical.
 
 ---
 
@@ -512,6 +511,6 @@ Each milestone lands with its corpus cases and a tagged release (`v0.1.0-m1` sty
 ## 12. Immediate next steps
 
 1. Land this plan + spec (this repo, `Design/`).
-2. M0 skeleton PR: Cargo workspace, CI, Cucumber scaffold with the first `.feature` files, and the lexer — including extraction of every fenced `esld` block from the spec as feature inputs; move `tests/sample1.md`/`sample2.md` to `corpus/valid/*.esld`.
+2. M0 skeleton PR: Cargo workspace, CI, Cucumber scaffold with the first `.feature` files, and the lexer — including extraction of every fenced `esld` block from the spec as feature inputs; the samples moved from `tests/` to `corpus/valid/*.esld`.
 3. Draft the IR JSON Schema (spec roadmap 0.4) early instead of late — it is the cheapest contract to review and unblocks third-party tooling before the tool exists.
 4. Choose the symbol set scope for M5: proposal — 24 symbols covering the built-in type library's IEC renderings (breaker, disconnector, fuse, transformer 2w, CT, VT, relay, motor, generator, grid, PV, battery, inverter, UPS, earth, NGR, bus/section, board, ATS, meter, capacitor, reactor, cable marker, SPD).

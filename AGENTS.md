@@ -27,7 +27,7 @@ Naming: the *tool* is BusBar; the *language* is ESLD. Don't rename either.
 | `crates/busbar-cli` | `busbar` binary (M1+) |
 | `crates/busbar-wasm` | `@busbar/core` bindings (M7) |
 | `features/` | Gherkin acceptance features (one file per spec area) |
-| `tests/cucumber.rs` | Cucumber step definitions (`harness = false` target) |
+| `features/steps.rs` | Cucumber step definitions (`harness = false` target) |
 | `corpus/{valid,invalid,roundtrip,render,solve}` | `.esld` fixtures driven by features |
 | `tools/` | Spec-example extractor etc. (future) |
 | `Design/` | Specs — the source of truth |
@@ -56,7 +56,7 @@ landed are tagged `@incomplete` and excluded from the default run and
 CI — run them with `make cucumber-incomplete` (or
 `BUSBAR_INCOMPLETE=1`); they fail honestly on undefined steps until
 implemented, then lose the tag. When adding steps for a new area,
-define them in `tests/cucumber.rs` and untag its scenarios.
+define them in `features/steps.rs` and untag its scenarios.
 `features/README.md` maps every feature file to its design-doc section.
 
 ## Conventions
