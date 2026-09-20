@@ -97,7 +97,10 @@ class Shape:
                 elif t == 'RelCubBezTo':
                     A, B = v(row, 'A', cx) * w, v(row, 'B', cy) * h
                     C, D = v(row, 'C', cx) * w, v(row, 'D', cy) * h
-                    d.append(f'C {A:.4f} {B:.4f} {C:.4f} {D:.4f} {X:.4f} {Y:.4f}')
+                    d.append(
+                        f'C {A:.4f} {B:.4f} {C:.4f} {D:.4f} '
+                        f'{X * w:.4f} {Y * h:.4f}'
+                    )
                 elif t == 'ArcTo':
                     a = v(row, 'A')
                     dx, dy = X - cx, Y - cy
@@ -188,23 +191,55 @@ def convert(vssx_path, outdir):
     return index
 
 
+def transform_path(d, xf):
+    """Rewrite a path's absolute coordinates through xf.
+
+    Command-aware: only M, L, and C argument pairs and an absolute A's
+    final endpoint are coordinates. Arc radii, x-rotation, and the
+    large-arc/sweep flags keep their original text (flags must stay
+    `0`/`1`), and relative (lowercase) commands — the ellipse arcs —
+    pass through with their deltas untouched.
+    """
+    parts = re.findall(r'[A-Za-z]|-?[\d.]+', d)
+    out = []
+    i = 0
+    while i < len(parts):
+        cmd = parts[i]
+        i += 1
+        if not cmd.isalpha():
+            out.append(cmd)  # defensive: stray token
+            continue
+        args = []
+        while i < len(parts) and not parts[i].isalpha():
+            args.append(parts[i])
+            i += 1
+        if cmd in ('M', 'L', 'C') and len(args) >= 2:
+            for j in range(0, len(args) - 1, 2):
+                x, y = xf(float(args[j]), float(args[j + 1]))
+                args[j], args[j + 1] = f'{x:.4f}', f'{y:.4f}'
+        elif cmd == 'A' and len(args) >= 7:
+            x, y = xf(float(args[5]), float(args[6]))
+            args[5], args[6] = f'{x:.4f}', f'{y:.4f}'
+        out.append(cmd + ((' ' + ' '.join(args)) if args else ''))
+    return ''.join(out)
+
+
+def emit_path(out, d, xf, stroke, dashed, filled, fill):
+    dash = ' stroke-dasharray="0.02 0.015"' if dashed else ''
+    fillattr = f' fill="{fill}"' if filled else ' fill="none"'
+    out.append(
+        f'<path d="{transform_path(d, xf)}" stroke="{stroke}" stroke-width="0.01"'
+        f'{fillattr}{dash}/>'
+    )
+
+
 def emit_toplevel(shape, pw, ph, out):
     """Emit paths with local->page transform, recursing groups."""
     def page(x, y):
         px, py = shape.to_parent(x, y)
         return px, ph - py  # Visio y-up -> SVG y-down
     for d, stroke, dashed, filled, fill in shape.geometry():
-        def sub(m, _page=page):
-            x, y = float(m.group(1)), float(m.group(2))
-            px, py = _page(x, y)
-            return f'{px:.4f} {py:.4f}'
-        mapped = re.sub(r'(-?[\d.]+) (-?[\d.]+)', sub, d)
-        dash = ' stroke-dasharray="0.02 0.015"' if dashed else ''
-        fillattr = f' fill="{fill}"' if filled else ' fill="none"'
-        out.append(
-            f'<path d="{mapped}" stroke="{stroke}" stroke-width="0.01"'
-            f'{fillattr}{dash}/>'
-        )
+        emit_path(out, d, page, stroke, dashed, filled, fill)
     for ch in shape.children:
         emit_child(ch, shape, ph, out)
 
@@ -216,17 +251,7 @@ def emit_child(child, parent, ph, out):
         return px, ph - py
 
     for d, stroke, dashed, filled, fill in child.geometry():
-        def sub(m, _page=page):
-            x, y = float(m.group(1)), float(m.group(2))
-            px, py = _page(x, y)
-            return f'{px:.4f} {py:.4f}'
-        mapped = re.sub(r'(-?[\d.]+) (-?[\d.]+)', sub, d)
-        dash = ' stroke-dasharray="0.02 0.015"' if dashed else ''
-        fillattr = f' fill="{fill}"' if filled else ' fill="none"'
-        out.append(
-            f'<path d="{mapped}" stroke="{stroke}" stroke-width="0.01"'
-            f'{fillattr}{dash}/>'
-        )
+        emit_path(out, d, page, stroke, dashed, filled, fill)
     for ch in child.children:
         emit_child(ch, child, ph, out)
 
