@@ -39,8 +39,18 @@ pub enum Glyph {
     Section,
     Source,
     Transformer,
+    /// Plain switch blade (also relay / control_relay contacts).
     Switch,
+    /// Breaker blade: diagonal with an x at the moving contact (IEC 60617).
     Protective,
+    /// Disconnector: blade with a short bar across the fixed contact.
+    Disconnector,
+    /// Switch-disconnector (main switch): bar + x.
+    MainSwitch,
+    /// Contactor: blade with a perpendicular tick at its tip.
+    Contactor,
+    /// Residual-current device: rectangle with a diagonal.
+    Rcd,
     Fuse,
     Load,
     Lamp,
@@ -54,6 +64,12 @@ pub enum Glyph {
     Junction,
     Ats,
     Spd,
+    /// EV supply equipment (no IEC 60617 extract: box + EV text).
+    Evse,
+    /// Relay / PLC: labeled box (per the corpus/render/house.svg reference).
+    Relay,
+    /// Heating element: box with a zigzag.
+    Heating,
     Generic,
 }
 
@@ -109,6 +125,13 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "motor" => Glyph::Motor,
         "lighting" => Glyph::Lamp,
         "socket" => Glyph::Socket,
+        "disconnector" | "isolator" | "load_break_switch" => Glyph::Disconnector,
+        "main_switch" => Glyph::MainSwitch,
+        "contactor" => Glyph::Contactor,
+        "rcd" | "rcbo" | "elcb" | "rccb" | "rcmcd" => Glyph::Rcd,
+        "control_relay" => Glyph::Relay,
+        "heating" => Glyph::Heating,
+        "evse" => Glyph::Evse,
         "bus" | "busbar" => Glyph::Section,
         "board" => Glyph::Board,
         _ => match kind {
