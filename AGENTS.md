@@ -10,6 +10,7 @@ Diagram language.
 
 - Language spec (normative): `Design/esld-spec.md`
 - Implementation plan (architecture, milestones): `Design/esld-implementation.md`
+- Drawing & layout guidance (normative for `busbar-layout`/`busbar-render`): `Design/layout-guidance.md`
 - Status: **M0 scaffold** — crates are doc-only stubs; no ESLD logic exists yet.
 
 Naming: the *tool* is BusBar; the *language* is ESLD. Don't rename either.

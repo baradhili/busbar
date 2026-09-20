@@ -218,6 +218,11 @@ The solver is reachability + constraint logic only — this keeps it determinist
 
 ### 5.5 `busbar-layout` — deterministic layout
 
+> Drawing conventions are codified in `Design/layout-guidance.md`
+(distilled from the reference corpus in `Design/refs/`); the engine
+implements its "adopted now" table and the invariant suite
+machine-checks it.
+
 - **Algorithm:** layered (Sugiyama-family) with fixed tie-breaking:
   1. Rank by longest-path from sources (`rank = source_to_load` default; `flow` sets orientation).
   2. Order within ranks: stable sort by (board membership, section index, phase, tag). Boards are laid out as grouped clusters — a board's circuits share ranks inside the board's rectangle.

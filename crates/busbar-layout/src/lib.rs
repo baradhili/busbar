@@ -25,6 +25,12 @@ pub const SECTION_GAP: f64 = 56.0;
 /// Gap between stacked cells in one feeder — room for the label and the
 /// rating note without crowding the glyph below.
 pub const STACK_GAP: f64 = 34.0;
+/// Height of the board label strip: name plus voltage-system note
+/// (guidance §5.1).
+pub const LABEL_STRIP: f64 = 36.0;
+/// Cells per feeder sub-column before long load chains wrap sideways
+/// (guidance §5.4 — the ragged-cascade fix).
+pub const MAX_COL_CELLS: usize = 4;
 pub const BAR_W_MIN: f64 = 200.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,8 +171,23 @@ pub fn build(ir: &Ir) -> Layout {
             }
         }
 
-        let n_feeders = feeders.values().map(Vec::len).max().unwrap_or(0);
-        let inner_w = FEEDER_W * n_feeders.max(1) as f64;
+        // Feeder band widths per section: each circuit spans
+        // ceil(cells / MAX_COL_CELLS) sub-columns (guidance §5.4).
+        let mut section_widths: BTreeMap<&String, f64> = BTreeMap::new();
+        for (section, ctags) in &feeders {
+            let mut w = 0.0;
+            for ctag in ctags {
+                if let Some(c) = ir.circuits.get(*ctag) {
+                    let total = c.protection.is_some() as usize
+                        + c.controller.is_some() as usize
+                        + c.loads.len();
+                    let sub_cols = total.div_ceil(MAX_COL_CELLS).max(1);
+                    w += sub_cols as f64 * FEEDER_W;
+                }
+            }
+            section_widths.insert(section, w);
+        }
+        let inner_w = section_widths.values().copied().fold(0.0f64, f64::max);
         let strip_w = |n: usize| {
             if n == 0 {
                 0.0
@@ -174,20 +195,22 @@ pub fn build(ir: &Ir) -> Layout {
                 n as f64 * (CELL + STACK_GAP) - STACK_GAP
             }
         };
-        let bar_w = inner_w
-            .max(strip_w(upstream_devs.len()))
-            .max(strip_w(downstream_devs.len()))
-            .max(BAR_W_MIN);
+        let bar_w = inner_w.max(strip_w(downstream_devs.len())).max(BAR_W_MIN);
 
-        let mut y = BOARD_PAD + 22.0; // label strip inside the board
+        // Incomer column: upstream devices stack vertically above the bar
+        // in power order — the device adjacent to the section lands nearest
+        // the bar (guidance §2.4). Hop distance from the sections orders
+        // the chain; the tag breaks ties.
+        let mut y = BOARD_PAD + LABEL_STRIP;
         if !upstream_devs.is_empty() {
-            let mut dx = BOARD_PAD;
-            for node in &upstream_devs {
+            let mut ordered = upstream_devs;
+            ordered.sort_by_key(|n| (u32::MAX - hops_to_sections(ir, n, board), n.tag.clone()));
+            for node in ordered {
                 member_list.push(node.tag.clone());
                 layout.places.insert(
                     node.tag.clone(),
                     Place {
-                        x: dx,
+                        x: BOARD_PAD,
                         y,
                         w: CELL,
                         h: CELL,
@@ -196,9 +219,8 @@ pub fn build(ir: &Ir) -> Layout {
                         note: rating_note(&node.props),
                     },
                 );
-                dx += CELL + STACK_GAP;
+                y += CELL + STACK_GAP;
             }
-            y += CELL + STACK_GAP;
         }
         for section in &board.sections {
             // Section bar.
@@ -219,8 +241,11 @@ pub fn build(ir: &Ir) -> Layout {
             // Feeder band under this bar.
             if let Some(ctags) = feeders.get(section) {
                 let mut depth = 0.0f64;
-                for (fi, ctag) in ctags.iter().enumerate() {
-                    let fx = BOARD_PAD + fi as f64 * FEEDER_W + (FEEDER_W - CELL) / 2.0;
+                let mut fx = BOARD_PAD;
+                for ctag in ctags {
+                    let Some(circuit) = ir.circuits.get(*ctag) else {
+                        continue;
+                    };
                     // Circuit anchor: a junction dot at the feeder's bar
                     // tap. Ports on the circuit itself (`connect X ->
                     // CIRCUIT.out`, PV-backfeed style) land here instead of
@@ -229,7 +254,7 @@ pub fn build(ir: &Ir) -> Layout {
                     layout.places.insert(
                         (*ctag).clone(),
                         Place {
-                            x: fx + CELL / 2.0,
+                            x: fx + FEEDER_W / 2.0,
                             y,
                             w: 0.0,
                             h: 0.0,
@@ -238,22 +263,26 @@ pub fn build(ir: &Ir) -> Layout {
                             note: None,
                         },
                     );
-                    let mut cy = y;
-                    let Some(circuit) = ir.circuits.get(*ctag) else {
-                        continue;
-                    };
+                    // Column balancing (guidance §5.4): protection and
+                    // controller open the first sub-column; loads fill
+                    // column-major, wrapping at MAX_COL_CELLS.
+                    let total = circuit.protection.is_some() as usize
+                        + circuit.controller.is_some() as usize
+                        + circuit.loads.len();
+                    let sub_cols = total.div_ceil(MAX_COL_CELLS).max(1);
                     let mut place_cell = |tag: &str,
                                           label: &str,
                                           glyph: Glyph,
                                           note: Option<String>,
-                                          cy: &mut f64|
-                     -> f64 {
+                                          slot: usize| {
+                        let col = slot / MAX_COL_CELLS;
+                        let row = slot % MAX_COL_CELLS;
                         member_list.push(tag.to_owned());
                         layout.places.insert(
                             tag.to_owned(),
                             Place {
-                                x: fx,
-                                y: *cy,
+                                x: fx + col as f64 * FEEDER_W + (FEEDER_W - CELL) / 2.0,
+                                y: y + row as f64 * (CELL + STACK_GAP),
                                 w: CELL,
                                 h: CELL,
                                 label: label.to_owned(),
@@ -261,30 +290,34 @@ pub fn build(ir: &Ir) -> Layout {
                                 note,
                             },
                         );
-                        *cy += CELL + STACK_GAP;
-                        *cy - (CELL + STACK_GAP)
+                        (row + 1) as f64 * (CELL + STACK_GAP)
                     };
+                    let mut slot = 0usize;
                     if let Some(prot) = &circuit.protection {
-                        place_cell(
+                        let d = place_cell(
                             &prot.tag,
                             &short_tag(ctag),
                             glyph_for(&prot.type_name, prot.kind),
                             rating_note(&prot.props),
-                            &mut cy,
+                            slot,
                         );
+                        depth = depth.max(d);
+                        slot += 1;
                     }
                     if let Some(ctl) = &circuit.controller {
-                        place_cell(
+                        let d = place_cell(
                             &ctl.tag,
                             &short_tag(ctag),
                             glyph_for(&ctl.type_name, ctl.kind),
                             None,
-                            &mut cy,
+                            slot,
                         );
+                        depth = depth.max(d);
+                        slot += 1;
                     }
                     for (load, _) in &circuit.loads {
                         let node = ir.nodes.get(load);
-                        place_cell(
+                        let d = place_cell(
                             load,
                             &node
                                 .map(|n| display_label(load, &n.props))
@@ -292,10 +325,12 @@ pub fn build(ir: &Ir) -> Layout {
                             node.map(|n| glyph_for(&n.type_name, n.kind))
                                 .unwrap_or(Glyph::Generic),
                             node.and_then(|n| rating_note(&n.props)),
-                            &mut cy,
+                            slot,
                         );
+                        depth = depth.max(d);
+                        slot += 1;
                     }
-                    depth = depth.max(cy - y);
+                    fx += sub_cols as f64 * FEEDER_W;
                 }
                 y += depth;
             }
@@ -387,7 +422,13 @@ pub fn build(ir: &Ir) -> Layout {
                     glyph: node
                         .map(|n| glyph_for(&n.type_name, n.kind))
                         .unwrap_or(Glyph::Generic),
-                    note: node.and_then(|n| rating_note(&n.props)),
+                    // Boards carry their voltage system in the label
+                    // strip (guidance §4.5): "230V 1ph 50Hz".
+                    note: if layout.boards.contains_key(tag) {
+                        voltsys_note(ir, tag)
+                    } else {
+                        node.and_then(|n| rating_note(&n.props))
+                    },
                 },
             );
             cur_x += w + COL_GAP;
@@ -453,6 +494,63 @@ fn display_label(tag: &str, props: &[busbar_syntax::ast::Property]) -> String {
         }
     }
     short_tag(tag)
+}
+
+/// BFS hop distance from a board device to the nearest section across
+/// resolved edges — orders the incomer column in power sequence.
+fn hops_to_sections(ir: &Ir, node: &busbar_ir::IrNode, board: &busbar_ir::Board) -> u32 {
+    use std::collections::VecDeque;
+    let mut dist: BTreeMap<String, u32> = BTreeMap::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+    for s in &board.sections {
+        dist.insert(s.clone(), 0);
+        queue.push_back(s.clone());
+    }
+    while let Some(t) = queue.pop_front() {
+        let d = dist[&t];
+        for e in &ir.edges {
+            let (Some((a, _, _)), Some((b, _, _))) =
+                (ir.resolve_endpoint(&e.from), ir.resolve_endpoint(&e.to))
+            else {
+                continue;
+            };
+            let other = if a == t {
+                b
+            } else if b == t {
+                a
+            } else {
+                continue;
+            };
+            if !dist.contains_key(&other) {
+                dist.insert(other.clone(), d + 1);
+                queue.push_back(other);
+            }
+        }
+    }
+    dist.get(&node.tag).copied().unwrap_or(u32::MAX / 2)
+}
+
+/// Voltage-system summary for a board's label strip (guidance §4.5).
+fn voltsys_note(ir: &Ir, board_tag: &str) -> Option<String> {
+    let name = ir.board_vs(board_tag)?;
+    let vs = ir.voltsys.get(&name)?;
+    let phases = match vs.phases {
+        busbar_ir::PhaseStyle::Dc => "dc".to_owned(),
+        busbar_ir::PhaseStyle::Single => "1ph".to_owned(),
+        busbar_ir::PhaseStyle::Split => "2ph".to_owned(),
+        busbar_ir::PhaseStyle::Three => "3ph".to_owned(),
+        busbar_ir::PhaseStyle::Multi(n) => format!("{n}ph"),
+    };
+    let v = if (vs.nominal_v - vs.nominal_v.round()).abs() < 1e-9 {
+        format!("{}", vs.nominal_v.round() as i64)
+    } else {
+        format!("{}", vs.nominal_v)
+    };
+    let mut s = format!("{v}V {phases}");
+    if let Some(f) = vs.frequency_hz {
+        s.push_str(&format!(" {f:.0}Hz"));
+    }
+    Some(s)
 }
 
 fn rating_note(props: &[busbar_syntax::ast::Property]) -> Option<String> {

@@ -99,7 +99,8 @@ fn draw_board(out: &mut String, tag: &str, p: &Place) {
         h = f2(p.h)
     );
     // Board label sits inside the rectangle (label strip reserved by the
-    // layout) so it never collides with routes above the frame.
+    // layout) so it never collides with routes above the frame. The note
+    // line carries the voltage system (guidance §4.5).
     let _ = writeln!(
         out,
         r##"<text x="{x}" y="{y}" fill="#222222" font-weight="bold">{t}</text>"##,
@@ -107,6 +108,15 @@ fn draw_board(out: &mut String, tag: &str, p: &Place) {
         y = f2(p.y + 15.0),
         t = esc(tag)
     );
+    if let Some(note) = &p.note {
+        let _ = writeln!(
+            out,
+            r##"<text x="{x}" y="{y}" fill="#666666" font-size="8">{t}</text>"##,
+            x = f2(p.x + 6.0),
+            y = f2(p.y + 28.0),
+            t = esc(note)
+        );
+    }
 }
 
 fn draw_section(out: &mut String, tag: &str, p: &Place) {

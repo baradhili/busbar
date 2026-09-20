@@ -562,7 +562,7 @@ impl Ir {
         None
     }
 
-    fn board_vs(&self, board: &str) -> Option<String> {
+    pub fn board_vs(&self, board: &str) -> Option<String> {
         self.boards.get(board).and_then(|b| {
             b.props.iter().find(|p| p.name == "vs").and_then(|p| {
                 if let Value::Ident(vs) = &p.value.value {
