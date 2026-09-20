@@ -1,37 +1,63 @@
 name: CI
 
+# Fast-dev policy (see AGENTS.md): every branch is tested; superseded runs
+# cancel; no release-profile builds, release artifacts, or publishing run
+# from this repository while iterating — enforced by the no-release-builds
+# step below. Release automation is deliberately a later milestone.
+
 on:
   push:
-    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  native:
-    name: native (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  lint:
+    name: lint + docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: No release builds while in fast dev
+        run: |
+          ! grep -rn -- "--release\|upload-artifact\|release.yml" .github/workflows
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
-      - run: cargo test --workspace
       - run: cargo doc --workspace --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
 
-  wasm:
-    name: wasm32 build
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Unit, corpus, and Cucumber suites (debug profile)
+        run: cargo test --workspace
+      - name: Cucumber suite detail (non-blocking echo)
+        if: always()
+        run: cargo test --test cucumber 2>&1 | tail -5 || true
+
+  wasm32:
+    name: wasm32 (debug)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

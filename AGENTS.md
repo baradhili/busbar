@@ -76,6 +76,9 @@ define them in `features/steps.rs` and untag its scenarios.
   the parser rejects the file. Keep such words mid-sentence.
 - Diagnostics are values (`code`, `severity`, `span`), never panics or bare
   strings (implementation plan §4.4).
+- **CI is debug-profile and test-only on every branch** while in fast dev:
+  no `--release` builds, artifacts, or publishing — enforced by a policy
+  step in `.github/workflows/ci.yml`.
 
 ## Before you commit
 
