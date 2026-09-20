@@ -189,8 +189,15 @@ fn decorate_endpoint(
             let (ux, uy) = (dx / len, dy / len);
             let (vx, vy) = (-uy, ux); // perpendicular
             // Routes run center-to-center and glyphs draw over wires, so
-            // the arrow must sit at the glyph's edge, not its center.
-            let edge = 15.0;
+            // the arrow must sit at the glyph's edge, not its center. The
+            // inset follows the glyph's own extent (lamp circle r10,
+            // motor r14, load square half 14, socket stem).
+            let edge = match place.glyph {
+                Glyph::Lamp => 11.5,
+                Glyph::Socket => 12.0,
+                Glyph::Motor | Glyph::Load => 15.0,
+                _ => 15.0,
+            };
             let (tx, ty) = (x - ux * edge, y - uy * edge);
             let back = 6.0;
             let half = 2.8;
@@ -364,8 +371,10 @@ fn draw_node(out: &mut String, labels: &mut String, _tag: &str, p: &Place) {
             glyph_text(out, cx + 9.0, ey, "IΔn");
         }
         Glyph::Ats => {
-            // Change-over (break-before-make), vertical: common terminal
-            // below, blades to two stacked fixed contacts at the sides.
+            // Change-over, break-before-make: common terminal below, two
+            // fixed contacts at the sides — one blade closed onto its
+            // contact, the other drawn OPEN (stopping short), so the
+            // symbol never depicts both sources bridged at once.
             let _ = writeln!(
                 out,
                 r##"<line x1="{cx}" y1="{a}" x2="{cx}" y2="{b}" {stroke}/>"##,
@@ -374,16 +383,21 @@ fn draw_node(out: &mut String, labels: &mut String, _tag: &str, p: &Place) {
                 b = f2(cy + 4.0),
                 stroke = stroke
             );
-            for dir in [-1.0, 1.0] {
+            for (dir, closed) in [(-1.0, true), (1.0, false)] {
                 let fx = cx + dir * 10.0;
                 let fy = cy - 8.0;
+                let (bx, by) = if closed {
+                    (fx, fy)
+                } else {
+                    (cx + dir * 6.5, cy - 4.5) // blade stops short: open
+                };
                 let _ = writeln!(
                     out,
                     r##"<line x1="{a}" y1="{b}" x2="{c}" y2="{d}" {stroke}/>"##,
                     a = f2(cx),
                     b = f2(cy + 4.0),
-                    c = f2(fx),
-                    d = f2(fy),
+                    c = f2(bx),
+                    d = f2(by),
                     stroke = stroke
                 );
                 let _ = writeln!(
