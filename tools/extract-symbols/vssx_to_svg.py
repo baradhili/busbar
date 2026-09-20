@@ -31,9 +31,17 @@ def v(el, name, default=0.0):
 
 
 def color(val, fallback='#000000'):
-    s = str(val)
+    s = str(val).strip()
     if s.startswith('#'):
         return s
+    # Numeric cells arrive as floats (1.0 == palette index 1): normalize
+    # integral floats to their int form before the palette lookup.
+    try:
+        f = float(s)
+        if f == int(f):
+            s = str(int(f))
+    except ValueError:
+        pass
     # Visio palette: 0 black, 1 white; others unused in this stencil
     return {'0': '#000000', '1': '#ffffff'}.get(s, fallback)
 
