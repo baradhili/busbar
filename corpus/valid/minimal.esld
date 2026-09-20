@@ -1,3 +1,2 @@
 profile "esld/1.0";
-
 note "Minimal valid document: header and a note only.";

@@ -1,0 +1,67 @@
+profile "esld/1.0";
+voltsys LV3 = 400V, 3ph, 50Hz;
+grid GRID_A : grid {
+  vs = LV3;
+  supply_a = 400A;
+};
+grid GRID_B : grid {
+  vs = LV3;
+  supply_a = 400A;
+};
+board MSB : board {
+  vs = LV3;
+  bus A {
+    incomers = [GRID_A.out];
+    rating_a = 630A;
+  }
+  bus B {
+    incomers = [GRID_B.out];
+    rating_a = 630A;
+  }
+  main_switch MSW_A : main_switch {
+    rating_a = 630A;
+    poles = 3;
+  };
+  main_switch MSW_B : main_switch {
+    rating_a = 630A;
+    poles = 3;
+  };
+  tie CB_TIE : breaker {
+    rating_a = 630A;
+    breaking_ka = 25kA;
+  };
+  circuit FEED_A {
+    bus = A;
+    phase = L1;
+    protection : mccb {
+      rating_a = 63A;
+      breaking_ka = 25kA;
+    };
+    loads = [PUMP_1];
+  };
+  circuit FEED_B {
+    bus = B;
+    phase = L2;
+    protection : mccb {
+      rating_a = 63A;
+      breaking_ka = 25kA;
+    };
+    loads = [PUMP_2];
+  };
+};
+motor PUMP_1 : motor {
+  kw = 30kW;
+  starter = dol;
+};
+motor PUMP_2 : motor {
+  kw = 30kW;
+  starter = dol;
+};
+connect GRID_A.out -> MSB.MSW_A.in;
+connect MSB.MSW_A.out -> MSB.A;
+connect GRID_B.out -> MSB.MSW_B.in;
+connect MSB.MSW_B.out -> MSB.B;
+connect MSB.A -- MSB.CB_TIE -- MSB.B;
+state "normal" {
+  MSB.CB_TIE = open;
+};

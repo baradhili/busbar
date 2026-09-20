@@ -22,6 +22,9 @@ Feature: Rendering determinism
       | file |
       | valid/board-connects.esld |
       | valid/minimal.esld |
+      | valid/quantities.esld |
+      | valid/statement-tour.esld |
+      | valid/two-section-tie.esld |
       | valid/sample1.esld |
       | valid/sample2.esld |
       | valid/voltsys-blocks.esld |

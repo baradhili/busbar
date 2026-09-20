@@ -1,0 +1,18 @@
+profile "esld/1.0";
+voltsys LV = 230V, 1ph, 50Hz;
+code "quantities" {
+  voltage = 230V;
+  spaced = 230 V;
+  current = 63A;
+  fault = 6kA;
+  apparent = 1.38MVA;
+  reactive = 7.5kvar;
+  energy = 10kWh;
+  csa = 2.5mm2;
+  length = 18m;
+  tiny = 10µV;
+  ratio_pct = 20%;
+  time = 250ms;
+  irradiance = 1000W/m2;
+};
+note "Unit zoo fixture: parse-only.";

@@ -57,6 +57,7 @@ CI — run them with `make cucumber-incomplete` (or
 `BUSBAR_INCOMPLETE=1`); they fail honestly on undefined steps until
 implemented, then lose the tag. When adding steps for a new area,
 define them in `tests/cucumber.rs` and untag its scenarios.
+`features/README.md` maps every feature file to its design-doc section.
 
 ## Conventions
 

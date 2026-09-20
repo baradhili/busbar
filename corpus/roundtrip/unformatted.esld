@@ -1,0 +1,6 @@
+profile   "esld/1.0" ;
+
+voltsys     LV=230V,1ph,50Hz;
+load    LAMP : load {kw=0.1kW;} ;
+
+note   "Deliberately unformatted: fmt --check must flag it." ;

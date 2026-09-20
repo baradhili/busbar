@@ -140,6 +140,7 @@ impl Parser {
                     let _ = self.type_ref()?;
                 }
                 self.skip_braced()?;
+                self.eat_opt_semi();
                 Statement::TypeDecl {
                     name,
                     span: Span { line },
@@ -171,13 +172,26 @@ impl Parser {
             "connect" => Statement::Connect(self.connect(line)?),
             "vendor" => {
                 self.skip_braced_after_string()?;
+                self.eat_opt_semi();
                 Statement::Vendor {
                     span: Span { line },
                 }
             }
-            "scenario" => self.scenario(line)?,
-            "state" => self.state(line)?,
-            "interlock" => self.interlock(line)?,
+            "scenario" => {
+                let stmt = self.scenario(line)?;
+                self.eat_opt_semi();
+                stmt
+            }
+            "state" => {
+                let stmt = self.state(line)?;
+                self.eat_opt_semi();
+                stmt
+            }
+            "interlock" => {
+                let stmt = self.interlock(line)?;
+                self.eat_opt_semi();
+                stmt
+            }
             "zone" => {
                 let name = self.string()?;
                 let props = self.property_block()?;
