@@ -79,19 +79,9 @@ define them in `features/steps.rs` and untag its scenarios.
 
 ## Before you commit
 
-1. **CodeRabbit review** (`cr` from `~/.local/bin`):
-
-   ```
-   export PATH="$HOME/.local/bin:$PATH"
-   cr review --uncommitted --include-untracked   # staged + unstaged + new files
-   ```
-
-   Address findings (fix, or justify why not) **before committing**. For an
-   already-made commit under review, use `cr review --committed`. First-time
-   use requires auth: `cr auth login` interactively, or
-   `cr auth login --api-key "cr-…"` in non-interactive environments.
-
-2. Local gate:
+Local gate (the review of record — do not run external review CLIs
+such as CodeRabbit; the maintainer reviews on the `coderabbit-fixes`
+branch):
 
 ```
 make lint && make fmt-check && make test
