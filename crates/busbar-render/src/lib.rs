@@ -72,11 +72,13 @@ fn draw_board(out: &mut String, tag: &str, p: &Place) {
         w = f2(p.w),
         h = f2(p.h)
     );
+    // Board label sits inside the rectangle (label strip reserved by the
+    // layout) so it never collides with routes above the frame.
     let _ = writeln!(
         out,
         r##"<text x="{x}" y="{y}" fill="#222222" font-weight="bold">{t}</text>"##,
-        x = f2(p.x + 4.0),
-        y = f2(p.y - 4.0),
+        x = f2(p.x + 6.0),
+        y = f2(p.y + 15.0),
         t = esc(tag)
     );
 }

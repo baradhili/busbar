@@ -12,5 +12,8 @@ publish = false
 busbar-ir = { path = "../busbar-ir" }
 busbar-syntax = { path = "../busbar-syntax" }
 
+[dev-dependencies]
+busbar-syntax = { path = "../busbar-syntax" }
+
 [lints]
 workspace = true
