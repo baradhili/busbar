@@ -522,7 +522,7 @@ The following types MUST be available without declaration. Implementations MAY a
 | Type | Kind | Ports | Key parameters |
 |---|---|---|---|
 | `transformer` | converter | `primary: ac_in`, `secondary: ac_out`, `tertiary: ac_out?`, `n: neutral?` | `kva`, `vs_in`, `vs_out`, `vector`, `impedance_pct`, `taps_count`, `tap_step_pct`, `cooling` |
-| `inverter` | converter | `dc_in`, `ac_in`, `ac_out`, `backup_out` | `kind` (`string`/`hybrid`/`battery`/`micro`), `kw`, `mppt_count`, `export_limit`, `island_capable`, `transfer_ms` |
+| `inverter` | converter | `dc_in`, `ac_in?`, `ac_out`, `backup_out?` | `kind` (`string`/`hybrid`/`battery`/`micro`), `kw`, `mppt_count`, `export_limit`, `island_capable`, `transfer_ms` |
 | `rectifier` | converter | `ac_in`, `dc_out` | `kw`, `v_out`, `regulation`, `float_v` |
 | `ups` | converter | `ac_in`, `bypass_in: ac_in`, `ac_out`, `batt: dc_bidi` | `kva`, `kw`, `transfer_ms`, `backup_min` |
 
@@ -665,7 +665,7 @@ board MV_SWBD : board {
 
 Rules:
 
-- Any feed crossing into a board from outside MUST name its **source-side port** in the target section's — or, for single-section boards, the board's — `incomers` list, else **R-110**. The feed may terminate on a section reference (`MV_SWBD.A`), the board's `bus` port, or a device inside the board (e.g. `GRID.out -> CB.in` into an incomer breaker).
+- Any feed crossing into a board from outside MUST name its **source-side port** in the target section's — or, for single-section boards, the board's — `incomers` list, else **R-110**. A feed terminating on a **circuit port** (`INV1.ac_out -> HOUSE.PV_IN.out`) is exempt: it enters through that circuit's own protection, and the circuit is the declaration. The feed may terminate on a section reference (`MV_SWBD.A`), the board's `bus` port, or a device inside the board (e.g. `GRID.out -> CB.in` into an incomer breaker).
 - Internal circuits attach to a section via the `bus` property and are not gated by `incomers`.
 - A protective or switching device declared inside a board without explicit connections attaches implicitly to the sole section's busbar at its `in` port. In a multi-section board, implicit attach of such devices is an error (R-113), same as for circuits. Measurement and relay devices (ct, vt, meter, relay, sync_check) are exempt: they associate via `measures`/`ct`/`vt` signal links, not busbar power, and never require a `bus`.
 - A circuit in a multi-section board without `bus = ...` is **R-113** (error). In a single-section board it attaches to the implicit section.
@@ -1004,12 +1004,12 @@ Rule IDs are stable. Implementations MUST report the ID and source span. Code-de
 | R-102 | Duplicate tag in document | error |
 | R-103 | Required port unconnected | error |
 | R-104 | Port arity violated (e.g. two feeds into a single `in`) | error |
-| R-105 | Node unreachable from any source | warning |
+| R-105 | Node unreachable from any source (board containers exempt — members are checked individually) | warning |
 | R-106 | Board or bus section with no incomer and no internal feed | error |
 | R-107 | Board with no outgoing circuits | warning |
 | R-108 | Circular supply path with no source | error |
 | R-109 | Orphan sub-board (declared, never fed) | error |
-| R-110 | External feed not listed in `incomers` | error |
+| R-110 | External feed not listed in `incomers` (feeds terminating on a circuit port are exempt — the circuit is the declaration) | error |
 | R-111 | Connection to a non-existent port | error |
 | R-112 | Include cycle or missing include | error |
 | R-113 | Circuit or power-path board device without `bus` on a multi-section board (measurement/relay devices exempt — they attach via signal links) | error |

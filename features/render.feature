@@ -5,12 +5,17 @@ Feature: Rendering determinism
   Scenario: Identical input renders identical SVG
     Given the document "valid/sample1.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "dbec09bab30d08d15b8d46c76b1e71ec8fb5bb128580b2cf6da1b5b163fd8af4"
+    Then the SVG hash is "9df82e332880c825571e09eec3231da7601fc834aeca1c702e7360413cb2b422"
 
   Scenario: Sample 2 golden SVG
     Given the document "valid/sample2.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "078d6f9f34f8cdc1c7ef68b398d1deaf1566d9e48d7b22566846d285db28c6e4"
+    Then the SVG hash is "4edf35439339f39ccb798e536ca60768a0eec39b8ca9f4b2769fabed4d13144d"
+
+  Scenario: House reference golden SVG
+    Given the document "valid/house.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "083447ac0d0682dfb9b55e9358218c7802bbd0161cfd9fa0a6b7eaccfa64b928"
 
   Scenario: Rendering is byte-deterministic
     Given the document "valid/sample2.esld"
@@ -26,6 +31,7 @@ Feature: Rendering determinism
     Examples:
       | file |
       | valid/board-connects.esld |
+      | valid/house.esld |
       | valid/minimal.esld |
       | valid/quantities.esld |
       | valid/statement-tour.esld |

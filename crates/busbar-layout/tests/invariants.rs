@@ -155,6 +155,39 @@ fn routes_land_on_their_places() {
     }
 }
 
+/// Every resolvable IR edge must produce exactly one route — a dropped
+/// route is a dropped wire on the drawing (the sample1 regression).
+#[test]
+fn every_resolvable_edge_is_routed() {
+    for path in corpus() {
+        let src = std::fs::read_to_string(&path).unwrap();
+        let doc = busbar_syntax::parse(&src).expect("parse");
+        let ir = busbar_ir::Ir::build(&doc).expect("ir");
+        let layout = busbar_layout::build(&ir);
+        let name = path.file_name().unwrap().to_string_lossy();
+        let mut expected: BTreeMap<(String, String), usize> = BTreeMap::new();
+        for edge in &ir.edges {
+            if let (Some((a, _, _)), Some((b, _, _))) = (
+                ir.resolve_endpoint(&edge.from),
+                ir.resolve_endpoint(&edge.to),
+            ) {
+                *expected.entry((a, b)).or_insert(0) += 1;
+            }
+        }
+        for ((a, b), n) in expected {
+            let got = layout
+                .routes
+                .iter()
+                .filter(|r| r.from_tag == a && r.to_tag == b)
+                .count();
+            assert_eq!(
+                got, n,
+                "{name}: edge `{a}` -> `{b}` routed {got}x, expected {n}x"
+            );
+        }
+    }
+}
+
 // Silence unused-import lint for BTreeMap (used only in signatures above
 // when corpus grows grouped checks).
 #[allow(dead_code)]

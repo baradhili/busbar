@@ -55,6 +55,30 @@ pub fn render_ir(ir: &Ir) -> String {
     for route in &layout.routes {
         draw_route(&mut edges, route);
     }
+    // Drafting decorations: a junction dot where a wire taps a busbar, an
+    // open arrowhead where it terminates on a load (power-flow direction).
+    for route in &layout.routes {
+        let n = route.points.len();
+        let (prev_first, prev_last) = if n >= 2 {
+            (Some(route.points[0]), Some(route.points[n - 2]))
+        } else {
+            (None, None)
+        };
+        decorate_endpoint(
+            &mut edges,
+            &layout,
+            &route.from_tag,
+            route.points.first(),
+            prev_first,
+        );
+        decorate_endpoint(
+            &mut edges,
+            &layout,
+            &route.to_tag,
+            route.points.last(),
+            prev_last,
+        );
+    }
 
     for part in [&boards, &edges, &nodes, &labels] {
         svg.push_str(part);
@@ -64,9 +88,11 @@ pub fn render_ir(ir: &Ir) -> String {
 }
 
 fn draw_board(out: &mut String, tag: &str, p: &Place) {
+    // Dashed frame: drafting convention for functional-group boundaries —
+    // keeps boards visually distinct from wires.
     let _ = writeln!(
         out,
-        r##"<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="#f8f8f8" stroke="#444444" stroke-width="1.2"/>"##,
+        r##"<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="#f8f8f8" stroke="#555555" stroke-width="1.1" stroke-dasharray="7 4"/>"##,
         x = f2(p.x),
         y = f2(p.y),
         w = f2(p.w),
@@ -117,6 +143,60 @@ fn draw_route(out: &mut String, route: &busbar_layout::Route) {
         p = pts.join(" "),
         dash = dash
     );
+}
+
+/// Junction dot / open arrowhead at one end of a route, keyed on the glyph
+/// the route lands on. `prev` is the neighbouring point, for arrow heading.
+fn decorate_endpoint(
+    out: &mut String,
+    layout: &busbar_layout::Layout,
+    tag: &str,
+    point: Option<&(f64, f64)>,
+    prev: Option<(f64, f64)>,
+) {
+    let Some(&(x, y)) = point else { return };
+    let Some(place) = layout.places.get(tag) else {
+        return;
+    };
+    match place.glyph {
+        Glyph::Section => {
+            let _ = writeln!(
+                out,
+                r##"<circle cx="{cx}" cy="{cy}" r="3" fill="#333333"/>"##,
+                cx = f2(x),
+                cy = f2(y)
+            );
+        }
+        Glyph::Load | Glyph::Lamp | Glyph::Motor | Glyph::Socket => {
+            let Some((px, py)) = prev else { return };
+            // Unit vector along the final wire segment, then an open V
+            // perpendicular to it at the endpoint.
+            let (dx, dy) = (x - px, y - py);
+            let len = (dx * dx + dy * dy).sqrt();
+            if len < 0.5 {
+                return;
+            }
+            let (ux, uy) = (dx / len, dy / len);
+            let (vx, vy) = (-uy, ux); // perpendicular
+            // Routes run center-to-center and glyphs draw over wires, so
+            // the arrow must sit at the glyph's edge, not its center.
+            let edge = 15.0;
+            let (tx, ty) = (x - ux * edge, y - uy * edge);
+            let back = 6.0;
+            let half = 2.8;
+            let _ = writeln!(
+                out,
+                r##"<path d="M {a} {b} L {x} {y} L {c} {d}" fill="none" stroke="#333333" stroke-width="1"/>"##,
+                x = f2(tx),
+                y = f2(ty),
+                a = f2(tx - ux * back + vx * half),
+                b = f2(ty - uy * back + vy * half),
+                c = f2(tx - ux * back - vx * half),
+                d = f2(ty - uy * back - vy * half),
+            );
+        }
+        _ => {}
+    }
 }
 
 fn draw_node(out: &mut String, labels: &mut String, _tag: &str, p: &Place) {
@@ -302,6 +382,26 @@ fn draw_node(out: &mut String, labels: &mut String, _tag: &str, p: &Place) {
                 x0 = f2(cx - 4.0),
                 x1 = f2(cx + 4.0),
                 y2 = f2(cy + 8.0),
+                stroke = stroke
+            );
+        }
+        Glyph::Socket => {
+            // IEC 60617 socket outlet: semicircle on a base line.
+            let _ = writeln!(
+                out,
+                r##"<path d="M {a} {y} A {r} {r} 0 0 1 {b} {y} Z" {stroke}/>"##,
+                a = f2(cx - 8.0),
+                b = f2(cx + 8.0),
+                y = f2(cy + 4.0),
+                r = f2(8.0),
+                stroke = stroke
+            );
+            let _ = writeln!(
+                out,
+                r##"<line x1="{a}" y1="{y}" x2="{b}" y2="{y}" {stroke}/>"##,
+                a = f2(cx - 11.0),
+                b = f2(cx + 11.0),
+                y = f2(cy + 4.0),
                 stroke = stroke
             );
         }

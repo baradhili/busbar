@@ -137,6 +137,8 @@ pub struct Ir {
     pub circuits: BTreeMap<String, Circuit>,
     pub edges: Vec<Edge>,
     pub states: Vec<(String, Vec<StatePosition>)>,
+    /// `layout { TAG { column = N; } }` hints (spec §16.1, advisory).
+    pub layout_columns: BTreeMap<String, u64>,
 }
 
 impl Ir {
@@ -174,6 +176,17 @@ impl Ir {
                 }
                 ast::Statement::Connect(c) => {
                     push_chain(&mut self.edges, &c.endpoints, &c.arrows);
+                }
+                ast::Statement::Layout { items, .. } => {
+                    for item in items {
+                        if let ast::LayoutItem::Target { target, props, .. } = item {
+                            if let Some(prop) = props.iter().find(|p| p.name == "column") {
+                                if let Some((v, _)) = prop.value.value.quantity() {
+                                    self.layout_columns.insert(target.clone(), v as u64);
+                                }
+                            }
+                        }
+                    }
                 }
                 ast::Statement::State { name, items, .. } => {
                     let positions = items

@@ -99,8 +99,8 @@ registry! {
         opt("tertiary", PortDir::Out), opt("n", PortDir::None),
     ], &[];
     "inverter" => Converter, &[
-        multi("dc_in", PortDir::In), p("ac_in", PortDir::In),
-        p("ac_out", PortDir::Out), p("backup_out", PortDir::Out),
+        multi("dc_in", PortDir::In), opt("ac_in", PortDir::In),
+        p("ac_out", PortDir::Out), opt("backup_out", PortDir::Out),
     ], &[];
     "rectifier" => Converter, IN_OUT, &[];
     "ups" => Converter, &[
@@ -119,7 +119,7 @@ registry! {
     "load_break_switch" => Switch, IN_OUT, &[];
     "earth_switch" => Switch, &[p("in", PortDir::None)], &[];
     "contactor" => Switch, &[p("in", PortDir::In), p("out", PortDir::Out), opt("coil", PortDir::None)], &[];
-    "control_relay" => Switch, &[p("in", PortDir::In), p("out", PortDir::Out), opt("coil", PortDir::None)], &[];
+    "control_relay" => Switch, &[opt("in", PortDir::In), opt("out", PortDir::Out), opt("coil", PortDir::None)], &[];
     "ats" => Switch, &[p("in1", PortDir::In), p("in2", PortDir::In), p("out", PortDir::Out)], &[];
     "changeover" => Switch, &[p("in1", PortDir::In), p("in2", PortDir::In), p("out", PortDir::Out)], &[];
     "main_switch" => Switch, IN_OUT, &[];

@@ -18,6 +18,11 @@ Feature: Structural validation rules (R-1xx)
     When I check it
     Then there are no error diagnostics
 
+  Scenario: House reference checks clean
+    Given the document "valid/house.esld"
+    When I check it
+    Then there are no error diagnostics
+
   Scenario Outline: Invalid documents report exactly the expected rule
     Given the document "<file>"
     When I check it

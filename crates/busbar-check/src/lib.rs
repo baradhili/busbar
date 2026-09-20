@@ -440,12 +440,18 @@ impl Ctx<'_> {
             if invalid.contains(&edge.line) || edge.arrow == busbar_syntax::ast::Arrow::Peer {
                 continue; // R-111 already reported / ties are self-authorized (§9.4)
             }
-            let Some((_, _, Some(tb))) = self.ir.resolve_endpoint(&edge.to) else {
+            let Some((to_entity, _, Some(tb))) = self.ir.resolve_endpoint(&edge.to) else {
                 continue;
             };
             let sb = self.ir.resolve_endpoint(&edge.from).and_then(|(_, _, b)| b);
             if sb.as_deref() == Some(tb.as_str()) {
                 continue; // internal to the board
+            }
+            // A feed terminating on a circuit port enters through that
+            // circuit's own protection — the circuit IS the declaration
+            // (PV-backfeed style, spec §18.3).
+            if self.ir.circuits.contains_key(&to_entity) {
+                continue;
             }
             let Some(board) = self.ir.boards.get(tb.as_str()) else {
                 continue;
@@ -665,6 +671,13 @@ impl Ctx<'_> {
         let reach = self.reachable_from_sources();
         for node in self.ir.nodes.values() {
             if node.kind == Some(NodeKind::Source) {
+                continue;
+            }
+            // Containers (boards) are groupings, not powered equipment —
+            // their members are checked individually. A board whose sole
+            // incomer device transits straight through (GRID -> QF1 ->
+            // sub-board) never joins the union itself, by design.
+            if node.kind == Some(NodeKind::Container) {
                 continue;
             }
             if !reach.contains(&node.tag) {

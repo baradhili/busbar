@@ -14,7 +14,7 @@ use busbar_ir::{Ir, NodeKind};
 
 pub const CELL: f64 = 40.0;
 /// Width allotted to each circuit feeder column inside a board.
-pub const FEEDER_W: f64 = 80.0;
+pub const FEEDER_W: f64 = 96.0;
 pub const MARGIN: f64 = 48.0;
 pub const ROW_GAP: f64 = 72.0;
 pub const COL_GAP: f64 = 64.0;
@@ -22,8 +22,9 @@ pub const BOARD_PAD: f64 = 28.0;
 pub const SECTION_BAR_H: f64 = 8.0;
 /// Bar to the feeder band beneath it, and band to the next bar.
 pub const SECTION_GAP: f64 = 56.0;
-/// Gap between stacked cells in one feeder.
-pub const STACK_GAP: f64 = 22.0;
+/// Gap between stacked cells in one feeder — room for the label and the
+/// rating note without crowding the glyph below.
+pub const STACK_GAP: f64 = 34.0;
 pub const BAR_W_MIN: f64 = 200.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +39,7 @@ pub enum Glyph {
     Load,
     Lamp,
     Motor,
+    Socket,
     Meter,
     Battery,
     Inverter,
@@ -100,6 +102,7 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "ct" | "vt" | "sync_check" | "meter" => Glyph::Meter,
         "motor" => Glyph::Motor,
         "lighting" => Glyph::Lamp,
+        "socket" => Glyph::Socket,
         "bus" | "busbar" => Glyph::Section,
         "board" => Glyph::Board,
         _ => match kind {
@@ -134,11 +137,69 @@ pub fn build(ir: &Ir) -> Layout {
             }
         }
 
+        // Board-declared devices (and loads declared inside boards) need a
+        // Place or every edge touching them silently drops from the drawing.
+        // Devices feeding a section sit above the bars (incomer style); the
+        // rest sit below the feeder bands. Sections and the protection/
+        // controller cells circuits own are placed by their own passes.
+        let mut upstream_devs: Vec<&busbar_ir::IrNode> = Vec::new();
+        let mut downstream_devs: Vec<&busbar_ir::IrNode> = Vec::new();
+        for node in ir.nodes.values() {
+            if node.parent.as_deref() != Some(board.tag.as_str())
+                || board.sections.contains(&node.tag)
+                || node.tag.ends_with(".protection")
+                || node.tag.ends_with(".controller")
+            {
+                continue;
+            }
+            let feeds_section = ir.edges.iter().any(|e| {
+                let from = ir.resolve_endpoint(&e.from).map(|(t, _, _)| t);
+                let to = ir.resolve_endpoint(&e.to).map(|(t, _, _)| t);
+                from.as_deref() == Some(node.tag.as_str())
+                    && to.is_some_and(|t| board.sections.iter().any(|s| s == &t))
+            });
+            if feeds_section {
+                upstream_devs.push(node);
+            } else {
+                downstream_devs.push(node);
+            }
+        }
+
         let n_feeders = feeders.values().map(Vec::len).max().unwrap_or(0);
         let inner_w = FEEDER_W * n_feeders.max(1) as f64;
-        let bar_w = inner_w.max(BAR_W_MIN);
+        let strip_w = |n: usize| {
+            if n == 0 {
+                0.0
+            } else {
+                n as f64 * (CELL + STACK_GAP) - STACK_GAP
+            }
+        };
+        let bar_w = inner_w
+            .max(strip_w(upstream_devs.len()))
+            .max(strip_w(downstream_devs.len()))
+            .max(BAR_W_MIN);
 
         let mut y = BOARD_PAD + 22.0; // label strip inside the board
+        if !upstream_devs.is_empty() {
+            let mut dx = BOARD_PAD;
+            for node in &upstream_devs {
+                member_list.push(node.tag.clone());
+                layout.places.insert(
+                    node.tag.clone(),
+                    Place {
+                        x: dx,
+                        y,
+                        w: CELL,
+                        h: CELL,
+                        label: display_label(&node.tag, &node.props),
+                        glyph: glyph_for(&node.type_name, node.kind),
+                        note: rating_note(&node.props),
+                    },
+                );
+                dx += CELL + STACK_GAP;
+            }
+            y += CELL + STACK_GAP;
+        }
         for section in &board.sections {
             // Section bar.
             member_list.push(section.clone());
@@ -160,6 +221,23 @@ pub fn build(ir: &Ir) -> Layout {
                 let mut depth = 0.0f64;
                 for (fi, ctag) in ctags.iter().enumerate() {
                     let fx = BOARD_PAD + fi as f64 * FEEDER_W + (FEEDER_W - CELL) / 2.0;
+                    // Circuit anchor: a junction dot at the feeder's bar
+                    // tap. Ports on the circuit itself (`connect X ->
+                    // CIRCUIT.out`, PV-backfeed style) land here instead of
+                    // dropping off the drawing.
+                    member_list.push((*ctag).clone());
+                    layout.places.insert(
+                        (*ctag).clone(),
+                        Place {
+                            x: fx + CELL / 2.0,
+                            y,
+                            w: 0.0,
+                            h: 0.0,
+                            label: String::new(),
+                            glyph: Glyph::Junction,
+                            note: None,
+                        },
+                    );
                     let mut cy = y;
                     let Some(circuit) = ir.circuits.get(*ctag) else {
                         continue;
@@ -208,7 +286,9 @@ pub fn build(ir: &Ir) -> Layout {
                         let node = ir.nodes.get(load);
                         place_cell(
                             load,
-                            load,
+                            &node
+                                .map(|n| display_label(load, &n.props))
+                                .unwrap_or_else(|| short_tag(load)),
                             node.map(|n| glyph_for(&n.type_name, n.kind))
                                 .unwrap_or(Glyph::Generic),
                             node.and_then(|n| rating_note(&n.props)),
@@ -222,8 +302,33 @@ pub fn build(ir: &Ir) -> Layout {
             y += SECTION_GAP;
         }
 
+        // Devices that hang off the bus rather than feed it sit in a strip
+        // below the feeder bands (contactor / relay / board-local loads).
+        let mut y_end = y - SECTION_GAP;
+        if !downstream_devs.is_empty() {
+            y_end += 20.0;
+            let mut dx = BOARD_PAD;
+            for node in &downstream_devs {
+                member_list.push(node.tag.clone());
+                layout.places.insert(
+                    node.tag.clone(),
+                    Place {
+                        x: dx,
+                        y: y_end,
+                        w: CELL,
+                        h: CELL,
+                        label: display_label(&node.tag, &node.props),
+                        glyph: glyph_for(&node.type_name, node.kind),
+                        note: rating_note(&node.props),
+                    },
+                );
+                dx += CELL + STACK_GAP;
+            }
+            y_end += CELL;
+        }
+
         let board_w = bar_w + BOARD_PAD * 2.0;
-        let board_h = y - SECTION_GAP + BOARD_PAD;
+        let board_h = y_end + BOARD_PAD;
         layout
             .boards
             .insert(board.tag.clone(), (board_w, board_h.max(BOARD_PAD * 2.0)));
@@ -252,7 +357,14 @@ pub fn build(ir: &Ir) -> Layout {
     let mut max_right = MARGIN;
     let mut cur_y = MARGIN;
     for (_rank, mut tags) in rows {
-        tags.sort();
+        // `layout { TAG { column = N; } }` hints fix left-to-right order
+        // (spec §16.1 advisory); unadorned tags keep tag order after them.
+        tags.sort_by_key(|t| {
+            (
+                ir.layout_columns.get(t).copied().unwrap_or(u64::MAX),
+                t.clone(),
+            )
+        });
         let row_h = tags
             .iter()
             .filter_map(|t| layout.boards.get(t).map(|(_, h)| *h))
@@ -327,6 +439,20 @@ fn short_tag(tag: &str) -> String {
     // rsplit yields segments right-to-left; next() is the final segment
     // (the circuit tag), next_back() was the board tag.
     tag.rsplit('.').next().unwrap_or(tag).to_owned()
+}
+
+/// Label for a placed glyph: the user-facing `name` property when the
+/// document provides one ("Bath 1"), else the short tag.
+fn display_label(tag: &str, props: &[busbar_syntax::ast::Property]) -> String {
+    use busbar_syntax::ast::Value;
+    if let Some(p) = props.iter().find(|p| p.name == "name") {
+        if let Value::Str(s) = &p.value.value {
+            if !s.is_empty() {
+                return s.clone();
+            }
+        }
+    }
+    short_tag(tag)
 }
 
 fn rating_note(props: &[busbar_syntax::ast::Property]) -> Option<String> {
