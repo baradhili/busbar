@@ -164,6 +164,10 @@ fn cmd_render(args: &[String]) -> ExitCode {
     if files.is_empty() {
         return ExitCode::from(2);
     }
+    if out.is_some() && files.len() > 1 {
+        eprintln!("error: -o cannot be combined with multiple input files");
+        return ExitCode::from(2);
+    }
 
     let mut failed = false;
     for file in &files {

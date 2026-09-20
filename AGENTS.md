@@ -67,8 +67,9 @@ define them in `tests/cucumber.rs` and untag its scenarios.
   clock, randomness, or `HashMap` iteration reaching output; use
   `BTreeMap`/`IndexMap`. Full rules in the implementation plan §4.3.
 - **Every rule or behavior change ships with a Gherkin scenario** (and a
-  corpus fixture where applicable). Scenarios for unimplemented areas stay
-  commented out in `features/`; uncomment as milestones land.
+  corpus fixture where applicable). Scenarios for unimplemented areas are
+  tagged `@incomplete` in `features/` (excluded from the default run);
+  remove the tag as milestones land.
 - **Gherkin gotcha**: description lines must not *start with* Gherkin
   keywords (`Scenario(s)`, `Rule`, `Given`, `When`, `Then`, `Examples`, …) —
   the parser rejects the file. Keep such words mid-sentence.

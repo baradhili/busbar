@@ -13,6 +13,11 @@ fn unit_prefixes_normalize_and_passthrough() {
         ("3", "kA", 3000.0, "A"),
         ("63", "A", 63.0, "A"),
         ("2.5", "mm2", 2.5, "mm2"),
+        // Complete base units are never prefix-stripped: bare "m" is
+        // metres, not milli-nothing; ms is still milliseconds.
+        ("18", "m", 18.0, "m"),
+        ("1", "s", 1.0, "s"),
+        ("250", "ms", 0.25, "s"),
     ];
     for (number, unit_text, want, unit_want) in cases {
         let v = busbar_syntax::ast::Value::Quantity {

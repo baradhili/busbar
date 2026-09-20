@@ -108,12 +108,17 @@ pub fn build(ir: &Ir) -> Layout {
     let mut layout = Layout::default();
 
     // -- Board internals first: sizes feed the global pass. ---------------
+    // Board member tags (sections, protection, controller, loads) per
+    // board — loads carry plain tags, so prefix matching can't find them.
+    let mut members: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for board in ir.boards.values() {
         let mut y = BOARD_PAD;
         let mut max_w = BAR_W;
+        let member_list = members.entry(board.tag.clone()).or_default();
         let mut section_y: BTreeMap<String, f64> = BTreeMap::new();
         for section in &board.sections {
             section_y.insert(section.clone(), y);
+            member_list.push(section.clone());
             layout.places.insert(
                 section.clone(),
                 Place {
@@ -144,7 +149,12 @@ pub fn build(ir: &Ir) -> Layout {
             let Some(section) = section else { continue };
             let ry = *row_y.get(&section).unwrap_or(&y);
             let mut x = BOARD_PAD + 12.0;
+            let board_tag = board.tag.clone();
             let mut place_cell = |tag: &str, label: &str, glyph: Glyph, note: Option<String>| {
+                members
+                    .entry(board_tag.clone())
+                    .or_default()
+                    .push(tag.to_owned());
                 layout.places.insert(
                     tag.to_owned(),
                     Place {
@@ -253,7 +263,8 @@ pub fn build(ir: &Ir) -> Layout {
                     .unwrap_or(Glyph::Generic),
                 note: node.and_then(|n| rating_note(&n.props)),
             };
-            offset_group(&mut layout, tag, cur_x, cur_y);
+            let member_list = members.get(tag).cloned().unwrap_or_default();
+            offset_group(&mut layout, &member_list, cur_x, cur_y);
             layout.places.insert(tag.clone(), place);
             cur_y += h + V_GAP;
             col_w = col_w.max(w);
@@ -287,12 +298,12 @@ pub fn build(ir: &Ir) -> Layout {
     layout
 }
 
-/// Shifts a board's internal places (already placed relative to the
-/// board's local origin) by the board's global origin.
-fn offset_group(layout: &mut Layout, board: &str, dx: f64, dy: f64) {
-    let prefix = format!("{board}.");
-    for (tag, place) in layout.places.iter_mut() {
-        if tag.starts_with(&prefix) {
+/// Shifts a board's placed members (relative to the board's local origin)
+/// by the board's global origin. The member list is explicit because
+/// loads carry plain tags that prefix matching cannot find.
+fn offset_group(layout: &mut Layout, members: &[String], dx: f64, dy: f64) {
+    for tag in members {
+        if let Some(place) = layout.places.get_mut(tag) {
             place.x += dx;
             place.y += dy;
         }
@@ -300,7 +311,9 @@ fn offset_group(layout: &mut Layout, board: &str, dx: f64, dy: f64) {
 }
 
 fn short_tag(tag: &str) -> String {
-    tag.rsplit('.').next_back().unwrap_or(tag).to_owned()
+    // rsplit yields segments right-to-left; next() is the final segment
+    // (the circuit tag), next_back() was the board tag.
+    tag.rsplit('.').next().unwrap_or(tag).to_owned()
 }
 
 fn rating_note(props: &[busbar_syntax::ast::Property]) -> Option<String> {
