@@ -66,6 +66,7 @@ struct BusbarWorld {
     fmt_second: Option<Result<String, String>>,
     render_first: Option<Result<String, String>>,
     render_second: Option<Result<String, String>>,
+    cli: Option<(i32, String, String)>,
     /// Diagnostic asserted by the last "it reports" step, so the
     /// following "no other errors" step excludes exactly it.
     expected: Option<Diagnostic>,
@@ -135,6 +136,7 @@ async fn the_document(world: &mut BusbarWorld, rel: String) {
     world.fmt_second = None;
     world.render_first = None;
     world.render_second = None;
+    world.cli = None;
     world.expected = None;
 }
 
@@ -283,6 +285,65 @@ async fn render_fails_mentioning(world: &mut BusbarWorld, needle: String) {
             "failure {cause:?} does not mention {needle:?}"
         ),
     }
+}
+
+// -- CLI steps (features/cli.feature) -------------------------------------
+
+#[cucumber::given(regex = r#"^a scratch output path "([^"]+)"$"#)]
+async fn scratch_output_path(_world: &mut BusbarWorld, path: String) {
+    // Workspace-relative, suite-created, parent guaranteed to exist — and
+    // cleared first so a stale file can never satisfy an existence assert.
+    let full = std::path::PathBuf::from(ROOT).join(&path);
+    if let Some(parent) = full.parent() {
+        std::fs::create_dir_all(parent).expect("create scratch parent dir");
+    }
+    let _ = std::fs::remove_file(&full);
+}
+
+#[cucumber::when(regex = r"^I run `busbar(.*)`$")]
+async fn run_cli(world: &mut BusbarWorld, args: String) {
+    let argv: Vec<&str> = args.split_whitespace().collect();
+    // `cargo run` so the harness never depends on a pre-built binary.
+    let output = std::process::Command::new("cargo")
+        .current_dir(ROOT)
+        .args(["run", "-q", "-p", "busbar-cli", "--"])
+        .args(&argv)
+        .output()
+        .expect("failed to spawn cargo");
+    world.cli = Some((
+        output.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    ));
+}
+
+#[cucumber::then(regex = r"^the exit code is (\d+)$")]
+async fn exit_code_is(world: &mut BusbarWorld, code: i32) {
+    let (actual, _, _) = world.cli.as_ref().expect("`When I run` not executed");
+    assert_eq!(*actual, code, "exit code mismatch");
+}
+
+#[cucumber::then(regex = r#"^stdout mentions "([^"]+)"$"#)]
+async fn stdout_mentions(world: &mut BusbarWorld, needle: String) {
+    let (_, stdout, _) = world.cli.as_ref().expect("`When I run` not executed");
+    assert!(
+        stdout.contains(&needle),
+        "stdout {stdout:?} lacks {needle:?}"
+    );
+}
+
+#[cucumber::then(regex = r#"^stderr mentions "([^"]+)"$"#)]
+async fn stderr_mentions(world: &mut BusbarWorld, needle: String) {
+    let (_, _, stderr) = world.cli.as_ref().expect("`When I run` not executed");
+    assert!(
+        stderr.contains(&needle),
+        "stderr {stderr:?} lacks {needle:?}"
+    );
+}
+
+#[cucumber::then(regex = r#"^the file "([^"]+)" exists$"#)]
+async fn file_exists(_world: &mut BusbarWorld, path: String) {
+    assert!(std::path::Path::new(&path).is_file(), "{path} missing");
 }
 
 // Smoke-test steps (always active).

@@ -541,8 +541,13 @@ impl Ctx<'_> {
     fn r114_state_targets(&mut self) {
         for (_, positions) in &self.ir.states {
             for pos in positions {
-                let base = pos.target.split('.').next().unwrap_or("");
-                let Some(node) = self.ir.nodes.get(base) else {
+                // Resolve the full dotted target: board-qualified device
+                // positions (`MSB.CB_TIE = open`) name the device, not the
+                // board.
+                let Some((entity, _, _)) = self.ir.resolve_endpoint(&pos.target) else {
+                    continue;
+                };
+                let Some(node) = self.ir.nodes.get(&entity) else {
                     continue;
                 };
                 if node.kind != Some(NodeKind::Switch) {

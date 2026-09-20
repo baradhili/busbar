@@ -1,8 +1,8 @@
 # BusBar — ESLD toolchain workspace.
 #
-# The root package hosts the Cucumber acceptance harness (tests/cucumber.rs,
-# features/) per Design/esld-implementation.md §6. All implementation lives in
-# crates/*; see that crate list for the pipeline order.
+# The root package hosts the Cucumber acceptance harness (features/ holds
+# the Gherkin files and steps.rs) per Design/esld-implementation.md §6.
+# All implementation lives in crates/*; see that crate list for the order.
 
 [package]
 name = "busbar"
@@ -45,5 +45,5 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [[test]]
 name = "cucumber"
-path = "tests/cucumber.rs"
+path = "features/steps.rs"
 harness = false

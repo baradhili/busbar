@@ -67,6 +67,12 @@ impl Value {
 
 /// Metric prefixes recognized on units; `kW` -> 1e3, `mV` -> 1e-3, …
 fn normalize_unit(unit: &str) -> (f64, String) {
+    const BASES: &[&str] = &["V", "A", "W", "VA", "var", "Wh", "Hz", "ohm", "m", "s", ""];
+    // A complete base unit is never prefix-stripped — most importantly
+    // bare "m" (metres) must not become milli-nothing.
+    if BASES.contains(&unit) {
+        return (1.0, unit.to_string());
+    }
     let Some(first) = unit.chars().next() else {
         return (1.0, String::new());
     };
@@ -80,7 +86,6 @@ fn normalize_unit(unit: &str) -> (f64, String) {
         _ => (1.0, unit),
     };
     // Only treat the prefix as such for known base units.
-    const BASES: &[&str] = &["V", "A", "W", "VA", "var", "Wh", "Hz", "ohm", "m", "s", ""];
     if BASES.contains(&rest) {
         (mult, rest.to_string())
     } else {

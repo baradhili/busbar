@@ -8,6 +8,11 @@ Feature: Structural validation rules (R-1xx)
     When I check it
     Then there are no error diagnostics
 
+  Scenario: Multi-section tie board checks clean
+    Given the document "valid/two-section-tie.esld"
+    When I check it
+    Then there are no error diagnostics
+
   Scenario: Converted seed sample 2 checks clean
     Given the document "valid/sample2.esld"
     When I check it

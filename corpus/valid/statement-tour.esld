@@ -1,0 +1,99 @@
+profile "esld/1.0";
+note "Every statement kind parses.";
+include "quantities.esld";
+voltsys LV = {
+  nominal = 230V;
+  phases = 1ph;
+  frequency = 50Hz;
+  neutral = yes;
+  earthing = "TN-C-S";
+};
+voltsys MV = 11kV, 3ph, 50Hz;
+code "demo" {
+  max_final_circuit_a = 32A;
+};
+type my_relay : switch {
+  extends control_relay;
+  ports {
+    in : ac_in;
+    out : ac_out;
+    coil : signal;
+  }
+  params {
+    rating_a : quantity (A) = 16A;
+  }
+  requires {
+    rating_a <= 63A;
+  }
+};
+group BACKUP_LOADS = [LAMP_A, LAMP_B];
+grid GRID : grid {
+  vs = LV;
+  supply_a = 63A;
+};
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  bus A {
+    rating_a = 100A;
+  }
+  main_switch MSB : main_switch {
+    rating_a = 63A;
+  };
+  circuit LIGHTS {
+    bus = A;
+    phase = L1;
+    protection : rcbo {
+      rating_a = 10A;
+      curve = B;
+      rcd_ma = 30mA;
+    };
+    cable = {
+      csa = 1.5mm2;
+      cores = 3;
+      length = 18m;
+    };
+    loads = [LAMP_A, LAMP_B];
+  };
+};
+load LAMP_A : load {
+  kw = 0.06kW;
+};
+load LAMP_B : load {
+  kw = 0.06kW;
+};
+connect GRID.out -> MAIN.MSB.in;
+connect MAIN.MSB.out -> MAIN.bus;
+connect MAIN.LIGHTS.out -> MY_JUNCTION.a;
+junction MY_JUNCTION : junction {
+  rating_a = 63A;
+};
+state "normal" {
+  MSB = closed;
+};
+interlock "sane" {
+  require !(MSB = open);
+};
+zone "demo zone" {
+  members = [GRID, MAIN];
+};
+scenario "demo" {
+  use "normal";
+  set GRID.status = online;
+  expect energized (MAIN);
+  expect power_at (GRID.out) >= 0kW;
+  expect violation ("R-204") == false;
+};
+vendor "acme" {
+  type widget : load {
+    kw = 1kW;
+  };
+};
+layout {
+  rank = source_to_load;
+  flow = top_to_bottom;
+  MAIN {
+    orientation = horizontal;
+  }
+};
