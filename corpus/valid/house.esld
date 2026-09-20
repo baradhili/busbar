@@ -1,0 +1,364 @@
+profile "esld/1.0";
+
+voltsys LV = {
+  nominal   = 230V;
+  phases    = 1ph;
+  frequency = 50Hz;
+  neutral   = yes;
+  earthing  = "TN-C-S";
+};
+
+grid GRID : grid {
+  vs             = LV;
+  supply_a       = 100A;
+  fault_mva      = 10MVA;
+  export_allowed = yes;
+};
+
+// ---------------------------------------------------------------------------
+// Loads / sockets / sources / converters
+// ---------------------------------------------------------------------------
+
+socket SOCKET_OUTLET1  : socket { kw = 0.1kW; points = 1; name = "Bath 1"; }
+socket SOCKET_OUTLET2  : socket { kw = 0.1kW; points = 1; name = "toilet 1"; }
+socket SOCKET_OUTLET3  : socket { kw = 0.1kW; points = 1; name = "bath 2"; }
+socket SOCKET_OUTLET4  : socket { kw = 0.1kW; points = 1; name = "toilet 2"; }
+socket SOCKET_OUTLET5  : socket { kw = 0.1kW; points = 1; name = "bed 1"; }
+socket SOCKET_OUTLET6  : socket { kw = 0.1kW; points = 1; name = "bed 2"; }
+socket SOCKET_OUTLET7  : socket { kw = 0.1kW; points = 1; name = "bed 3"; }
+socket SOCKET_OUTLET8  : socket { kw = 0.1kW; points = 1; name = "hall"; }
+socket SOCKET_OUTLET9  : socket { kw = 0.1kW; points = 1; name = "Toilet 1"; }
+socket SOCKET_OUTLET10 : socket { kw = 0.1kW; points = 1; name = "Toilet 2"; }
+socket SOCKET_OUTLET11 : socket { kw = 0.1kW; points = 1; name = "HRV 1"; }
+socket SOCKET_OUTLET12 : socket { kw = 0.1kW; points = 1; name = "HRV 2"; }
+socket SOCKET_OUTLET13 : socket { kw = 0.1kW; points = 1; name = "HRV 3"; }
+socket SOCKET_OUTLET14 : socket { kw = 0.1kW; points = 1; name = "HRV 4"; }
+socket SOCKET_OUTLET15 : socket { kw = 0.1kW; points = 1; name = "HRV 5"; }
+socket SOCKET_OUTLET16 : socket { kw = 0.1kW; points = 1; name = "HRV 6"; }
+socket SOCKET_OUTLET17 : socket { kw = 0.1kW; points = 1; name = "HRV 7"; }
+socket SOCKET_OUTLET18 : socket { kw = 0.1kW; points = 1; name = "HRV 8"; }
+socket SOCKET_OUTLET19 : socket { kw = 0.1kW; points = 1; name = "Washer"; }
+socket SOCKET_OUTLET20 : socket { kw = 0.1kW; points = 1; name = "Dryer"; }
+socket SOCKET_OUTLET21 : socket { kw = 0.1kW; points = 1; name = "Laundry 1"; }
+socket SOCKET_OUTLET22 : socket { kw = 0.1kW; points = 1; name = "Laundry 2"; }
+socket SOCKET_OUTLET23 : socket { kw = 0.1kW; points = 1; name = "Dishwasher"; }
+socket SOCKET_OUTLET24 : socket { kw = 0.1kW; points = 1; name = "Lounge proj"; }
+socket SOCKET_OUTLET25 : socket { kw = 0.1kW; points = 1; name = "Lunge ent centre"; }
+socket SOCKET_OUTLET26 : socket { kw = 0.1kW; points = 1; name = "dining"; }
+socket SOCKET_OUTLET27 : socket { kw = 0.1kW; points = 1; name = "Door"; }
+socket SOCKET_OUTLET28 : socket { kw = 0.1kW; points = 1; name = "New dining"; }
+socket SOCKET_OUTLET29 : socket { kw = 0.1kW; points = 1; name = "Living"; }
+socket SOCKET_OUTLET30 : socket { kw = 0.1kW; points = 1; name = "TV"; }
+socket SOCKET_OUTLET31 : socket { kw = 0.1kW; points = 1; name = "Lounge wall 1"; }
+socket SOCKET_OUTLET32 : socket { kw = 0.1kW; points = 1; name = "Lounge wall 2"; }
+socket SOCKET_OUTLET33 : socket { kw = 0.1kW; points = 1; name = "uwave"; }
+socket SOCKET_OUTLET34 : socket { kw = 0.1kW; points = 1; name = "Carport"; }
+socket SOCKET_OUTLET35 : socket { kw = 0.1kW; points = 1; name = "kit extractor"; }
+socket SOCKET_OUTLET36 : socket { kw = 0.1kW; points = 1; name = "Stove ppt"; }
+socket SOCKET_OUTLET37 : socket { kw = 0.1kW; points = 1; name = "bench L"; }
+socket SOCKET_OUTLET38 : socket { kw = 0.1kW; points = 1; name = "bench R"; }
+socket SOCKET_OUTLET39 : socket { kw = 0.1kW; points = 1; name = "Clock area"; }
+socket SOCKET_OUTLET40 : socket { kw = 0.1kW; points = 1; name = "Bench ext L"; }
+socket SOCKET_OUTLET41 : socket { kw = 0.1kW; points = 1; name = "Bench ext R"; }
+
+load L1  : load { kw = 0.2kW; name = "Freezer"; }
+load L2  : load { kw = 0.05kW; name = "Router"; }
+load L3  : load { kw = 0.2kW; name = "Fridge"; }
+load L4  : load { kw = 1.0kW; name = "Septic Pump 1"; }
+load L5  : load { kw = 2.5kW; name = "AC3"; }
+load L6  : load { kw = 2.5kW; name = "AC2"; }
+load L7  : load { kw = 2.5kW; name = "AC1"; }
+load L8  : load { kw = 1.0kW; name = "Septic Pump 2"; }
+load L9  : load { kw = 1.0kW; name = "Septic-aero"; }
+load L11 : load { kw = 3.0kW; name = "Stove"; }
+
+evse EV_CHARGER1 : evse {
+  kw     = 7kW;
+  phases = 1;
+  mode   = "mode3";
+};
+
+pv_array PV1 : pv_array {
+  kw_peak = 5kW;
+};
+
+inverter INV1 : inverter {
+  kind           = hybrid;
+  kw             = 5kW;
+  island_capable = yes;
+};
+
+// ---------------------------------------------------------------------------
+// SHED main board
+// ---------------------------------------------------------------------------
+
+board SHED : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+
+  breaker QF1 : breaker {
+    rating_a    = 100A;
+    breaking_ka = 6kA;
+    technology  = miniature;
+    poles       = 1;
+  }
+}
+
+connect GRID.out -> SHED.QF1.in;
+
+// ---------------------------------------------------------------------------
+// HOUSE sub-board
+// ---------------------------------------------------------------------------
+
+board HOUSE : board {
+  vs = LV;
+  incomers = [SHED.QF1.out];
+  busbar_rating_a = 100A;
+
+  disconnector QS1 : disconnector {
+    rating_a = 100A;
+    poles    = 1;
+  }
+
+  bus B1 {
+    incomers = [QS1.out];
+    rating_a = 100A;
+  }
+
+  circuit KITCHEN_STOVE_DISH {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [SOCKET_OUTLET23, L11];
+  }
+
+  circuit LAUNDRY {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [SOCKET_OUTLET19, SOCKET_OUTLET20, SOCKET_OUTLET21, SOCKET_OUTLET22];
+  }
+
+  circuit FAN_LOOP {
+    bus = B1;
+    protection : rcbo { rating_a = 16A; curve = C; rcd_ma = 30mA; };
+    loads = [
+      SOCKET_OUTLET9, SOCKET_OUTLET10,
+      SOCKET_OUTLET11, SOCKET_OUTLET12, SOCKET_OUTLET13, SOCKET_OUTLET14,
+      SOCKET_OUTLET15, SOCKET_OUTLET16, SOCKET_OUTLET17, SOCKET_OUTLET18
+    ];
+  }
+
+  circuit STH_LOOP {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [
+      SOCKET_OUTLET1, SOCKET_OUTLET2, SOCKET_OUTLET3, SOCKET_OUTLET4,
+      SOCKET_OUTLET5, SOCKET_OUTLET6, SOCKET_OUTLET7, SOCKET_OUTLET8
+    ];
+  }
+
+  circuit HW_FEED {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+  }
+
+  circuit SEPTIC {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [L4, L8, L9];
+  }
+
+  circuit AC1 {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [L7];
+  }
+
+  circuit AC2 {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [L6];
+  }
+
+  circuit AC3 {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [L5];
+  }
+
+  circuit EV {
+    bus = B1;
+    protection : rcbo { rating_a = 32A; curve = C; rcd_ma = 30mA; };
+    loads = [EV_CHARGER1];
+  }
+
+  circuit PV_IN {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+  }
+
+  circuit LIGHTS_NTH {
+    bus = B1;
+    protection : rcbo { rating_a = 10A; curve = B; rcd_ma = 30mA; };
+  }
+
+  circuit LIGHTS_STH {
+    bus = B1;
+    protection : rcbo { rating_a = 10A; curve = B; rcd_ma = 30mA; };
+  }
+
+  circuit LIGHTS_EXT {
+    bus = B1;
+    protection : rcbo { rating_a = 10A; curve = B; rcd_ma = 30mA; };
+  }
+
+  circuit KITCHEN_LOOP {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [
+      SOCKET_OUTLET33, SOCKET_OUTLET35, SOCKET_OUTLET36,
+      SOCKET_OUTLET37, SOCKET_OUTLET38, SOCKET_OUTLET39,
+      SOCKET_OUTLET40, SOCKET_OUTLET41
+    ];
+  }
+
+  circuit NTH_LOOP {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [
+      SOCKET_OUTLET24, SOCKET_OUTLET25, SOCKET_OUTLET26, SOCKET_OUTLET27,
+      SOCKET_OUTLET28, SOCKET_OUTLET29, SOCKET_OUTLET30, SOCKET_OUTLET31,
+      SOCKET_OUTLET32, SOCKET_OUTLET34
+    ];
+  }
+
+  circuit HOUSE_ESSENTIAL {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+    loads = [L1, L2, L3];
+  }
+
+  circuit RETIC_FEED {
+    bus = B1;
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; };
+  }
+}
+
+connect SHED.QF1.out -> HOUSE.QS1.in;
+connect HOUSE.QS1.out -> HOUSE.B1;
+
+// PV inverter backfeed through the PV_IN circuit
+connect INV1.ac_out -> HOUSE.PV_IN.out;
+connect PV1.out    -> INV1.dc_in;
+
+// ---------------------------------------------------------------------------
+// HW sub-board
+// ---------------------------------------------------------------------------
+
+board HW : board {
+  vs = LV;
+  incomers = [HOUSE.HW_FEED.out];
+  busbar_rating_a = 32A;
+
+  disconnector QS2 : disconnector {
+    rating_a = 20A;
+    poles    = 1;
+  }
+
+  contactor CONTACTOR1 : contactor {
+    rating_a    = 20A;
+    utilization = "AC-1";
+  }
+
+  breaker QF2 : breaker {
+    rating_a    = 10A;
+    breaking_ka = 6kA;
+    technology  = miniature;
+    poles       = 1;
+  }
+
+  control_relay PLC1 : control_relay {
+    rating_a = 10A;
+  }
+
+  heating HEATER1 : heating {
+    kw   = 2kW;
+    name = "HW Booster";
+  }
+
+  load L10 : load {
+    kw   = 1kW;
+    name = "HW Pump";
+  }
+}
+
+connect HOUSE.HW_FEED.out -> HW.QS2.in;
+connect HW.QS2.out -> HW.bus;
+connect HW.bus -> HW.CONTACTOR1.in;
+connect HW.CONTACTOR1.out -> HW.HEATER1.in;
+connect HW.bus -> HW.QF2.in;
+connect HW.QF2.out -> HW.PLC1.in;
+connect HW.PLC1.out -> HW.L10.in;
+
+// ---------------------------------------------------------------------------
+// RETIC sub-board
+// ---------------------------------------------------------------------------
+
+board RETIC : board {
+  vs = LV;
+  incomers = [HOUSE.RETIC_FEED.out];
+  busbar_rating_a = 32A;
+
+  disconnector QS3 : disconnector {
+    rating_a = 20A;
+    poles    = 1;
+  }
+
+  contactor CONTACTOR2 : contactor {
+    rating_a    = 20A;
+    utilization = "AC-1";
+  }
+
+  breaker QF3 : breaker {
+    rating_a    = 10A;
+    breaking_ka = 6kA;
+    technology  = miniature;
+    poles       = 1;
+  }
+
+  control_relay PLC2 : control_relay {
+    rating_a = 10A;
+  }
+
+  contactor MOTOR_STARTER1 : contactor {
+    rating_a    = 10A;
+    utilization = "AC-3";
+  }
+
+  motor M1 : motor {
+    kw      = 1.5kW;
+    starter = none;
+  }
+}
+
+connect HOUSE.RETIC_FEED.out -> RETIC.QS3.in;
+connect RETIC.QS3.out -> RETIC.bus;
+connect RETIC.bus -> RETIC.CONTACTOR2.in;
+connect RETIC.CONTACTOR2.out -> RETIC.MOTOR_STARTER1.in;
+connect RETIC.MOTOR_STARTER1.out -> RETIC.M1.in;
+connect RETIC.bus -> RETIC.QF3.in;
+connect RETIC.QF3.out -> RETIC.PLC2.in;
+
+// ---------------------------------------------------------------------------
+// Optional layout hints derived from the JSON annotation boxes
+// ---------------------------------------------------------------------------
+
+layout {
+  rank = source_to_load;
+  flow = top_to_bottom;
+
+  SHED    { column = 0; }
+  HOUSE   { column = 1; }
+  HW      { column = 2; }
+  RETIC   { column = 3; }
+}
