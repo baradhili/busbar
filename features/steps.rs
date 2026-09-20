@@ -289,6 +289,17 @@ async fn render_fails_mentioning(world: &mut BusbarWorld, needle: String) {
 
 // -- CLI steps (features/cli.feature) -------------------------------------
 
+#[cucumber::given(regex = r#"^a scratch output path "([^"]+)"$"#)]
+async fn scratch_output_path(_world: &mut BusbarWorld, path: String) {
+    // Workspace-relative, suite-created, parent guaranteed to exist — and
+    // cleared first so a stale file can never satisfy an existence assert.
+    let full = std::path::PathBuf::from(ROOT).join(&path);
+    if let Some(parent) = full.parent() {
+        std::fs::create_dir_all(parent).expect("create scratch parent dir");
+    }
+    let _ = std::fs::remove_file(&full);
+}
+
 #[cucumber::when(regex = r"^I run `busbar(.*)`$")]
 async fn run_cli(world: &mut BusbarWorld, args: String) {
     let argv: Vec<&str> = args.split_whitespace().collect();

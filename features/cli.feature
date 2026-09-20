@@ -38,9 +38,10 @@ Feature: CLI behaviour
     Then the exit code is 0
 
   Scenario: Rendering writes an SVG
-    When I run `busbar render corpus/valid/minimal.esld -o /tmp/busbar-cli-min.svg`
+    Given a scratch output path "target/cli-out/minimal.svg"
+    When I run `busbar render corpus/valid/minimal.esld -o target/cli-out/minimal.svg`
     Then the exit code is 0
-    And the file "/tmp/busbar-cli-min.svg" exists
+    And the file "target/cli-out/minimal.svg" exists
 
   Scenario: ANSI registry fails cleanly until M8
     When I run `busbar render corpus/valid/minimal.esld --symbols ansi`
