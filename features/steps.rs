@@ -303,13 +303,23 @@ async fn scratch_output_path(_world: &mut BusbarWorld, path: String) {
 #[cucumber::when(regex = r"^I run `busbar(.*)`$")]
 async fn run_cli(world: &mut BusbarWorld, args: String) {
     let argv: Vec<&str> = args.split_whitespace().collect();
-    // `cargo run` so the harness never depends on a pre-built binary.
-    let output = std::process::Command::new("cargo")
+    // Prefer the prebuilt binary (CI builds it first) — nested `cargo run`
+    // inside `cargo test` contends for the build lock and flakes on
+    // Windows. Fall back to cargo only when the binary is missing.
+    let bin = std::path::PathBuf::from(ROOT).join("target/debug/busbar");
+    if !bin.is_file() {
+        let status = std::process::Command::new("cargo")
+            .current_dir(ROOT)
+            .args(["build", "-q", "-p", "busbar-cli"])
+            .status()
+            .expect("failed to spawn cargo build");
+        assert!(status.success(), "cargo build -p busbar-cli failed");
+    }
+    let output = std::process::Command::new(&bin)
         .current_dir(ROOT)
-        .args(["run", "-q", "-p", "busbar-cli", "--"])
         .args(&argv)
         .output()
-        .expect("failed to spawn cargo");
+        .expect("failed to spawn busbar");
     world.cli = Some((
         output.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&output.stdout).into_owned(),

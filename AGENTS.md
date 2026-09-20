@@ -61,6 +61,9 @@ define them in `features/steps.rs` and untag its scenarios.
 
 ## Conventions
 
+- **Feature branches only**: never commit directly to `main`; branch every
+  change from `main` (`feat/…`, `fix/…`, `test/…`, `build/…`) and merge
+  via PR once the gate is green.
 - **Conventional commits** (`docs:`, `build:`, `feat:`, `fix:`, `test:`),
   matching existing history.
 - **No `unsafe`** anywhere — workspace lints forbid it.
@@ -77,8 +80,12 @@ define them in `features/steps.rs` and untag its scenarios.
 - Diagnostics are values (`code`, `severity`, `span`), never panics or bare
   strings (implementation plan §4.4).
 - **CI is debug-profile and test-only on every branch** while in fast dev:
-  no `--release` builds, artifacts, or publishing — enforced by a policy
-  step in `.github/workflows/ci.yml`.
+  no `--release` builds, artifacts, or publishing — enforced by a guard
+  step in `.github/workflows/ci.yml`. Line endings are forced LF via
+  `.gitattributes` so `fmt --check` holds on Windows.
+- **Dependency currency is automated**: Renovate (`renovate.json`) opens
+  weekly grouped update PRs for crates and actions, plus lock-file
+  maintenance; major updates come as separate PRs.
 
 ## Before you commit
 
