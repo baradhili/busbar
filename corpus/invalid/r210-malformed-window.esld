@@ -1,0 +1,22 @@
+// R-210: window must be HH:MM..HH:MM with valid clock times.
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  circuit LIGHTS {
+    protection : mcb { rating_a = 10A; };
+    loads = [EVENING];
+  }
+}
+
+connect GRID.out -> MAIN.in;
+
+load EVENING : lighting {
+  kw     = 0.3kW;
+  window = "25:00..27:00";
+};

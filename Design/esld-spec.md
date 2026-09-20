@@ -591,7 +591,7 @@ The following types MUST be available without declaration. Implementations MAY a
 
 | Type | Kind | Ports | Key parameters |
 |---|---|---|---|
-| `load` | load | `in` | `kw`, `pf`, `duty`, `diversity`, `essential` |
+| `load` | load | `in` | `kw`, `pf`, `diversity`, `essential`, `on_time`, `period`, `window`, `seasons` |
 | `lighting` | load | `in` | `kw`, `points`, `control` |
 | `socket` | load | `in` | `kw`, `points`, `rcd_required` |
 | `appliance` | load | `in` | `kw`, `dedicated` |
@@ -602,6 +602,25 @@ The following types MUST be available without declaration. Implementations MAY a
 | `hvac` | load | `in` | `kw`, `phases`, `cop`, `compressor` |
 | `pool_pump` | load | `in` | `kw`, `phases` |
 | `evse` | load | `in` | `kw`, `phases`, `mode`, `v2x_capable` |
+
+**Intermittent load profiles.** Any load type (§8.8) may declare a
+temporal profile; a load with one is *intermittent*, otherwise
+*continuous*:
+
+- `on_time` / `period` — duty cycling, both durations with units `s`,
+  `min`, `h`, or `d`. "3 minutes per day" is `on_time = 3min;
+  period = 1d;`. `on_time` MUST be shorter than `period` (**R-209**).
+- `window = "HH:MM..HH:MM"` — daily active window; a list means any of
+  the windows applies. Windows MUST be valid clock times with start
+  before end (**R-210**); midnight-crossing windows are not expressible
+  in v1 (use two windows).
+- `seasons = [summer, autumn, winter, spring]` — restricts the profile
+  to those seasons (**R-210**); omitted means year-round.
+
+Average demand of an intermittent load is `kw × on_time/period`, active
+only within its windows and seasons. Maximum demand and coincidence of
+overlapping windows is solver territory (implementation plan M6); checks
+validate the profile shape only.
 
 ### 8.9 Containers
 
@@ -1027,6 +1046,8 @@ Rule IDs are stable. Implementations MUST report the ID and source span. Code-de
 | R-206 | Neutral connected where no neutral exists | error |
 | R-207 | Parallel or tie between different earthing schemes | error |
 | R-208 | Paralleled transformers with incompatible vector group or far-off impedance | warning |
+| R-209 | Load profile duration invalid (`on_time`/`period` not s/min/h/d, or `on_time` ≥ `period`) | error |
+| R-210 | Load profile `window` not `HH:MM..HH:MM` (start before end) or `seasons` outside summer/autumn/winter/spring | error |
 
 ### R-300 — Protection and rating
 

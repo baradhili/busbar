@@ -55,6 +55,7 @@ pub fn check(source: &str, base_dir: Option<&Path>) -> Result<Vec<Diagnostic>, S
     ctx.r206_neutral();
     ctx.r207_earthing_tie();
     ctx.r208_parallel_transformers();
+    ctx.r209_r210_load_profiles();
     ctx.diags
         .sort_by(|a, b| (&a.code, a.line).cmp(&(&b.code, b.line)));
     Ok(ctx.diags)
@@ -686,6 +687,163 @@ impl Ctx<'_> {
                     node.line,
                     format!("`{}` is unreachable from any source", node.tag),
                 );
+            }
+        }
+    }
+
+    /// Duration unit -> seconds (spec §8.8 intermittent load profiles).
+    fn duration_seconds(value: &busbar_syntax::ast::Value) -> Option<f64> {
+        let busbar_syntax::ast::Value::Quantity { number, unit } = value else {
+            return None;
+        };
+        let per: f64 = match unit.as_str() {
+            "s" => 1.0,
+            "min" => 60.0,
+            "h" => 3600.0,
+            "d" => 86400.0,
+            _ => return None,
+        };
+        number.parse::<f64>().ok().map(|n| n * per)
+    }
+
+    /// `HH:MM..HH:MM` with valid clock times; start before end (no
+    /// midnight crossing in v1).
+    fn valid_window(text: &str) -> bool {
+        let Some((start, end)) = text.split_once("..") else {
+            return false;
+        };
+        let clock = |t: &str| -> Option<u32> {
+            let (h, m) = t.split_once(':')?;
+            if h.len() != 2 || m.len() != 2 {
+                return None;
+            }
+            let h: u32 = h.parse().ok()?;
+            let m: u32 = m.parse().ok()?;
+            (h < 24 && m < 60).then_some(h * 60 + m)
+        };
+        match (clock(start), clock(end)) {
+            (Some(a), Some(b)) => a < b,
+            _ => false,
+        }
+    }
+
+    const SEASONS: [&'static str; 4] = ["summer", "autumn", "winter", "spring"];
+
+    /// Source-text rendering of a value for diagnostics.
+    fn value_text(value: &busbar_syntax::ast::Value) -> String {
+        use busbar_syntax::ast::Value;
+        match value {
+            Value::Quantity { number, unit } => format!("{number}{unit}"),
+            Value::Number(n) => n.clone(),
+            Value::Str(s) => format!("\"{s}\""),
+            Value::Ident(i) => i.clone(),
+            Value::Bool(b) => b.to_string(),
+            _ => "(list)".to_owned(),
+        }
+    }
+
+    /// R-209/R-210: intermittent load profiles (spec §8.8).
+    fn r209_r210_load_profiles(&mut self) {
+        use busbar_syntax::ast::Value;
+        for node in self.ir.nodes.values() {
+            if node.kind != Some(NodeKind::Load) {
+                continue;
+            }
+            let prop = |name: &str| {
+                node.props
+                    .iter()
+                    .find(|p| p.name == name)
+                    .map(|p| &p.value.value)
+            };
+            // R-209: durations.
+            let on = prop("on_time").and_then(Self::duration_seconds);
+            let period = prop("period").and_then(Self::duration_seconds);
+            if let Some(p) = node.props.iter().find(|p| p.name == "on_time") {
+                if on.is_none() {
+                    self.error(
+                        "R-209",
+                        node.line,
+                        format!(
+                            "`on_time` of `{}` must be a duration (s/min/h/d), got {}",
+                            node.tag,
+                            Self::value_text(&p.value.value)
+                        ),
+                    );
+                }
+            }
+            if let Some(p) = node.props.iter().find(|p| p.name == "period") {
+                if period.is_none() {
+                    self.error(
+                        "R-209",
+                        node.line,
+                        format!(
+                            "`period` of `{}` must be a duration (s/min/h/d), got {}",
+                            node.tag,
+                            Self::value_text(&p.value.value)
+                        ),
+                    );
+                }
+            }
+            if let (Some(on), Some(period)) = (on, period) {
+                if on >= period {
+                    self.error(
+                        "R-209",
+                        node.line,
+                        format!("`on_time` of `{}` must be shorter than `period`", node.tag),
+                    );
+                }
+            }
+            // R-210: windows and seasons.
+            if let Some(w) = prop("window") {
+                let windows: Vec<&str> = match w {
+                    Value::Str(s) => vec![s.as_str()],
+                    Value::List(items) => items
+                        .iter()
+                        .map(|i| match &i.value {
+                            Value::Str(s) => Some(s.as_str()),
+                            _ => None,
+                        })
+                        .collect::<Option<_>>()
+                        .unwrap_or_default(),
+                    _ => Vec::new(),
+                };
+                if windows.is_empty() || windows.iter().any(|t| !Self::valid_window(t)) {
+                    self.error(
+                        "R-210",
+                        node.line,
+                        format!(
+                            "`window` of `{}` must be \"HH:MM..HH:MM\" (start before end)",
+                            node.tag
+                        ),
+                    );
+                }
+            }
+            if let Some(s) = prop("seasons") {
+                let seasons: Vec<String> = match s {
+                    Value::Ident(i) => vec![i.clone()],
+                    Value::List(items) => items
+                        .iter()
+                        .map(|i| match &i.value {
+                            Value::Ident(v) => Some(v.clone()),
+                            _ => None,
+                        })
+                        .collect::<Option<_>>()
+                        .unwrap_or_default(),
+                    _ => Vec::new(),
+                };
+                if seasons.is_empty()
+                    || seasons.iter().any(|s| !Self::SEASONS.contains(&s.as_str()))
+                {
+                    self.error(
+                        "R-210",
+                        node.line,
+                        format!(
+                            "`seasons` of `{}` must be from {}",
+                            node.tag,
+                            Self::SEASONS.join("/")
+                        ),
+                    );
+                }
             }
         }
     }

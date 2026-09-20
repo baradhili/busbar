@@ -1,0 +1,22 @@
+// R-210: seasons must be summer/autumn/winter/spring.
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  circuit POOL {
+    protection : mcb { rating_a = 16A; };
+    loads = [POOL_PUMP];
+  }
+}
+
+connect GRID.out -> MAIN.in;
+
+load POOL_PUMP : pool_pump {
+  kw      = 1.1kW;
+  seasons = [wet, dry];
+};

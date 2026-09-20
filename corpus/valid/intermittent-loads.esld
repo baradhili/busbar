@@ -1,0 +1,75 @@
+// Intermittent load profiles (spec §8.8): duty-cycled loads
+// (`on_time`/`period`), scheduled windows, and seasonal restrictions.
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+
+  circuit SEPTIC {
+    protection : mcb { rating_a = 20A; };
+    loads = [PUMP, AERATOR];
+  }
+
+  circuit HOT_WATER {
+    protection : rcbo { rating_a = 20A; rcd_ma = 30mA; };
+    loads = [BOOSTER];
+  }
+
+  circuit POOL {
+    protection : mcb { rating_a = 16A; };
+    loads = [POOL_PUMP];
+  }
+
+  circuit EVENING {
+    protection : mcb { rating_a = 10A; };
+    loads = [LOUNGE_LIGHTS, DRIVE_LIGHTS];
+  }
+}
+
+connect GRID.out -> MAIN.in;
+
+// "3 minutes per day": a 90-second pump, twice daily.
+load PUMP : load {
+  kw      = 1kW;
+  name    = "Septic Pump 1";
+  on_time = 90s;
+  period  = 12h;
+}
+
+// Runs only during winter evenings (17:00-21:00).
+load BOOSTER : heating {
+  kw      = 2kW;
+  name    = "HW Booster";
+  window  = "17:00..21:00";
+  seasons = [winter];
+}
+
+load AERATOR : load {
+  kw      = 0.1kW;
+  on_time = 30min;
+  period  = 1d;
+}
+
+load POOL_PUMP : pool_pump {
+  kw      = 1.1kW;
+  on_time = 4h;
+  period  = 1d;
+  seasons = [summer, spring, autumn];
+}
+
+// Two windows: early and late (off-peak tariffs).
+load LOUNGE_LIGHTS : lighting {
+  kw     = 0.3kW;
+  window = ["06:00..08:00", "18:00..23:00"];
+}
+
+load DRIVE_LIGHTS : lighting {
+  kw     = 0.15kW;
+  window = "18:00..23:00";
+  seasons = [winter, autumn, spring, summer];
+}
