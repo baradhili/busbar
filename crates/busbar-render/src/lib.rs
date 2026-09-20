@@ -60,7 +60,7 @@ pub fn render_ir(ir: &Ir) -> String {
     for route in &layout.routes {
         let n = route.points.len();
         let (prev_first, prev_last) = if n >= 2 {
-            (Some(route.points[0]), Some(route.points[n - 2]))
+            (Some(route.points[1]), Some(route.points[n - 2]))
         } else {
             (None, None)
         };
