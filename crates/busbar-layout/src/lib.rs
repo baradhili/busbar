@@ -217,6 +217,11 @@ pub fn build(ir: &Ir) -> Layout {
         }
     }
 
+    // Boards whose incomer column exists (own chain or foreign sub-mains)
+    // — their feed lands on the column, so they hang column-aligned.
+    let mut has_incomer_column: std::collections::BTreeSet<String> =
+        std::collections::BTreeSet::new();
+
     // -- Board internals: bars + feeder bands. --------------------------------
     let mut members: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for board in ir.boards.values() {
@@ -307,6 +312,7 @@ pub fn build(ir: &Ir) -> Layout {
         // the chain; the tag breaks ties.
         let mut y = BOARD_PAD + LABEL_STRIP;
         if !upstream_devs.is_empty() {
+            has_incomer_column.insert(board.tag.clone());
             let mut ordered = upstream_devs;
             ordered.sort_by_key(|n| {
                 let hops = directed_hops_to_section(ir, &n.tag, board).unwrap_or(u32::MAX / 2);
@@ -533,14 +539,29 @@ pub fn build(ir: &Ir) -> Layout {
     // child's rank so its row is strictly below the parent's; the
     // anchor's x is read from its placed glyph when the child's row is
     // packed.
-    let mut feeder_of: BTreeMap<String, (String, String)> = BTreeMap::new();
+    // board -> (owner, feeder, self_placed): a self-placed feeder (a
+    // sub-main breaker rendered inside the FED board's column) has no
+    // global position until the fed board lands, so it cannot anchor.
+    let mut feeder_of: BTreeMap<String, (String, String, bool)> = BTreeMap::new();
     for board in ir.boards.keys() {
         let mut candidates: Vec<(String, String)> = Vec::new();
         for edge in &ir.edges {
             let Some((to_entity, _, _)) = ir.resolve_endpoint(&edge.to) else {
                 continue;
             };
-            if to_entity != *board {
+            // The feed may land on the board port, a section, a circuit
+            // or a member device (`-> HW_SUB.QS2.in`) — all feed the
+            // board equally.
+            let to_owner = if &to_entity == board {
+                Some(board.clone())
+            } else {
+                ir.nodes
+                    .get(&to_entity)
+                    .and_then(|n| n.parent.clone())
+                    .or_else(|| ir.sections.get(&to_entity).map(|s| s.board.clone()))
+                    .or_else(|| ir.circuits.get(&to_entity).map(|c| c.board.clone()))
+            };
+            if to_owner.as_deref() != Some(board.as_str()) {
                 continue;
             }
             let Some((from_entity, _, Some(owner))) = ir.resolve_endpoint(&edge.from) else {
@@ -558,7 +579,10 @@ pub fn build(ir: &Ir) -> Layout {
                 .saturating_add(1);
             let rank = ranks.get_mut(board.as_str()).expect("board ranked above");
             *rank = (*rank).max(floor);
-            feeder_of.insert(board.clone(), (owner, feeder));
+            let self_placed = foreign_incomers
+                .get(board.as_str())
+                .is_some_and(|tags| tags.contains(&feeder));
+            feeder_of.insert(board.clone(), (owner, feeder, self_placed));
         }
     }
 
@@ -577,7 +601,7 @@ pub fn build(ir: &Ir) -> Layout {
         let mut depth: BTreeMap<&str, u32> = unranked.iter().map(|b| (b.as_str(), 0)).collect();
         for _ in 0..unranked.len() {
             for b in &unranked {
-                let Some((owner, _)) = feeder_of.get(*b) else {
+                let Some((owner, _, _)) = feeder_of.get(*b) else {
                     continue;
                 };
                 let parent = depth.get(owner.as_str()).copied().unwrap_or(0);
@@ -591,6 +615,49 @@ pub fn build(ir: &Ir) -> Layout {
         for b in &unranked {
             let d = depth[b.as_str()];
             ranks.insert((*b).clone(), u32::MAX - (max_depth - d));
+        }
+    }
+
+    // Peer bonds (earth/neutral ties) belong BESIDE the thing they bond:
+    // a node whose every edge is a peer edge joins its partner's row
+    // instead of a distant rank row, so the dashed bond stays short and
+    // never crosses the drawing (todo: feeds must not pass through
+    // boards).
+    for node in ir.nodes.values() {
+        if node.parent.is_some() {
+            continue;
+        }
+        let mut peer_rank: Option<u32> = Some(u32::MAX);
+        let mut powered = false;
+        for e in &ir.edges {
+            if powered {
+                break;
+            }
+            for (mine, other) in [
+                (e.from.as_str(), e.to.as_str()),
+                (e.to.as_str(), e.from.as_str()),
+            ] {
+                let Some((entity, _, _)) = ir.resolve_endpoint(mine) else {
+                    continue;
+                };
+                if entity != node.tag {
+                    continue;
+                }
+                if e.arrow != busbar_syntax::ast::Arrow::Peer {
+                    powered = true; // a powered edge — rank rules apply
+                    peer_rank = None;
+                    break;
+                }
+                let Some((other_e, _, _)) = ir.resolve_endpoint(other) else {
+                    continue;
+                };
+                if let Some(r) = ranks.get(&other_e) {
+                    peer_rank = Some(peer_rank.unwrap_or(u32::MAX).min(*r));
+                }
+            }
+        }
+        if let Some(r) = peer_rank.filter(|r| *r != u32::MAX) {
+            ranks.insert(node.tag.clone(), r);
         }
     }
 
@@ -621,7 +688,8 @@ pub fn build(ir: &Ir) -> Layout {
         let desired_x = |tag: &String| -> f64 {
             feeder_of
                 .get(tag)
-                .and_then(|(_, feeder)| layout.places.get(feeder))
+                .filter(|(_, _, self_placed)| !self_placed)
+                .and_then(|(_, feeder, _)| layout.places.get(feeder))
                 .map(|p| p.center().0)
                 .unwrap_or(f64::MAX)
         };
@@ -632,101 +700,75 @@ pub fn build(ir: &Ir) -> Layout {
                 .then_with(|| desired_x(a).total_cmp(&desired_x(b)))
                 .then_with(|| a.cmp(b))
         });
-        // Feeder-centred lanes (guidance §2.5): an anchored board sits
-        // centred under its feeder in the first lane with room; when
-        // feeders crowd (two wide sub-boards under adjacent feeder
-        // columns), the later board opens a lower lane of the same rank
-        // row instead of drifting sideways off its feeder. Only the
-        // canvas margin can still clamp the centre — geometry, not
-        // policy. Flow entities (no feeder) always use the first lane.
-        struct LaneSlot {
-            tag: String,
-            x: f64,
-            w: f64,
-            h: f64,
-        }
-        let mut lanes: Vec<(f64, Vec<LaneSlot>)> = vec![(MARGIN, Vec::new())];
+        // Anchored-or-jostled placement (guidance §2.5, per review):
+        // a fed board sits as close as it can BELOW its feeder column —
+        // at the anchor when the row is free there, jostled right (never
+        // overlapping) when an earlier board occupies the spot. Flow
+        // entities follow in the same row.
+        let mut cur_x = MARGIN;
         for tag in &tags {
             let (w, h) = layout.boards.get(tag).copied().unwrap_or((CELL, CELL));
-            let desired = feeder_of
-                .get(tag)
-                .and_then(|(_, feeder)| layout.places.get(feeder))
-                .map(|p| (p.center().0 - w / 2.0).max(MARGIN));
-            match desired {
-                Some(x) => {
-                    if let Some((cur_x, slots)) = lanes.iter_mut().find(|(cx, _)| *cx <= x) {
-                        slots.push(LaneSlot {
-                            tag: tag.clone(),
-                            x,
-                            w,
-                            h,
-                        });
-                        *cur_x = x + w + COL_GAP;
+            let mut x = cur_x;
+            if let Some((_, feeder, false)) = feeder_of.get(tag) {
+                if let Some(p) = layout.places.get(feeder) {
+                    // Column-aligned when the board has an incomer
+                    // column (the feed drops onto the incomer device),
+                    // else frame-centred under the tap.
+                    let anchor = if has_incomer_column.contains(tag.as_str()) {
+                        p.center().0 - BOARD_PAD - CELL / 2.0
                     } else {
-                        lanes.push((
-                            x + w + COL_GAP,
-                            vec![LaneSlot {
-                                tag: tag.clone(),
-                                x,
-                                w,
-                                h,
-                            }],
-                        ));
-                    }
-                }
-                None => {
-                    let (cur_x, slots) = &mut lanes[0];
-                    let x = *cur_x;
-                    slots.push(LaneSlot {
-                        tag: tag.clone(),
-                        x,
-                        w,
-                        h,
-                    });
-                    *cur_x = x + w + COL_GAP;
+                        p.center().0 - w / 2.0
+                    };
+                    x = x.max(anchor.max(MARGIN));
                 }
             }
-        }
-        for (_, slots) in &lanes {
-            let lane_h = slots
-                .iter()
-                .map(|s| s.h)
-                .chain(std::iter::once(CELL))
-                .fold(0.0f64, f64::max);
-            for slot in slots {
-                let node = ir.nodes.get(&slot.tag);
-                let member_list = members.get(&slot.tag).cloned().unwrap_or_default();
-                offset_group(&mut layout, &member_list, slot.x, cur_y);
-                layout.places.insert(
-                    slot.tag.clone(),
-                    Place {
-                        x: slot.x,
-                        y: cur_y,
-                        w: slot.w,
-                        h: slot.h,
-                        label: slot.tag.clone(),
-                        glyph: node
-                            .map(|n| glyph_for(&n.type_name, n.kind))
-                            .unwrap_or(Glyph::Generic),
-                        // Boards carry their voltage system in the label
-                        // strip (guidance §4.5): "230V 1ph 50Hz".
-                        note: if layout.boards.contains_key(&slot.tag) {
-                            voltsys_note(ir, &slot.tag)
-                        } else {
-                            node.and_then(|n| rating_note(&n.props))
-                        },
+            let node = ir.nodes.get(tag);
+            let member_list = members.get(tag).cloned().unwrap_or_default();
+            offset_group(&mut layout, &member_list, x, cur_y);
+            layout.places.insert(
+                tag.clone(),
+                Place {
+                    x,
+                    y: cur_y,
+                    w,
+                    h,
+                    label: tag.clone(),
+                    glyph: node
+                        .map(|n| glyph_for(&n.type_name, n.kind))
+                        .unwrap_or(Glyph::Generic),
+                    // Boards carry their voltage system in the label
+                    // strip (guidance §4.5): "230V 1ph 50Hz".
+                    note: if layout.boards.contains_key(tag) {
+                        voltsys_note(ir, tag)
+                    } else {
+                        node.and_then(|n| rating_note(&n.props))
                     },
-                );
-                max_right = max_right.max(slot.x + slot.w);
-            }
-            cur_y += lane_h + ROW_GAP;
+                },
+            );
+            cur_x = x + w + COL_GAP;
+            max_right = max_right.max(cur_x - COL_GAP);
         }
+        let row_h = tags
+            .iter()
+            .filter_map(|t| layout.boards.get(t).map(|(_, h)| *h))
+            .chain(std::iter::once(CELL))
+            .fold(0.0f64, f64::max);
+        cur_y += row_h + ROW_GAP;
     }
 
     layout.width = max_right + MARGIN;
     layout.height = cur_y - ROW_GAP + MARGIN;
 
-    // -- Routes: center-to-center elbows, deterministic edge order. ------------
+    // -- Routes: deterministic edge order. --------------------------------------
+    // Reverse member map for channel routing: every placed tag -> its
+    // board (boards own their frames).
+    let mut members_of: BTreeMap<&str, &str> = BTreeMap::new();
+    for (board_tag, member_list) in &members {
+        members_of.insert(board_tag.as_str(), board_tag.as_str());
+        for t in member_list {
+            members_of.insert(t.as_str(), board_tag.as_str());
+        }
+    }
     for edge in &ir.edges {
         let (Some((a, _, _)), Some((b, _, _))) = (
             ir.resolve_endpoint(&edge.from),
@@ -747,9 +789,70 @@ pub fn build(ir: &Ir) -> Layout {
         // bottom and lands on the target's top.
         let (x1, y1) = terminal(pa, down);
         let (x2, y2) = terminal(pb, !down);
-        let mx = (x1 + x2) / 2.0;
+        // A busbar tap is perpendicular and ON the bar (guidance
+        // §2.2/§3.1): the wire meets it vertically, from directly above
+        // or below the thing it feeds when that column crosses the bar,
+        // else above the nearest point of the bar — never running along
+        // it, never off its end.
+        let clamp_to = |p: &Place, x: f64| x.clamp(p.x, p.x + p.w);
+        // Same-band peers (an electrode beside its board) connect via
+        // their SIDE terminals with a horizontal elbow — the bond exits
+        // the frame edge instead of diving through the drawing. Only
+        // when their vertical extents overlap: a wide busbar's centre
+        // sits far from its tap, which must not read as "horizontal".
+        let horizontal = pa.glyph != Glyph::Section && pb.glyph != Glyph::Section && {
+            let (acx, acy) = pa.center();
+            let (bcx, bcy) = pb.center();
+            (bcy - acy).abs() < (pa.h + pb.h) / 2.0 + 1.0 && (bcx - acx).abs() > (bcy - acy).abs()
+        };
+        let (x1, x2) = match (pa.glyph, pb.glyph) {
+            (Glyph::Section, _) => {
+                let t = clamp_to(pa, x2);
+                (t, x2)
+            }
+            (_, Glyph::Section) => {
+                let t = clamp_to(pb, x1);
+                (x1, t)
+            }
+            _ => (x1, x2),
+        };
+        // Vertical—horizontal—vertical: both ends are approached along
+        // the terminals' axis, so bus taps and cell chains read as
+        // straight drops wherever the columns align. A feed between two
+        // boards runs its horizontal in the clear channel BETWEEN the
+        // frames — never through a board.
+        let board_of = |t: &str| -> Option<&str> { members_of.get(t).copied() };
+        if horizontal {
+            let right = pb.center().0 >= pa.center().0;
+            let side = |p: &Place, r: bool| {
+                let cy = p.center().1;
+                if r { (p.x + p.w, cy) } else { (p.x, cy) }
+            };
+            let (x1, y1) = side(pa, right);
+            let (x2, y2) = side(pb, !right);
+            let xm = (x1 + x2) / 2.0;
+            layout.routes.push(Route {
+                points: vec![(x1, y1), (xm, y1), (xm, y2), (x2, y2)],
+                dashed: edge.arrow == busbar_syntax::ast::Arrow::Peer,
+                from_tag: a,
+                to_tag: b,
+            });
+            continue;
+        }
+        let ym = match (board_of(&a), board_of(&b)) {
+            (Some(ba), Some(bb)) if ba != bb => {
+                let frame = |t: &str| layout.places.get(t).map(|p| (p.y, p.y + p.h));
+                let (upper, lower) = if y1 < y2 { (ba, bb) } else { (bb, ba) };
+                let channel = match (frame(upper), frame(lower)) {
+                    (Some((_, ub)), Some((lt, _))) => (ub + lt) / 2.0,
+                    _ => (y1 + y2) / 2.0,
+                };
+                channel.clamp(y1.min(y2), y1.max(y2))
+            }
+            _ => (y1 + y2) / 2.0,
+        };
         layout.routes.push(Route {
-            points: vec![(x1, y1), (mx, y1), (mx, y2), (x2, y2)],
+            points: vec![(x1, y1), (x1, ym), (x2, ym), (x2, y2)],
             dashed: edge.arrow == busbar_syntax::ast::Arrow::Peer,
             from_tag: a,
             to_tag: b,
@@ -770,6 +873,69 @@ pub fn build(ir: &Ir) -> Layout {
                 endpoints.push((i, false, p, route.to_tag.clone()));
             }
         }
+        // Shared endpoints branch from one trunk rail (guidance §2.2):
+        // every route leaving (or arriving at) the same terminal shares
+        // the first member's mid-y, so the group draws as a single
+        // horizontal rail with perpendicular drops instead of crossing
+        // fans. Deterministic: groups keyed by (side, tag, point),
+        // members in route order.
+        fn key(is_start: bool, tag: &str, p: (f64, f64)) -> (bool, String, (u64, u64)) {
+            (is_start, tag.to_owned(), (p.0.to_bits(), p.1.to_bits()))
+        }
+        // The rail hugs the shared terminal (8px out along the wires'
+        // direction): every branch leaves perpendicular from one line
+        // right at the source (or arrives into one line right at the
+        // target), so the group's own drops never cross each other or
+        // neighbouring columns.
+        // Only terminals shared by two or more wires are junctions worth
+        // a rail; a singleton keeps its channel/midpoint shape (hugging
+        // it would drag inter-board feeds through foreign frames).
+        let mut rail_y: BTreeMap<(bool, String, (u64, u64)), f64> = BTreeMap::new();
+        let mut rail_n: BTreeMap<(bool, String, (u64, u64)), usize> = BTreeMap::new();
+        for route in &layout.routes {
+            if route.points[0].0 != route.points[1].0 {
+                continue; // side-form route — no vertical rail
+            }
+            let going_down = route.points[3].1 >= route.points[0].1;
+            let start_rail = if going_down {
+                route.points[0].1 + 8.0
+            } else {
+                route.points[0].1 - 8.0
+            };
+            let end_rail = if going_down {
+                route.points[3].1 - 8.0
+            } else {
+                route.points[3].1 + 8.0
+            };
+            let ks = key(true, &route.from_tag, route.points[0]);
+            let ke = key(false, &route.to_tag, route.points[3]);
+            rail_y.entry(ks.clone()).or_insert(start_rail);
+            rail_n.entry(ks).and_modify(|n| *n += 1).or_insert(1);
+            rail_y.entry(ke.clone()).or_insert(end_rail);
+            rail_n.entry(ke).and_modify(|n| *n += 1).or_insert(1);
+        }
+        for route in &mut layout.routes {
+            if route.points[0].0 != route.points[1].0 {
+                continue; // side-form route — no vertical rail
+            }
+            // One rail per route: the departure group wins when both
+            // terminals are shared (its members counted first).
+            for (is_start, tag, end, elbow) in [
+                (true, route.from_tag.clone(), 0, 1),
+                (false, route.to_tag.clone(), 3, 2),
+            ] {
+                let k = key(is_start, &tag, route.points[end]);
+                if rail_n.get(&k).is_some_and(|n| *n >= 2) {
+                    if let Some(&yr) = rail_y.get(&k) {
+                        route.points[1].1 = yr;
+                        route.points[2].1 = yr;
+                        route.points[elbow].0 = route.points[end].0;
+                    }
+                    break;
+                }
+            }
+        }
+
         let mut handled = std::collections::BTreeSet::new();
         for i in 0..endpoints.len() {
             if handled.contains(&i) {
@@ -784,8 +950,16 @@ pub fn build(ir: &Ir) -> Layout {
                 if ia == ib || ta != tb || !(*sa && !*sb) || pa != pb {
                     continue;
                 }
+                let vertical_a = layout.routes[*ia].points[0].0 == layout.routes[*ia].points[1].0;
                 layout.routes[*ia].points[0].0 += 10.0;
+                if vertical_a {
+                    layout.routes[*ia].points[1].0 += 10.0;
+                }
+                let vertical_b = layout.routes[*ib].points[3].0 == layout.routes[*ib].points[2].0;
                 layout.routes[*ib].points[3].0 -= 10.0;
+                if vertical_b {
+                    layout.routes[*ib].points[2].0 -= 10.0;
+                }
                 handled.insert(i);
                 handled.insert(j);
                 break;

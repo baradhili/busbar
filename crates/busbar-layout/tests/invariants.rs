@@ -8,6 +8,8 @@ use std::path::PathBuf;
 
 use busbar_layout::{FEEDER_W, Glyph, Layout, Place};
 
+const COL_EPS: f64 = 1.0;
+
 fn corpus() -> Vec<PathBuf> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus/valid");
     let mut files: Vec<PathBuf> = std::fs::read_dir(root)
@@ -151,22 +153,44 @@ fn routes_land_on_their_places() {
             // layout does — wrapped sub-columns can tie centres while
             // the snapped endpoints invert.
             let down = pb.center().1 >= pa.center().1;
-            for (point, place, lower) in [(first, pa, down), (last, pb, !down)] {
+            for (point, place, lower, tag) in [
+                (first, pa, down, &route.from_tag),
+                (last, pb, !down, &route.to_tag),
+            ] {
                 let expected = busbar_layout::terminal(place, lower);
-                assert_eq!(
-                    point.1, expected.1,
-                    "{name}: route end y is not a terminal of `{}`",
-                    "?"
-                );
-                // On-centreline, or the ±10 terminal-strip relief seat
-                // when an arrival and a departure share a terminal.
-                assert!(
-                    (point.0 - expected.0).abs() <= 10.5,
-                    "{name}: route end x {:.1} off the terminal strip of `{}` ({:.1})",
-                    point.0,
-                    "?",
-                    expected.0
-                );
+                let (_cx, cy) = place.center();
+                let side_form = ((point.0 - place.x).abs() < 0.5
+                    || (point.0 - (place.x + place.w)).abs() < 0.5)
+                    && (point.1 - cy).abs() < 0.5;
+                if !side_form {
+                    assert_eq!(
+                        point.1, expected.1,
+                        "{name}: route end y is not a terminal of `{tag}`"
+                    );
+                }
+                if side_form {
+                    // Side-form endpoints are at a side edge by
+                    // construction; nothing more to check.
+                } else if place.glyph == Glyph::Section {
+                    // A busbar tap is perpendicular: same y as the bar
+                    // edge, x free anywhere along the bar.
+                    assert!(
+                        point.0 >= place.x - 0.5 && point.0 <= place.x + place.w + 0.5,
+                        "{name}: tap x {:.1} off the bar ({:.1}..{:.1})",
+                        point.0,
+                        place.x,
+                        place.x + place.w
+                    );
+                } else {
+                    // On-centreline, or the ±10 terminal-strip relief seat
+                    // when an arrival and a departure share a terminal.
+                    assert!(
+                        (point.0 - expected.0).abs() <= 10.5,
+                        "{name}: route end x {:.1} off the terminal strip ({:.1})",
+                        point.0,
+                        expected.0
+                    );
+                }
             }
         }
     }
@@ -361,11 +385,11 @@ connect MAIN.FEED_A.out -> SUB_A.in;
     );
 }
 
-/// §2.5 under crowding: two wide sub-boards fed by adjacent feeder
-/// columns cannot share a lane, so the second opens a lower lane — and
-/// both stay centred on their own feeder (no sideways drift).
+/// §2.5 under crowding: a fed board sits as close as it can below its
+/// feeder column, jostling right (never overlapping) when an earlier
+/// board occupies the spot.
 #[test]
-fn crowded_fed_boards_lane_instead_of_drifting() {
+fn crowded_fed_boards_jostle_without_overlapping() {
     let src = r#"
 profile "esld/1.0";
 voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
@@ -399,24 +423,23 @@ connect MAIN.FEED_B.out -> SUB_B.in;
     let ir = busbar_ir::Ir::build(&doc).expect("ir");
     let layout = busbar_layout::build(&ir);
 
+    let a = layout.places.get("SUB_A").unwrap();
+    let b = layout.places.get("SUB_B").unwrap();
+    assert!(
+        b.x >= a.x + a.w - 0.5 || a.x >= b.x + b.w - 0.5 || b.y >= a.y + a.h || a.y >= b.y + b.h,
+        "crowded sub-boards must not overlap"
+    );
     for (sub, feeder) in [("SUB_A", "MAIN.FEED_A"), ("SUB_B", "MAIN.FEED_B")] {
         let s = layout.places.get(sub).expect("sub placed");
         let f = layout.places.get(feeder).expect("feeder placed");
         let (scx, _) = s.center();
         let (fcx, _) = f.center();
+        // As close as it can be: within a jostle of one board width.
         assert!(
-            (scx - fcx).abs() < 0.5,
-            "{sub} centre {:.1} must stay aligned with {feeder} at {:.1}",
-            scx,
-            fcx
+            (scx - fcx).abs() <= s.w + COL_EPS,
+            "{sub} centre {scx:.1} drifted too far from {feeder} at {fcx:.1}"
         );
     }
-    let a = layout.places.get("SUB_A").unwrap();
-    let b = layout.places.get("SUB_B").unwrap();
-    assert!(
-        b.y == a.y || b.y >= a.y + a.h || a.y >= b.y + b.h,
-        "crowded sub-boards must not overlap: SUB_A {a:?} vs SUB_B {b:?}"
-    );
 }
 
 /// §2.5 also holds for clusters no source can reach (orphan sub-boards,
