@@ -60,11 +60,11 @@ const EARTH: &str = r##"<line x1="-10" y1="0" x2="10" y2="0"/><line x1="0" y1="-
 
 const RELAY_COIL: &str = r##"<rect x="-20" y="-10" width="40" height="20" rx="0" ry="0"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/>"##;
 
-const CT: &str = r##"<g transform=\"translate(30 30)\"><line x1="-30" y1="-60" x2="-30" y2="0"/><line x1="-20" y1="-30" x2="10" y2="-30"/><ellipse cx="-30" cy="-30" rx="10" ry="10"/><line x1="-10" y1="-20" x2="0" y2="-20"/><line x1="-5" y1="-20" x2="5" y2="-20"/></g>"##;
+const CT: &str = r##"<g transform="translate(30 30)\"><line x1="-30" y1="-60" x2="-30" y2="0"/><line x1="-20" y1="-30" x2="10" y2="-30"/><ellipse cx="-30" cy="-30" rx="10" ry="10"/><line x1="-10" y1="-20" x2="0" y2="-40"/><line x1="-5" y1="-20" x2="5" y2="-40"/></g>"##;
 
 const ENERGY_METER: &str = r##"<text x="-10" y="19.2" font-size="9" fill="#222222">Wh</text><rect x="-20" y="-10" width="40" height="40" rx="0" ry="0"/><rect x="-20" y="-30" width="40" height="20" rx="0" ry="0"/>"##;
 
-const GENERATOR: &str = r##"<g transform=\"translate(20 20)\"><rect x="-40" y="-40" width="40" height="40" rx="0" ry="0"/><text x="-24" y="-8.8" font-size="14" fill="#222222">G</text></g>"##;
+const GENERATOR: &str = r##"<g transform="translate(20 20)\"><rect x="-40" y="-40" width="40" height="40" rx="0" ry="0"/><text x="-24" y="-8.8" font-size="14" fill="#222222">G</text></g>"##;
 
 const SUPPLY: &str = r##"<circle cx="0" cy="-15" r="14"/><text x="0" y="-12" text-anchor="middle" font-size="14" fill="#222222">~</text><line x1="0" y1="-1" x2="0" y2="20"/>"##;
 
@@ -79,6 +79,6 @@ const BATTERY: &str = r##"<line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="
 
 const INVERTER: &str = r##"<g transform="matrix(1 0 0 -1 0 -40)"><path d="M -15 -8 A 5 2.5 0 0 0 -25 -8"/><line x1="-40" y1="0" x2="0" y2="-20"/><path d="M -15 -8 A 5 2.5 0 0 0 -5 -8"/><rect x="-40" y="-40" width="40" height="40" rx="0" ry="0"/><line x1="-36" y1="-36" x2="-20" y2="-36"/><line x1="-36" y1="-32" x2="-30" y2="-32"/><line x1="-26" y1="-32" x2="-20" y2="-32"/></g>"##;
 
-const PV: &str = r##"<g transform=\"translate(-20 -10)\"><line x1="-16" y1="24" x2="-26" y2="14"/><line x1="-21" y1="29" x2="-31" y2="19"/><polygon points="-20,23 -17,20 -15,25" fill="#222222"/><polygon points="-22,25 -25,28 -20,30" fill="#222222"/><rect x="-10" y="-20" width="60" height="60" rx="0" ry="0"/><text x="15" y="7.2" font-size="14" fill="#222222">G</text><line x1="10" y1="20" x2="20" y2="20"/><line x1="20" y1="15" x2="20" y2="25"/><line x1="25" y1="10" x2="25" y2="30"/><line x1="25" y1="20" x2="35" y2="20"/></g>"##;
+const PV: &str = r##"<g transform="translate(-20 -10)\"><line x1="-16" y1="24" x2="-26" y2="14"/><line x1="-21" y1="29" x2="-31" y2="19"/><polygon points="-20,23 -17,20 -15,25" fill="#222222"/><polygon points="-22,25 -25,28 -20,30" fill="#222222"/><rect x="-10" y="-20" width="60" height="60" rx="0" ry="0"/><text x="15" y="7.2" font-size="14" fill="#222222">G</text><line x1="10" y1="20" x2="20" y2="20"/><line x1="20" y1="15" x2="20" y2="25"/><line x1="25" y1="10" x2="25" y2="30"/><line x1="25" y1="20" x2="35" y2="20"/></g>"##;
 
 const WIND_TURBINE: &str = r##"<circle cx="0" cy="0" r="20"/><text x="0" y="4" text-anchor="middle" font-size="16" fill="#222222">G</text><line x1="0" y1="-20" x2="0" y2="-32"/><line x1="0" y1="-32" x2="-10" y2="-39" stroke-width="1.5"/><line x1="0" y1="-32" x2="10" y2="-39" stroke-width="1.5"/><line x1="0" y1="-32" x2="0" y2="-44" stroke-width="1.5"/>"##;
