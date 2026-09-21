@@ -19,7 +19,9 @@ pub fn render_str(source: &str, symbols: &str) -> Result<String, String> {
         ));
     }
     let doc = busbar_syntax::parse_or_string(source)?;
-    let ir = Ir::build(&doc)?;
+    let ir = Ir::build(&doc)
+        .map_err(|e| format!("line {}:{}: {} [E-IR-1]", e.line, e.col, e.message))?;
+
     Ok(render_ir(&ir))
 }
 

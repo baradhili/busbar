@@ -338,7 +338,7 @@ pub fn build(ir: &Ir) -> Layout {
                         depth = depth.max(d);
                         slot += 1;
                     }
-                    for (load, _) in &circuit.loads {
+                    for (load, ..) in &circuit.loads {
                         let node = ir.nodes.get(load);
                         let d = place_cell(
                             load,
@@ -397,7 +397,7 @@ pub fn build(ir: &Ir) -> Layout {
     let in_circuit: std::collections::BTreeSet<String> = ir
         .circuits
         .values()
-        .flat_map(|c| c.loads.iter().map(|(l, _)| l.clone()))
+        .flat_map(|c| c.loads.iter().map(|(l, ..)| l.clone()))
         .collect();
 
     let mut rows: BTreeMap<u32, Vec<String>> = BTreeMap::new();

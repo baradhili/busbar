@@ -90,11 +90,18 @@ define them in `features/steps.rs` and untag its scenarios.
 
 ## Before you commit
 
-Local gate (the review of record — do not run external review CLIs
-such as CodeRabbit; the maintainer reviews on the `coderabbit-fixes`
-branch):
+Local gate (the review of record):
 
 ```
 make lint && make fmt-check && make test
+```
+
+Then run a CodeRabbit pass over the pending work and fix what it
+finds before committing (the CLI is installed and authenticated for
+the maintainer account):
+
+```
+coderabbit review --uncommitted --include-untracked
+coderabbit findings        # re-show findings from the last review
 ```
 

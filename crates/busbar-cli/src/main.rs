@@ -52,18 +52,7 @@ fn cmd_check(args: &[String]) -> ExitCode {
         match busbar_check::check(&source, dir.as_deref()) {
             Ok(diags) => {
                 for d in &diags {
-                    let sev = match d.severity {
-                        busbar_check::Severity::Error => "error",
-                        busbar_check::Severity::Warning => "warning",
-                    };
-                    println!(
-                        "{}:{}: {}[{}]: {}",
-                        path.display(),
-                        d.line,
-                        sev,
-                        d.code,
-                        d.message
-                    );
+                    print_diagnostic(&path, &source, d);
                     if d.severity == busbar_check::Severity::Error {
                         any_errors = true;
                     }
@@ -85,6 +74,36 @@ fn cmd_check(args: &[String]) -> ExitCode {
         ExitCode::FAILURE
     } else {
         ExitCode::SUCCESS
+    }
+}
+
+/// Compiler-convention human rendering (implementation plan §5.7):
+/// `path:line:col: sev[code]: message`, the offending source line with a
+/// caret under the column, then `note:` detail lines.
+fn print_diagnostic(path: &std::path::Path, source: &str, d: &busbar_check::Diagnostic) {
+    let sev = match d.severity {
+        busbar_check::Severity::Error => "error",
+        busbar_check::Severity::Warning => "warning",
+    };
+    println!(
+        "{}:{}:{}: {}[{}]: {}",
+        path.display(),
+        d.line,
+        d.col,
+        sev,
+        d.code,
+        d.message
+    );
+    // Line 0 marks end-of-input positions with no snippet to show.
+    if d.line > 0 {
+        if let Some(text) = source.lines().nth(d.line as usize - 1) {
+            println!("{:>5} | {}", d.line, text);
+            let pad = " ".repeat(d.col.saturating_sub(1) as usize);
+            println!("{:>5} | {}^", "", pad);
+        }
+    }
+    for note in &d.notes {
+        println!("{:>5} = note: {note}", "");
     }
 }
 
@@ -117,7 +136,13 @@ fn cmd_fmt(args: &[String]) -> ExitCode {
                 }
             }
             Err(e) => {
-                eprintln!("error: {}: line {}: {}", path.display(), e.line, e.message);
+                eprintln!(
+                    "error: {}: {}:{}: {}",
+                    path.display(),
+                    e.line,
+                    e.col,
+                    e.message
+                );
                 failed = true;
             }
         }

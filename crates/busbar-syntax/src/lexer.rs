@@ -1,7 +1,8 @@
 //! Hand-written lexer for ESLD (spec §4).
 //!
-//! Produces a flat token stream with line positions. Comments are tokens:
-//! the formatter (§ `fmt`) re-emits them, so round-trip preserves them.
+//! Produces a flat token stream with line/column positions. Comments are
+//! tokens: the formatter (§ `fmt`) re-emits them, so round-trip preserves
+//! them.
 //!
 //! Quantities are lexed as a single `Number` token covering the digits and
 //! any immediately-attached unit (`63A`, `2.5mm2`, `1ph`, `1000W/m2`,
@@ -26,6 +27,8 @@ pub enum Tok {
 pub struct Token {
     pub tok: Tok,
     pub line: u32,
+    /// 1-based column of the token's first character; a tab is one column.
+    pub col: u32,
 }
 
 impl Token {
@@ -45,6 +48,7 @@ impl Token {
 pub struct LexError {
     pub message: String,
     pub line: u32,
+    pub col: u32,
 }
 
 const SYMBOLS: &[&str] = &[
@@ -62,12 +66,14 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
     let mut tokens = Vec::new();
     let mut i = 0usize;
     let mut line: u32 = 1;
+    let mut col: u32 = 1;
 
     macro_rules! err {
         ($msg:expr) => {
             return Err(LexError {
                 message: $msg.to_owned(),
                 line,
+                col,
             })
         };
     }
@@ -78,9 +84,11 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
             '\n' => {
                 i += 1;
                 line += 1;
+                col = 1;
             }
             ' ' | '\t' | '\r' => {
                 i += 1;
+                col += 1;
             }
             '/' if src[i..].starts_with("//") => {
                 let start = i;
@@ -92,46 +100,63 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                 tokens.push(Token {
                     tok: Tok::Comment(text),
                     line,
+                    col,
                 });
+                col += src[start..i].chars().count() as u32;
             }
             '/' if src[i..].starts_with("/*") => {
                 let start = i;
                 let start_line = line;
+                let start_col = col;
                 i += 2;
+                col += 2;
                 loop {
                     if i >= bytes.len() {
                         err!("unterminated block comment");
                     }
                     if src[i..].starts_with("*/") {
                         i += 2;
+                        col += 2;
                         break;
                     }
-                    if bytes[i] == b'\n' {
+                    let ch = src[i..].chars().next().unwrap();
+                    i += ch.len_utf8();
+                    if ch == '\n' {
                         line += 1;
+                        col = 1;
+                    } else {
+                        col += 1;
                     }
-                    i += 1;
                 }
                 tokens.push(Token {
                     tok: Tok::Comment(src[start..i].to_string()),
                     line: start_line,
+                    col: start_col,
                 });
             }
             '"' => {
+                let start_col = col;
                 i += 1;
+                col += 1;
                 let mut s = String::new();
                 loop {
                     let Some(ch) = src[i..].chars().next() else {
                         err!("unterminated string");
                     };
+                    // Report the newline's own column, not one past it.
+                    if ch == '\n' {
+                        err!("newline in string");
+                    }
                     i += ch.len_utf8();
+                    col += 1;
                     match ch {
                         '"' => break,
-                        '\n' => err!("newline in string"),
                         '\\' => {
                             let Some(esc) = src[i..].chars().next() else {
                                 err!("unterminated escape");
                             };
                             i += esc.len_utf8();
+                            col += 1;
                             match esc {
                                 'n' => s.push('\n'),
                                 't' => s.push('\t'),
@@ -141,6 +166,7 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                                         err!("bad \\u escape");
                                     }
                                     i += 4;
+                                    col += 4;
                                     let cp =
                                         u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32);
                                     match cp {
@@ -157,10 +183,12 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                 tokens.push(Token {
                     tok: Tok::Str(s),
                     line,
+                    col: start_col,
                 });
             }
             c if c.is_ascii_digit() => {
                 let start = i;
+                let start_col = col;
                 while i < bytes.len()
                     && (bytes[i].is_ascii_digit()
                         || (bytes[i] == b'.' && bytes.get(i + 1) != Some(&b'.')))
@@ -183,10 +211,13 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                         unit: src[unit_start..i].to_string(),
                     },
                     line,
+                    col: start_col,
                 });
+                col += src[start..i].chars().count() as u32;
             }
             c if c.is_ascii_alphabetic() || c == '_' => {
                 let start = i;
+                let start_col = col;
                 while i < bytes.len() {
                     let ch = src[i..].chars().next().unwrap();
                     // `-` continues hyphenated identifiers, but never when it
@@ -205,7 +236,9 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                 tokens.push(Token {
                     tok: Tok::Ident(src[start..i].to_string()),
                     line,
+                    col: start_col,
                 });
+                col += src[start..i].chars().count() as u32;
             }
             _ => {
                 let mut sym = None;
@@ -222,7 +255,9 @@ pub fn lex(src: &str) -> Result<Vec<Token>, LexError> {
                 tokens.push(Token {
                     tok: Tok::Sym(sym),
                     line,
+                    col,
                 });
+                col += sym.chars().count() as u32;
             }
         }
     }

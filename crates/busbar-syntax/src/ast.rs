@@ -4,10 +4,12 @@
 //! for the formatter to be a token-stream renderer (§ `fmt`), so unknown
 //! properties, comments, and ordering survive round-trip by construction.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
     /// 1-based line of the construct's first token.
     pub line: u32,
+    /// 1-based column of the construct's first token; a tab is one column.
+    pub col: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

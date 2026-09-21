@@ -189,6 +189,15 @@ async fn no_error_diagnostics(world: &mut BusbarWorld) {
     );
 }
 
+#[cucumber::then(regex = r"^there are no diagnostics$")]
+async fn no_diagnostics(world: &mut BusbarWorld) {
+    let diagnostics = unwrap_or_panic(world.check.as_ref().expect("`When I check it` not run"));
+    assert!(
+        diagnostics.is_empty(),
+        "expected no diagnostics at all, got {diagnostics:?}"
+    );
+}
+
 #[cucumber::then(regex = r#"^it reports "([^"]+)" with severity (error|warning) at line (\d+)$"#)]
 async fn reports_rule(world: &mut BusbarWorld, code: String, severity: Severity, line: u32) {
     let diagnostics = unwrap_or_panic(world.check.as_ref().expect("`When I check it` not run"));

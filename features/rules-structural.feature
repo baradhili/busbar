@@ -23,6 +23,11 @@ Feature: Structural validation rules (R-1xx)
     When I check it
     Then there are no error diagnostics
 
+  Scenario: SPD wired only through PE keeps implicit busbar attachment
+    Given the document "valid/spd-pe-wired.esld"
+    When I check it
+    Then there are no diagnostics
+
   Scenario Outline: Invalid documents report exactly the expected rule
     Given the document "<file>"
     When I check it

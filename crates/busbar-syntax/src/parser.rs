@@ -8,10 +8,12 @@ use crate::lexer::{Tok, Token, lex};
 pub struct ParseError {
     pub message: String,
     pub line: u32,
+    pub col: u32,
 }
 
 pub fn parse(src: &str) -> Result<Document, ParseError> {
-    let tokens = lex(src).map_err(|LexError { message, line }| ParseError { message, line })?;
+    let tokens =
+        lex(src).map_err(|LexError { message, line, col }| ParseError { message, line, col })?;
     let mut p = Parser { tokens, pos: 0 };
     p.document()
 }
@@ -28,6 +30,22 @@ impl Parser {
 
     fn line(&self) -> u32 {
         self.peek().map(|t| t.line).unwrap_or(0)
+    }
+
+    /// Position of the upcoming token; column defaults to 1 at end of
+    /// input, mirroring `line`'s 0.
+    fn here(&self) -> Span {
+        match self.peek() {
+            Some(t) => Span {
+                line: t.line,
+                col: t.col,
+            },
+            None => Span { line: 0, col: 1 },
+        }
+    }
+
+    fn col(&self) -> u32 {
+        self.peek().map(|t| t.col).unwrap_or(1)
     }
 
     fn next(&mut self) -> Token {
@@ -67,6 +85,7 @@ impl Parser {
         ParseError {
             message: message.into(),
             line: self.line(),
+            col: self.col(),
         }
     }
 
@@ -95,43 +114,30 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Statement, ParseError> {
-        let line = self.line();
+        let span = self.here();
         let keyword = self.eat_ident()?;
         let stmt = match keyword.as_str() {
             "profile" => {
                 let value = self.string()?;
                 self.eat_sym(";")?;
-                Statement::Profile {
-                    value,
-                    span: Span { line },
-                }
+                Statement::Profile { value, span }
             }
             "include" => {
                 let path = self.string()?;
                 self.eat_sym(";")?;
-                Statement::Include {
-                    path,
-                    span: Span { line },
-                }
+                Statement::Include { path, span }
             }
             "note" => {
                 let text = self.string()?;
                 self.eat_sym(";")?;
-                Statement::Note(NoteStmt {
-                    text,
-                    span: Span { line },
-                })
+                Statement::Note(NoteStmt { text, span })
             }
-            "voltsys" => self.voltsys(line)?,
+            "voltsys" => self.voltsys(span)?,
             "code" => {
                 let name = self.string()?;
                 let props = self.property_block()?;
                 self.eat_opt_semi();
-                Statement::Code {
-                    name,
-                    props,
-                    span: Span { line },
-                }
+                Statement::Code { name, props, span }
             }
             "type" => {
                 let name = self.eat_ident()?;
@@ -141,10 +147,7 @@ impl Parser {
                 }
                 self.skip_braced()?;
                 self.eat_opt_semi();
-                Statement::TypeDecl {
-                    name,
-                    span: Span { line },
-                }
+                Statement::TypeDecl { name, span }
             }
             "board" => {
                 let tag = self.eat_ident()?;
@@ -155,7 +158,7 @@ impl Parser {
                     tag,
                     type_ref,
                     items,
-                    span: Span { line },
+                    span,
                 }
             }
             "group" => {
@@ -163,32 +166,26 @@ impl Parser {
                 self.eat_sym("=")?;
                 let list = self.value()?;
                 self.eat_sym(";")?;
-                Statement::Group {
-                    name,
-                    list,
-                    span: Span { line },
-                }
+                Statement::Group { name, list, span }
             }
-            "connect" => Statement::Connect(self.connect(line)?),
+            "connect" => Statement::Connect(self.connect(span)?),
             "vendor" => {
                 self.skip_braced_after_string()?;
                 self.eat_opt_semi();
-                Statement::Vendor {
-                    span: Span { line },
-                }
+                Statement::Vendor { span }
             }
             "scenario" => {
-                let stmt = self.scenario(line)?;
+                let stmt = self.scenario(span)?;
                 self.eat_opt_semi();
                 stmt
             }
             "state" => {
-                let stmt = self.state(line)?;
+                let stmt = self.state(span)?;
                 self.eat_opt_semi();
                 stmt
             }
             "interlock" => {
-                let stmt = self.interlock(line)?;
+                let stmt = self.interlock(span)?;
                 self.eat_opt_semi();
                 stmt
             }
@@ -196,19 +193,12 @@ impl Parser {
                 let name = self.string()?;
                 let props = self.property_block()?;
                 self.eat_opt_semi();
-                Statement::Zone {
-                    name,
-                    props,
-                    span: Span { line },
-                }
+                Statement::Zone { name, props, span }
             }
             "layout" => {
                 let items = self.layout_items()?;
                 self.eat_opt_semi();
-                Statement::Layout {
-                    items,
-                    span: Span { line },
-                }
+                Statement::Layout { items, span }
             }
             other => {
                 // Node declaration: `TAG : type { … } ;?` or with a
@@ -234,7 +224,7 @@ impl Parser {
                         tag: other.to_string(),
                         type_ref,
                         props,
-                        span: Span { line },
+                        span,
                     })
                 } else {
                     return Err(self.error(format!(
@@ -274,7 +264,7 @@ impl Parser {
         }
     }
 
-    fn voltsys(&mut self, line: u32) -> Result<Statement, ParseError> {
+    fn voltsys(&mut self, span: Span) -> Result<Statement, ParseError> {
         let name = self.eat_ident()?;
         self.eat_sym("=")?;
         let body = if self.at_sym("{") {
@@ -290,11 +280,7 @@ impl Parser {
             self.eat_sym(";")?;
             VoltsysBody::Positional(a, b, c)
         };
-        Ok(Statement::Voltsys {
-            name,
-            body,
-            span: Span { line },
-        })
+        Ok(Statement::Voltsys { name, body, span })
     }
 
     fn property_block(&mut self) -> Result<Vec<Property>, ParseError> {
@@ -320,16 +306,12 @@ impl Parser {
     }
 
     fn property(&mut self) -> Result<Property, ParseError> {
-        let line = self.line();
+        let span = self.here();
         let name = self.eat_ident()?;
         self.eat_sym("=")?;
         let value = self.value()?;
         self.eat_sym(";")?;
-        Ok(Property {
-            name,
-            value,
-            span: Span { line },
-        })
+        Ok(Property { name, value, span })
     }
 
     /// Parses a value; merges `Number` + following `Ident` into a quantity
@@ -338,7 +320,7 @@ impl Parser {
         if self.peek().is_none() {
             return Err(self.error("expected value, found end of input"));
         }
-        let line = self.line();
+        let span = self.here();
         // Unary minus on numeric values (`>= -5kW`).
         if self.at_sym("-") {
             self.pos += 1;
@@ -353,7 +335,7 @@ impl Parser {
             };
             return Ok(ValueNode {
                 value: negated,
-                span: Span { line },
+                span,
             });
         }
         let value = match self.next().tok {
@@ -434,10 +416,7 @@ impl Parser {
                 Value::Block(props)
             }
             other => {
-                return Err(ParseError {
-                    message: format!("expected value, found {other:?}"),
-                    line,
-                });
+                return Err(self.error(format!("expected value, found {other:?}")));
             }
         };
         // Range: `a .. b`
@@ -445,20 +424,11 @@ impl Parser {
             self.pos += 1;
             let hi = self.value()?;
             return Ok(ValueNode {
-                value: Value::Range(
-                    Box::new(ValueNode {
-                        value,
-                        span: Span { line },
-                    }),
-                    Box::new(hi),
-                ),
-                span: Span { line },
+                value: Value::Range(Box::new(ValueNode { value, span }), Box::new(hi)),
+                span,
             });
         }
-        Ok(ValueNode {
-            value,
-            span: Span { line },
-        })
+        Ok(ValueNode { value, span })
     }
 
     fn board_items(&mut self) -> Result<Vec<BoardItem>, ParseError> {
@@ -470,7 +440,7 @@ impl Parser {
                 self.pos += 1;
                 break;
             }
-            let line = self.line();
+            let span = self.here();
             if self.at_ident("circuit") {
                 self.pos += 1;
                 let tag = self.eat_ident()?;
@@ -481,7 +451,7 @@ impl Parser {
                     tag,
                     type_ref,
                     items: items_inner,
-                    span: Span { line },
+                    span,
                 }));
             } else if self.at_ident("bus") {
                 self.pos += 1;
@@ -502,19 +472,16 @@ impl Parser {
                     tag,
                     type_ref,
                     props,
-                    span: Span { line },
+                    span,
                 }));
             } else if self.at_ident("connect") {
                 self.pos += 1; // past the keyword; connect() starts at the first endpoint
-                items.push(BoardItem::Connect(self.connect(line)?));
+                items.push(BoardItem::Connect(self.connect(span)?));
             } else if self.at_ident("note") {
                 self.pos += 1;
                 let text = self.string()?;
                 self.eat_sym(";")?;
-                items.push(BoardItem::Note(NoteStmt {
-                    text,
-                    span: Span { line },
-                }));
+                items.push(BoardItem::Note(NoteStmt { text, span }));
             } else {
                 let mut tag = self.eat_ident()?;
                 // Redundant leading type introducer (`main_switch MSB : …`).
@@ -539,7 +506,7 @@ impl Parser {
                         tag,
                         type_ref,
                         props,
-                        span: Span { line },
+                        span,
                     }));
                 } else if self.at_sym("=") {
                     self.pos += 1;
@@ -548,7 +515,7 @@ impl Parser {
                     items.push(BoardItem::Property(Property {
                         name: tag,
                         value,
-                        span: Span { line },
+                        span,
                     }));
                 } else {
                     return Err(self.error(format!("expected `:` or `=` after `{tag}` in board")));
@@ -567,7 +534,7 @@ impl Parser {
                 self.pos += 1;
                 break;
             }
-            let line = self.line();
+            let span = self.here();
             if self.at_ident("protection") || self.at_ident("controller") {
                 let which = if self.at_ident("protection") {
                     "protection"
@@ -586,7 +553,7 @@ impl Parser {
                 let device = InlineDevice {
                     type_ref,
                     props,
-                    span: Span { line },
+                    span,
                 };
                 items.push(if which == "protection" {
                     CircuitItem::Protection(device)
@@ -595,15 +562,12 @@ impl Parser {
                 });
             } else if self.at_ident("connect") {
                 self.pos += 1; // past the keyword; connect() starts at the first endpoint
-                items.push(CircuitItem::Connect(self.connect(line)?));
+                items.push(CircuitItem::Connect(self.connect(span)?));
             } else if self.at_ident("note") {
                 self.pos += 1;
                 let text = self.string()?;
                 self.eat_sym(";")?;
-                items.push(CircuitItem::Note(NoteStmt {
-                    text,
-                    span: Span { line },
-                }));
+                items.push(CircuitItem::Note(NoteStmt { text, span }));
             } else {
                 let mut tag = self.eat_ident()?;
                 // Redundant leading type introducer.
@@ -628,7 +592,7 @@ impl Parser {
                         tag,
                         type_ref,
                         props,
-                        span: Span { line },
+                        span,
                     }));
                 } else if self.at_sym("=") {
                     self.pos += 1;
@@ -637,7 +601,7 @@ impl Parser {
                     items.push(CircuitItem::Property(Property {
                         name: tag,
                         value,
-                        span: Span { line },
+                        span,
                     }));
                 } else {
                     return Err(self.error(format!("expected `:` or `=` after `{tag}` in circuit")));
@@ -647,7 +611,7 @@ impl Parser {
         Ok(items)
     }
 
-    fn connect(&mut self, line: u32) -> Result<ConnectStmt, ParseError> {
+    fn connect(&mut self, span: Span) -> Result<ConnectStmt, ParseError> {
         let mut endpoints = vec![self.endpoint_value()?];
         let mut arrows = Vec::new();
         loop {
@@ -679,13 +643,13 @@ impl Parser {
             endpoints,
             arrows,
             attrs,
-            span: Span { line },
+            span,
         })
     }
 
     /// An endpoint is a dotted reference with optional `[phases]`.
     fn endpoint_value(&mut self) -> Result<ValueNode, ParseError> {
-        let line = self.line();
+        let span = self.here();
         let mut text = self.eat_ident()?;
         while self.at_sym(".") {
             self.pos += 1;
@@ -713,11 +677,11 @@ impl Parser {
         }
         Ok(ValueNode {
             value: Value::Ident(text),
-            span: Span { line },
+            span,
         })
     }
 
-    fn scenario(&mut self, line: u32) -> Result<Statement, ParseError> {
+    fn scenario(&mut self, span: Span) -> Result<Statement, ParseError> {
         let name = self.string()?;
         self.eat_sym("{")?;
         let mut items = Vec::new();
@@ -727,7 +691,7 @@ impl Parser {
                 self.pos += 1;
                 break;
             }
-            let iline = self.line();
+            let ispan = self.here();
             let kind = self.eat_ident()?;
             let mut text_parts = Vec::new();
             // Collect tokens until `;` on the same statement.
@@ -744,17 +708,13 @@ impl Parser {
             items.push(ScenarioItemRaw {
                 kind,
                 text: text_parts.join(" "),
-                span: Span { line: iline },
+                span: ispan,
             });
         }
-        Ok(Statement::Scenario {
-            name,
-            items,
-            span: Span { line },
-        })
+        Ok(Statement::Scenario { name, items, span })
     }
 
-    fn state(&mut self, line: u32) -> Result<Statement, ParseError> {
+    fn state(&mut self, span: Span) -> Result<Statement, ParseError> {
         let name = self.string()?;
         self.eat_sym("{")?;
         let mut items = Vec::new();
@@ -764,20 +724,17 @@ impl Parser {
                 self.pos += 1;
                 break;
             }
-            let iline = self.line();
+            let ispan = self.here();
             if self.at_ident("use") {
                 self.pos += 1;
                 let target = self.string()?;
                 self.eat_sym(";")?;
-                items.push(StateItem::Use(target, Span { line: iline }));
+                items.push(StateItem::Use(target, ispan));
             } else if self.at_ident("note") {
                 self.pos += 1;
                 let text = self.string()?;
                 self.eat_sym(";")?;
-                items.push(StateItem::Note(NoteStmt {
-                    text,
-                    span: Span { line: iline },
-                }));
+                items.push(StateItem::Note(NoteStmt { text, span: ispan }));
             } else {
                 // Position: `ref = ident ;`
                 let mut target = self.eat_ident()?;
@@ -792,21 +749,17 @@ impl Parser {
                 items.push(StateItem::Position {
                     target: ValueNode {
                         value: Value::Ident(target),
-                        span: Span { line: iline },
+                        span: ispan,
                     },
                     position,
-                    span: Span { line: iline },
+                    span: ispan,
                 });
             }
         }
-        Ok(Statement::State {
-            name,
-            items,
-            span: Span { line },
-        })
+        Ok(Statement::State { name, items, span })
     }
 
-    fn interlock(&mut self, line: u32) -> Result<Statement, ParseError> {
+    fn interlock(&mut self, span: Span) -> Result<Statement, ParseError> {
         let name = self.string()?;
         self.eat_sym("{")?;
         let mut requires = Vec::new();
@@ -841,7 +794,7 @@ impl Parser {
         Ok(Statement::Interlock {
             name,
             requires,
-            span: Span { line },
+            span,
         })
     }
 
@@ -854,15 +807,12 @@ impl Parser {
                 self.pos += 1;
                 break;
             }
-            let line = self.line();
+            let span = self.here();
             if self.at_ident("note") {
                 self.pos += 1;
                 let text = self.string()?;
                 self.eat_sym(";")?;
-                items.push(LayoutItem::Note(NoteStmt {
-                    text,
-                    span: Span { line },
-                }));
+                items.push(LayoutItem::Note(NoteStmt { text, span }));
             } else {
                 let target = self.eat_ident()?;
                 if self.at_sym("=") {
@@ -872,14 +822,14 @@ impl Parser {
                     items.push(LayoutItem::Property(Property {
                         name: target,
                         value,
-                        span: Span { line },
+                        span,
                     }));
                 } else if self.at_sym("{") {
                     let props = self.property_block()?;
                     items.push(LayoutItem::Target {
                         target,
                         props,
-                        span: Span { line },
+                        span,
                     });
                 } else {
                     return Err(

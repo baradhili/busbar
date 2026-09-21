@@ -1,0 +1,5 @@
+profile "esld/1.0";
+
+// `phases` must be 1ph/split/3ph/dc or `Nph` — a bare word parses as a
+// value but fails IR build, reported as E-IR-1 at the voltsys position.
+voltsys BAD = { nominal = 230V; phases = banana; frequency = 50Hz; };

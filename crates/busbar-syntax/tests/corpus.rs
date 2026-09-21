@@ -27,6 +27,15 @@ fn all_corpus_documents_parse() {
     let files = corpus_files();
     assert!(!files.is_empty(), "no corpus files found");
     for path in files {
+        // `e-*` fixtures in corpus/invalid are expected E-LEX/E-PARSE
+        // errors — asserting they fail to parse is the Cucumber suite's
+        // job (features/parsing.feature).
+        if path
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy().starts_with("e-"))
+        {
+            continue;
+        }
         let src = std::fs::read_to_string(&path).unwrap();
         match busbar_syntax::parse(&src) {
             Ok(_) => {}

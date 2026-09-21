@@ -5,6 +5,16 @@
 //!
 //! Phase 1 status: full grammar parses; formatter is a token-stream
 //! renderer (canonical spacing, expanded blocks, preserved comments).
+//!
+//! # Diagnostic code catalog (implementation plan §4.4)
+//!
+//! `E-*` codes identify tool failures, as opposed to `R-*` spec rules.
+//! The catalog is frozen per release.
+//!
+//! | Code | Stage | Meaning |
+//! |---|---|---|
+//! | `E-LEX-1` | lex | lexical error: unexpected character, unterminated string or block comment, bad escape |
+//! | `E-PARSE-1` | parse | syntax error: the construct does not match the §6 grammar |
 
 pub mod ast;
 pub mod fmt;
