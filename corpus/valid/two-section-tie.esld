@@ -29,7 +29,8 @@ board MSB : board {
   tie CB_TIE : breaker {
     rating_a = 630A;
     breaking_ka = 25kA;
-  };
+  }
+  tie CB_TIE2 : breaker { rating_a = 630A; breaking_ka = 25kA; technology = vcb; };
   circuit FEED_A {
     bus = A;
     phase = L1;
@@ -62,6 +63,7 @@ connect MSB.MSW_A.out -> MSB.A;
 connect GRID_B.out -> MSB.MSW_B.in;
 connect MSB.MSW_B.out -> MSB.B;
 connect MSB.A -- MSB.CB_TIE -- MSB.B;
+connect MSB.B -- MSB.CB_TIE2 -- MSB.A;
 state "normal" {
   MSB.CB_TIE = open;
 };

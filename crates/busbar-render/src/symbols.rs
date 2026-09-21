@@ -73,7 +73,7 @@ const EVSE: &str = r##"<line x1="0" y1="-25" x2="0" y2="-15"/><rect x="-15" y="-
 const LOAD: &str =
     r##"<line x1="0" y1="-20" x2="0" y2="10"/><polygon points="-6,10 6,10 0,22" fill="#222222"/>"##;
 
-const SOCKET: &str = r##"<line x1="-5" y1="13" x2="4" y2="20" stroke-width="0.4"/><line x1="-1" y1="12" x2="-1" y2="19"/><line x1="0" y1="12" x2="0" y2="30"/><line x1="0" y1="9" x2="0" y2="0"/><line x1="1" y1="12" x2="1" y2="19"/><path d="M 3 13 A 3 3 0 0 0 -3 13"/>"##;
+const SOCKET: &str = r##"<g transform="translate(0 -15)"><line x1="-5" y1="13" x2="4" y2="20" stroke-width="0.4"/><line x1="-1" y1="12" x2="-1" y2="19"/><line x1="0" y1="12" x2="0" y2="30"/><line x1="0" y1="9" x2="0" y2="0"/><line x1="1" y1="12" x2="1" y2="19"/><path d="M 3 13 A 3 3 0 0 0 -3 13"/></g>"##;
 
 const BATTERY: &str = r##"<line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/><line x1="5" y1="-10" x2="5" y2="10"/><line x1="5" y1="0" x2="15" y2="0"/>"##;
 

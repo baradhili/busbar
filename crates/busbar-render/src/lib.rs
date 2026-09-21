@@ -301,9 +301,11 @@ fn draw_node(out: &mut String, labels: &mut String, _tag: &str, p: &Place) {
                 let d = 7.07;
                 let _ = writeln!(
                     out,
-                    r##"<line x1="{a}" y1="{a}" x2="{b}" y2="{b}" {stroke}/><line x1="{a}" y1="{b}" x2="{b}" y2="{a}" {stroke}/>"##,
+                    r##"<line x1="{a}" y1="{e}" x2="{b}" y2="{f}" {stroke}/><line x1="{a}" y1="{f}" x2="{b}" y2="{e}" {stroke}/>"##,
                     a = f2(cx - d),
                     b = f2(cx + d),
+                    e = f2(cy - d),
+                    f = f2(cy + d),
                     stroke = stroke
                 );
             }

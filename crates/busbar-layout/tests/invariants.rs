@@ -590,3 +590,31 @@ connect SHED.QF1.out -> HOUSE.in;
         "QF1 must render inside the HOUSE frame"
     );
 }
+
+/// A bus tie renders BETWEEN the sections it joins (guidance §5.2),
+/// not in the incomer column above the first bar.
+#[test]
+fn ties_render_between_their_sections() {
+    let src = std::fs::read_to_string(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../corpus/valid/two-section-tie.esld"),
+    )
+    .unwrap();
+    let doc = busbar_syntax::parse(&src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+    let a = layout.places.get("MSB.A").expect("bar A");
+    let b = layout.places.get("MSB.B").expect("bar B");
+    // Both tie directions anchor between the bars.
+    for tie_tag in ["CB_TIE", "CB_TIE2"] {
+        let tie = layout.places.get(tie_tag).expect("tie placed");
+        assert!(
+            tie.y > a.y + a.h && tie.y + tie.h < b.y,
+            "{tie_tag} ({:.0}..{:.0}) must sit between bar A (bottom {:.0}) and bar B (top {:.0})",
+            tie.y,
+            tie.y + tie.h,
+            a.y + a.h,
+            b.y
+        );
+    }
+}

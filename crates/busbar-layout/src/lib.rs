@@ -247,6 +247,8 @@ pub fn build(ir: &Ir) -> Layout {
         // controller cells circuits own are placed by their own passes.
         let mut upstream_devs: Vec<&busbar_ir::IrNode> = Vec::new();
         let mut downstream_devs: Vec<&busbar_ir::IrNode> = Vec::new();
+        // (device, section it feeds) — placed between the bars.
+        let mut tie_devs: Vec<(&busbar_ir::IrNode, String)> = Vec::new();
         for node in ir.nodes.values() {
             if node.parent.as_deref() != Some(board.tag.as_str())
                 || board.sections.contains(&node.tag)
@@ -262,7 +264,77 @@ pub fn build(ir: &Ir) -> Layout {
             // switch all promote, while an outgoing way fed from the bus
             // never does.
             let feeds_section = directed_hops_to_section(ir, &node.tag, board).is_some();
-            if feeds_section {
+            // A device fed FROM one section that reaches a DIFFERENT
+            // section is a bus tie: it renders BETWEEN the two bars it
+            // joins (guidance §5.2), never in the incomer column.
+            let fed_from: Vec<&String> = board
+                .sections
+                .iter()
+                .filter(|s| {
+                    ir.edges.iter().any(|e| {
+                        let (Some((f, _, _)), Some((t, _, _))) =
+                            (ir.resolve_endpoint(&e.from), ir.resolve_endpoint(&e.to))
+                        else {
+                            return false;
+                        };
+                        f == **s && t == node.tag
+                    })
+                })
+                .collect();
+            let reaches: Vec<&String> = board
+                .sections
+                .iter()
+                .filter(|s| **s != node.tag)
+                .filter(|s| {
+                    // directed, board-local reach from node to s
+                    let mut dist: BTreeMap<String, u32> = BTreeMap::from([(node.tag.clone(), 0)]);
+                    let mut queue: std::collections::VecDeque<String> =
+                        std::collections::VecDeque::from([node.tag.clone()]);
+                    while let Some(t) = queue.pop_front() {
+                        if &t == *s {
+                            return true;
+                        }
+                        let d = dist[&t];
+                        for e in &ir.edges {
+                            let (Some((f, _, _)), Some((tt, _, owner))) =
+                                (ir.resolve_endpoint(&e.from), ir.resolve_endpoint(&e.to))
+                            else {
+                                continue;
+                            };
+                            if f != t {
+                                continue;
+                            }
+                            if owner.as_deref().is_some_and(|o| o != board.tag) {
+                                continue;
+                            }
+                            if tt == *board.tag {
+                                continue;
+                            }
+                            if !dist.contains_key(&tt) {
+                                dist.insert(tt.clone(), d + 1);
+                                queue.push_back(tt);
+                            }
+                        }
+                    }
+                    false
+                })
+                .collect();
+            let is_tie = fed_from
+                .iter()
+                .any(|s1| reaches.iter().any(|s2| *s2 != *s1));
+            if is_tie {
+                // Anchor above the LATER of the joined sections in board
+                // order — the tie sits between the bars whichever way
+                // its edges were written.
+                let pos = |s: &String| board.sections.iter().position(|x| *x == *s).unwrap_or(0);
+                let s1 = fed_from[0];
+                let s2 = reaches
+                    .iter()
+                    .find(|s| ***s != **s1)
+                    .expect("tie reaches another section");
+                let anchor = if pos(s1) > pos(s2) { s1 } else { s2 };
+                tie_devs.push((node, anchor.clone()));
+            } else if feeds_section {
                 upstream_devs.push(node);
             } else {
                 downstream_devs.push(node);
@@ -336,6 +408,30 @@ pub fn build(ir: &Ir) -> Layout {
             }
         }
         for section in &board.sections {
+            // Bus ties land between the bars: any tie feeding THIS
+            // section sits directly above its bar (guidance §5.2).
+            let mut ties_here: Vec<&busbar_ir::IrNode> = tie_devs
+                .iter()
+                .filter(|(_, target)| target == section.as_str())
+                .map(|(n, _)| *n)
+                .collect();
+            ties_here.sort_by(|a, b| a.tag.cmp(&b.tag));
+            for node in ties_here {
+                member_list.push(node.tag.clone());
+                layout.places.insert(
+                    node.tag.clone(),
+                    Place {
+                        x: BOARD_PAD,
+                        y,
+                        w: CELL,
+                        h: CELL,
+                        label: display_label(&node.tag, &node.props),
+                        glyph: glyph_for(&node.type_name, node.kind),
+                        note: rating_note(&node.props),
+                    },
+                );
+                y += CELL + STACK_GAP;
+            }
             // Section bar.
             member_list.push(section.clone());
             layout.places.insert(
@@ -1208,11 +1304,20 @@ pub fn build(ir: &Ir) -> Layout {
 /// half-height, junctions at their dot.
 pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {
     let (cx, cy) = p.center();
+    // Extents follow each glyph's own geometry (todo: load symbols must
+    // meet their wires — a lamp's circle ends at r12, a motor's at r15;
+    // a 20px default left wires floating short or overlapping marks).
     let d = match p.glyph {
         Glyph::Junction => 0.0,
         Glyph::Section | Glyph::Board => p.h / 2.0,
         Glyph::Fuse | Glyph::Meter | Glyph::Ct | Glyph::Pv => 30.0,
         Glyph::Earth => 15.0,
+        Glyph::Lamp => 10.0,
+        Glyph::Motor => 15.0,
+        Glyph::Socket => 15.0,
+        Glyph::Heating => 15.0,
+        Glyph::Load => 22.0,
+        Glyph::Battery => 6.0,
         _ => 20.0,
     };
     (cx, if lower { cy + d } else { cy - d })
