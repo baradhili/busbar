@@ -1,0 +1,2460 @@
+{
+  "version": "1",
+  "elements": [
+    {
+      "id": "gfci-breaker1",
+      "kind": "gfci-breaker",
+      "name": "kitchen-stove-dish"
+    },
+    {
+      "id": "gfci-breaker2",
+      "kind": "gfci-breaker",
+      "name": "laundry"
+    },
+    {
+      "id": "gfci-breaker3",
+      "kind": "gfci-breaker",
+      "name": "fan-loop"
+    },
+    {
+      "id": "gfci-breaker4",
+      "kind": "gfci-breaker",
+      "name": "Sth-loop"
+    },
+    {
+      "id": "gfci-breaker5",
+      "kind": "gfci-breaker",
+      "name": "HW"
+    },
+    {
+      "id": "gfci-breaker6",
+      "kind": "gfci-breaker",
+      "name": "septic"
+    },
+    {
+      "id": "gfci-breaker7",
+      "kind": "gfci-breaker",
+      "name": "AC1"
+    },
+    {
+      "id": "gfci-breaker8",
+      "kind": "gfci-breaker",
+      "name": "AC2"
+    },
+    {
+      "id": "gfci-breaker9",
+      "kind": "gfci-breaker",
+      "name": "AC3"
+    },
+    {
+      "id": "gfci-breaker10",
+      "kind": "gfci-breaker",
+      "name": "EV"
+    },
+    {
+      "id": "gfci-breaker11",
+      "kind": "gfci-breaker",
+      "name": "PV-in"
+    },
+    {
+      "id": "gfci-breaker12",
+      "kind": "gfci-breaker",
+      "name": "lights-nth"
+    },
+    {
+      "id": "gfci-breaker13",
+      "kind": "gfci-breaker",
+      "name": "lights-sth"
+    },
+    {
+      "id": "gfci-breaker14",
+      "kind": "gfci-breaker",
+      "name": "lights-ext"
+    },
+    {
+      "id": "gfci-breaker15",
+      "kind": "gfci-breaker",
+      "name": "kitchen-loop"
+    },
+    {
+      "id": "gfci-breaker16",
+      "kind": "gfci-breaker",
+      "name": "Nth-loop"
+    },
+    {
+      "id": "gfci-breaker17",
+      "kind": "gfci-breaker",
+      "name": "house-essential"
+    },
+    {
+      "id": "QS1",
+      "kind": "disconnector"
+    },
+    {
+      "id": "QF1",
+      "kind": "breaker",
+      "note": "House"
+    },
+    {
+      "id": "L1",
+      "kind": "load",
+      "name": "Freezer"
+    },
+    {
+      "id": "L2",
+      "kind": "load",
+      "name": "Router"
+    },
+    {
+      "id": "L3",
+      "kind": "load",
+      "name": "Fridge"
+    },
+    {
+      "id": "ev-charger1",
+      "kind": "ev-charger"
+    },
+    {
+      "id": "L5",
+      "kind": "load",
+      "name": "AC3"
+    },
+    {
+      "id": "L6",
+      "kind": "load",
+      "name": "AC2"
+    },
+    {
+      "id": "L7",
+      "kind": "load",
+      "name": "AC1"
+    },
+    {
+      "id": "L4",
+      "kind": "load",
+      "name": "Septic Pump 1"
+    },
+    {
+      "id": "L8",
+      "kind": "load",
+      "name": "Septic Pump 2"
+    },
+    {
+      "id": "heater1",
+      "kind": "heater",
+      "name": "HW Booster"
+    },
+    {
+      "id": "INV1",
+      "kind": "inverter"
+    },
+    {
+      "id": "PV1",
+      "kind": "pv"
+    },
+    {
+      "id": "contactor1",
+      "kind": "contactor"
+    },
+    {
+      "id": "QF2",
+      "kind": "breaker"
+    },
+    {
+      "id": "plc1",
+      "kind": "plc"
+    },
+    {
+      "id": "L9",
+      "kind": "load",
+      "name": "Septic-aero"
+    },
+    {
+      "id": "L10",
+      "kind": "load",
+      "name": "HW Pump"
+    },
+    {
+      "id": "socket-outlet1",
+      "kind": "socket-outlet",
+      "name": "Bath 1"
+    },
+    {
+      "id": "socket-outlet2",
+      "kind": "socket-outlet",
+      "name": "toilet 1"
+    },
+    {
+      "id": "socket-outlet3",
+      "kind": "socket-outlet",
+      "name": "bath 2"
+    },
+    {
+      "id": "socket-outlet4",
+      "kind": "socket-outlet",
+      "name": "toilet 2"
+    },
+    {
+      "id": "socket-outlet5",
+      "kind": "socket-outlet",
+      "name": "bed 1"
+    },
+    {
+      "id": "socket-outlet6",
+      "kind": "socket-outlet",
+      "name": "bed 2"
+    },
+    {
+      "id": "socket-outlet7",
+      "kind": "socket-outlet",
+      "name": "bed 3"
+    },
+    {
+      "id": "socket-outlet8",
+      "kind": "socket-outlet",
+      "name": "hall"
+    },
+    {
+      "id": "socket-outlet9",
+      "kind": "socket-outlet",
+      "name": "Toilet 1"
+    },
+    {
+      "id": "socket-outlet10",
+      "kind": "socket-outlet",
+      "name": "Toilet 2"
+    },
+    {
+      "id": "socket-outlet11",
+      "kind": "socket-outlet",
+      "name": "HRV 1"
+    },
+    {
+      "id": "socket-outlet12",
+      "kind": "socket-outlet",
+      "name": "HRV 2"
+    },
+    {
+      "id": "socket-outlet13",
+      "kind": "socket-outlet",
+      "name": "HRV 3"
+    },
+    {
+      "id": "socket-outlet14",
+      "kind": "socket-outlet",
+      "name": "HRV 4"
+    },
+    {
+      "id": "socket-outlet15",
+      "kind": "socket-outlet",
+      "name": "HRV 5"
+    },
+    {
+      "id": "socket-outlet16",
+      "kind": "socket-outlet",
+      "name": "HRV 6"
+    },
+    {
+      "id": "socket-outlet17",
+      "kind": "socket-outlet",
+      "name": "HRV 7"
+    },
+    {
+      "id": "socket-outlet18",
+      "kind": "socket-outlet",
+      "name": "HRV 8"
+    },
+    {
+      "id": "socket-outlet19",
+      "kind": "socket-outlet",
+      "name": "Washer"
+    },
+    {
+      "id": "socket-outlet20",
+      "kind": "socket-outlet",
+      "name": "Dryer"
+    },
+    {
+      "id": "socket-outlet21",
+      "kind": "socket-outlet",
+      "name": "Laundry 1"
+    },
+    {
+      "id": "socket-outlet22",
+      "kind": "socket-outlet",
+      "name": "Laundry 2"
+    },
+    {
+      "id": "socket-outlet23",
+      "kind": "socket-outlet",
+      "name": "Dishwasher"
+    },
+    {
+      "id": "L11",
+      "kind": "load",
+      "name": "Stove"
+    },
+    {
+      "id": "socket-outlet24",
+      "kind": "socket-outlet",
+      "name": "Lounge proj"
+    },
+    {
+      "id": "socket-outlet25",
+      "kind": "socket-outlet",
+      "name": "Lunge ent centre"
+    },
+    {
+      "id": "socket-outlet26",
+      "kind": "socket-outlet",
+      "name": "dining"
+    },
+    {
+      "id": "socket-outlet27",
+      "kind": "socket-outlet",
+      "name": "Door"
+    },
+    {
+      "id": "socket-outlet28",
+      "kind": "socket-outlet",
+      "name": "New dining"
+    },
+    {
+      "id": "socket-outlet29",
+      "kind": "socket-outlet",
+      "name": "Living"
+    },
+    {
+      "id": "socket-outlet30",
+      "kind": "socket-outlet",
+      "name": "TV"
+    },
+    {
+      "id": "socket-outlet31",
+      "kind": "socket-outlet",
+      "name": "Lounge wall 1"
+    },
+    {
+      "id": "socket-outlet32",
+      "kind": "socket-outlet",
+      "name": "Lounge wall 2"
+    },
+    {
+      "id": "socket-outlet33",
+      "kind": "socket-outlet",
+      "name": "uwave"
+    },
+    {
+      "id": "socket-outlet34",
+      "kind": "socket-outlet",
+      "name": "Carport"
+    },
+    {
+      "id": "socket-outlet35",
+      "kind": "socket-outlet",
+      "name": "kit extractor"
+    },
+    {
+      "id": "socket-outlet36",
+      "kind": "socket-outlet",
+      "name": "Stove ppt"
+    },
+    {
+      "id": "socket-outlet37",
+      "kind": "socket-outlet",
+      "name": "bench L"
+    },
+    {
+      "id": "socket-outlet38",
+      "kind": "socket-outlet",
+      "name": "bench R"
+    },
+    {
+      "id": "socket-outlet39",
+      "kind": "socket-outlet",
+      "name": "Clock area"
+    },
+    {
+      "id": "socket-outlet40",
+      "kind": "socket-outlet",
+      "name": "Bench ext L"
+    },
+    {
+      "id": "socket-outlet41",
+      "kind": "socket-outlet",
+      "name": "Bench ext R"
+    },
+    {
+      "id": "QS2",
+      "kind": "disconnector"
+    },
+    {
+      "id": "gfci-breaker18",
+      "kind": "gfci-breaker",
+      "name": "Retic"
+    },
+    {
+      "id": "QS3",
+      "kind": "disconnector"
+    },
+    {
+      "id": "contactor2",
+      "kind": "contactor"
+    },
+    {
+      "id": "plc2",
+      "kind": "plc"
+    },
+    {
+      "id": "QF3",
+      "kind": "breaker"
+    },
+    {
+      "id": "motor-starter1",
+      "kind": "motor-starter"
+    },
+    {
+      "id": "M1",
+      "kind": "async-motor"
+    },
+    {
+      "id": "QF4",
+      "kind": "breaker",
+      "note": "Main Switch"
+    },
+    {
+      "id": "FU1",
+      "kind": "fuse"
+    },
+    {
+      "id": "energy-meter1",
+      "kind": "energy-meter"
+    },
+    {
+      "id": "L12",
+      "kind": "grid-source"
+    },
+    {
+      "id": "QF5",
+      "kind": "breaker",
+      "note": "Shed"
+    }
+  ],
+  "layout": {
+    "gfci-breaker1": {
+      "at": [
+        -460,
+        -450
+      ]
+    },
+    "gfci-breaker2": {
+      "at": [
+        -390,
+        -450
+      ]
+    },
+    "gfci-breaker3": {
+      "at": [
+        -300,
+        -450
+      ]
+    },
+    "gfci-breaker4": {
+      "at": [
+        -180,
+        -450
+      ]
+    },
+    "gfci-breaker5": {
+      "at": [
+        90,
+        -450
+      ]
+    },
+    "gfci-breaker6": {
+      "at": [
+        210,
+        -450
+      ]
+    },
+    "gfci-breaker7": {
+      "at": [
+        300,
+        -450
+      ]
+    },
+    "gfci-breaker8": {
+      "at": [
+        350,
+        -450
+      ]
+    },
+    "gfci-breaker9": {
+      "at": [
+        410,
+        -450
+      ]
+    },
+    "gfci-breaker10": {
+      "at": [
+        480,
+        -450
+      ]
+    },
+    "gfci-breaker11": {
+      "at": [
+        560,
+        -540
+      ],
+      "rot": 180
+    },
+    "gfci-breaker12": {
+      "at": [
+        620,
+        -450
+      ]
+    },
+    "gfci-breaker13": {
+      "at": [
+        680,
+        -450
+      ]
+    },
+    "gfci-breaker14": {
+      "at": [
+        740,
+        -450
+      ]
+    },
+    "gfci-breaker15": {
+      "at": [
+        -570,
+        -450
+      ]
+    },
+    "gfci-breaker16": {
+      "at": [
+        -730,
+        -450
+      ]
+    },
+    "gfci-breaker17": {
+      "at": [
+        -880,
+        -450
+      ]
+    },
+    "QS1": {
+      "at": [
+        -60,
+        -570
+      ]
+    },
+    "QF1": {
+      "at": [
+        -60,
+        -700
+      ]
+    },
+    "L1": {
+      "at": [
+        -820,
+        -280
+      ]
+    },
+    "L2": {
+      "at": [
+        -820,
+        -190
+      ]
+    },
+    "L3": {
+      "at": [
+        -860,
+        -280
+      ]
+    },
+    "ev-charger1": {
+      "at": [
+        480,
+        -335
+      ]
+    },
+    "L5": {
+      "at": [
+        410,
+        -330
+      ]
+    },
+    "L6": {
+      "at": [
+        350,
+        -330
+      ]
+    },
+    "L7": {
+      "at": [
+        300,
+        -330
+      ]
+    },
+    "L4": {
+      "at": [
+        240,
+        -330
+      ]
+    },
+    "L8": {
+      "at": [
+        190,
+        -330
+      ]
+    },
+    "heater1": {
+      "at": [
+        90,
+        -210
+      ],
+      "rot": 90
+    },
+    "INV1": {
+      "at": [
+        540,
+        -690
+      ],
+      "rot": 180
+    },
+    "PV1": {
+      "at": [
+        600,
+        -770
+      ]
+    },
+    "contactor1": {
+      "at": [
+        90,
+        -270
+      ]
+    },
+    "QF2": {
+      "at": [
+        20,
+        -270
+      ]
+    },
+    "plc1": {
+      "at": [
+        20,
+        -200
+      ]
+    },
+    "L9": {
+      "at": [
+        150,
+        -330
+      ]
+    },
+    "L10": {
+      "at": [
+        20,
+        -100
+      ]
+    },
+    "socket-outlet1": {
+      "at": [
+        -180,
+        -390
+      ],
+      "rot": 270
+    },
+    "socket-outlet2": {
+      "at": [
+        -180,
+        -370
+      ],
+      "rot": 270
+    },
+    "socket-outlet3": {
+      "at": [
+        -180,
+        -350
+      ],
+      "rot": 270
+    },
+    "socket-outlet4": {
+      "at": [
+        -180,
+        -330
+      ],
+      "rot": 270
+    },
+    "socket-outlet5": {
+      "at": [
+        -180,
+        -310
+      ],
+      "rot": 270
+    },
+    "socket-outlet6": {
+      "at": [
+        -180,
+        -290
+      ],
+      "rot": 270
+    },
+    "socket-outlet7": {
+      "at": [
+        -180,
+        -270
+      ],
+      "rot": 270
+    },
+    "socket-outlet8": {
+      "at": [
+        -180,
+        -250
+      ],
+      "rot": 270
+    },
+    "socket-outlet9": {
+      "at": [
+        -290,
+        -390
+      ],
+      "rot": 270
+    },
+    "socket-outlet10": {
+      "at": [
+        -290,
+        -370
+      ],
+      "rot": 270
+    },
+    "socket-outlet11": {
+      "at": [
+        -290,
+        -350
+      ],
+      "rot": 270
+    },
+    "socket-outlet12": {
+      "at": [
+        -290,
+        -330
+      ],
+      "rot": 270
+    },
+    "socket-outlet13": {
+      "at": [
+        -290,
+        -310
+      ],
+      "rot": 270
+    },
+    "socket-outlet14": {
+      "at": [
+        -290,
+        -290
+      ],
+      "rot": 270
+    },
+    "socket-outlet15": {
+      "at": [
+        -290,
+        -270
+      ],
+      "rot": 270
+    },
+    "socket-outlet16": {
+      "at": [
+        -290,
+        -250
+      ],
+      "rot": 270
+    },
+    "socket-outlet17": {
+      "at": [
+        -290,
+        -230
+      ],
+      "rot": 270
+    },
+    "socket-outlet18": {
+      "at": [
+        -290,
+        -210
+      ],
+      "rot": 270
+    },
+    "socket-outlet19": {
+      "at": [
+        -380,
+        -410
+      ],
+      "rot": 270
+    },
+    "socket-outlet20": {
+      "at": [
+        -380,
+        -390
+      ],
+      "rot": 270
+    },
+    "socket-outlet21": {
+      "at": [
+        -380,
+        -370
+      ],
+      "rot": 270
+    },
+    "socket-outlet22": {
+      "at": [
+        -380,
+        -350
+      ],
+      "rot": 270
+    },
+    "socket-outlet23": {
+      "at": [
+        -460,
+        -410
+      ],
+      "rot": 270
+    },
+    "L11": {
+      "at": [
+        -460,
+        -360
+      ]
+    },
+    "socket-outlet24": {
+      "at": [
+        -730,
+        -400
+      ],
+      "rot": 270
+    },
+    "socket-outlet25": {
+      "at": [
+        -730,
+        -380
+      ],
+      "rot": 270
+    },
+    "socket-outlet26": {
+      "at": [
+        -730,
+        -360
+      ],
+      "rot": 270
+    },
+    "socket-outlet27": {
+      "at": [
+        -730,
+        -340
+      ],
+      "rot": 270
+    },
+    "socket-outlet28": {
+      "at": [
+        -730,
+        -320
+      ],
+      "rot": 270
+    },
+    "socket-outlet29": {
+      "at": [
+        -730,
+        -300
+      ],
+      "rot": 270
+    },
+    "socket-outlet30": {
+      "at": [
+        -730,
+        -280
+      ],
+      "rot": 270
+    },
+    "socket-outlet31": {
+      "at": [
+        -730,
+        -260
+      ],
+      "rot": 270
+    },
+    "socket-outlet32": {
+      "at": [
+        -730,
+        -240
+      ],
+      "rot": 270
+    },
+    "socket-outlet33": {
+      "at": [
+        -570,
+        -400
+      ],
+      "rot": 270
+    },
+    "socket-outlet34": {
+      "at": [
+        -730,
+        -220
+      ],
+      "rot": 270
+    },
+    "socket-outlet35": {
+      "at": [
+        -570,
+        -380
+      ],
+      "rot": 270
+    },
+    "socket-outlet36": {
+      "at": [
+        -570,
+        -360
+      ],
+      "rot": 270
+    },
+    "socket-outlet37": {
+      "at": [
+        -570,
+        -340
+      ],
+      "rot": 270
+    },
+    "socket-outlet38": {
+      "at": [
+        -570,
+        -320
+      ],
+      "rot": 270
+    },
+    "socket-outlet39": {
+      "at": [
+        -570,
+        -300
+      ],
+      "rot": 270
+    },
+    "socket-outlet40": {
+      "at": [
+        -570,
+        -280
+      ],
+      "rot": 270
+    },
+    "socket-outlet41": {
+      "at": [
+        -570,
+        -260
+      ],
+      "rot": 270
+    },
+    "QS2": {
+      "at": [
+        90,
+        -350
+      ]
+    },
+    "gfci-breaker18": {
+      "at": [
+        -90,
+        -450
+      ]
+    },
+    "QS3": {
+      "at": [
+        -90,
+        -350
+      ]
+    },
+    "contactor2": {
+      "at": [
+        -50,
+        -280
+      ]
+    },
+    "plc2": {
+      "at": [
+        -110,
+        -200
+      ]
+    },
+    "QF3": {
+      "at": [
+        -110,
+        -290
+      ]
+    },
+    "motor-starter1": {
+      "at": [
+        -50,
+        -125
+      ]
+    },
+    "M1": {
+      "at": [
+        -20,
+        20
+      ]
+    },
+    "QF4": {
+      "at": [
+        -80,
+        -780
+      ]
+    },
+    "FU1": {
+      "at": [
+        -80,
+        -930
+      ]
+    },
+    "energy-meter1": {
+      "at": [
+        -80,
+        -846
+      ]
+    },
+    "L12": {
+      "at": [
+        -80,
+        -1000
+      ]
+    },
+    "QF5": {
+      "at": [
+        -110,
+        -700
+      ]
+    }
+  },
+  "buses": [
+    {
+      "id": "B1",
+      "layout": {
+        "at": [
+          -70,
+          -520
+        ],
+        "span": 1620,
+        "rot": 0
+      }
+    },
+    {
+      "id": "B2",
+      "layout": {
+        "at": [
+          -75,
+          -740
+        ],
+        "span": 210,
+        "rot": 0
+      }
+    }
+  ],
+  "junctions": [
+    {
+      "id": "J2",
+      "layout": {
+        "at": [
+          -880,
+          -520
+        ]
+      }
+    },
+    {
+      "id": "J3",
+      "layout": {
+        "at": [
+          -880,
+          -300
+        ]
+      }
+    },
+    {
+      "id": "J5",
+      "layout": {
+        "at": [
+          -880,
+          -210
+        ]
+      }
+    },
+    {
+      "id": "J6",
+      "layout": {
+        "at": [
+          480,
+          -470
+        ]
+      }
+    },
+    {
+      "id": "J7",
+      "layout": {
+        "at": [
+          410,
+          -470
+        ]
+      }
+    },
+    {
+      "id": "J8",
+      "layout": {
+        "at": [
+          350,
+          -470
+        ]
+      }
+    },
+    {
+      "id": "J9",
+      "layout": {
+        "at": [
+          410,
+          -350
+        ]
+      }
+    },
+    {
+      "id": "J10",
+      "layout": {
+        "at": [
+          350,
+          -350
+        ]
+      }
+    },
+    {
+      "id": "J11",
+      "layout": {
+        "at": [
+          210,
+          -430
+        ]
+      }
+    },
+    {
+      "id": "J12",
+      "layout": {
+        "at": [
+          210,
+          -380
+        ]
+      }
+    },
+    {
+      "id": "J13",
+      "layout": {
+        "at": [
+          240,
+          -380
+        ]
+      }
+    },
+    {
+      "id": "J14",
+      "layout": {
+        "at": [
+          190,
+          -380
+        ]
+      }
+    },
+    {
+      "id": "J15",
+      "layout": {
+        "at": [
+          560,
+          -720
+        ]
+      }
+    },
+    {
+      "id": "J16",
+      "layout": {
+        "at": [
+          600,
+          -720
+        ]
+      }
+    },
+    {
+      "id": "J17",
+      "layout": {
+        "at": [
+          150,
+          -380
+        ]
+      }
+    },
+    {
+      "id": "J18",
+      "layout": {
+        "at": [
+          20,
+          -320
+        ]
+      }
+    },
+    {
+      "id": "J19",
+      "layout": {
+        "at": [
+          90,
+          -320
+        ]
+      }
+    },
+    {
+      "id": "J20",
+      "layout": {
+        "at": [
+          -200,
+          -250
+        ]
+      }
+    },
+    {
+      "id": "J21",
+      "layout": {
+        "at": [
+          -200,
+          -410
+        ]
+      }
+    },
+    {
+      "id": "J22",
+      "layout": {
+        "at": [
+          -180,
+          -410
+        ]
+      }
+    },
+    {
+      "id": "J23",
+      "layout": {
+        "at": [
+          -300,
+          -210
+        ]
+      }
+    },
+    {
+      "id": "J24",
+      "layout": {
+        "at": [
+          -320,
+          -210
+        ]
+      }
+    },
+    {
+      "id": "J25",
+      "layout": {
+        "at": [
+          -320,
+          -410
+        ]
+      }
+    },
+    {
+      "id": "J26",
+      "layout": {
+        "at": [
+          -300,
+          -410
+        ]
+      }
+    },
+    {
+      "id": "J27",
+      "layout": {
+        "at": [
+          -300,
+          -390
+        ]
+      }
+    },
+    {
+      "id": "J28",
+      "layout": {
+        "at": [
+          -300,
+          -370
+        ]
+      }
+    },
+    {
+      "id": "J29",
+      "layout": {
+        "at": [
+          -300,
+          -350
+        ]
+      }
+    },
+    {
+      "id": "J30",
+      "layout": {
+        "at": [
+          -300,
+          -330
+        ]
+      }
+    },
+    {
+      "id": "J31",
+      "layout": {
+        "at": [
+          -300,
+          -310
+        ]
+      }
+    },
+    {
+      "id": "J32",
+      "layout": {
+        "at": [
+          -300,
+          -290
+        ]
+      }
+    },
+    {
+      "id": "J33",
+      "layout": {
+        "at": [
+          -300,
+          -270
+        ]
+      }
+    },
+    {
+      "id": "J34",
+      "layout": {
+        "at": [
+          -300,
+          -250
+        ]
+      }
+    },
+    {
+      "id": "J35",
+      "layout": {
+        "at": [
+          -300,
+          -230
+        ]
+      }
+    },
+    {
+      "id": "J36",
+      "layout": {
+        "at": [
+          -390,
+          -350
+        ]
+      }
+    },
+    {
+      "id": "J37",
+      "layout": {
+        "at": [
+          -390,
+          -370
+        ]
+      }
+    },
+    {
+      "id": "J38",
+      "layout": {
+        "at": [
+          -390,
+          -390
+        ]
+      }
+    },
+    {
+      "id": "J39",
+      "layout": {
+        "at": [
+          -390,
+          -410
+        ]
+      }
+    },
+    {
+      "id": "J40",
+      "layout": {
+        "at": [
+          -460,
+          -380
+        ]
+      }
+    },
+    {
+      "id": "J4",
+      "layout": {
+        "at": [
+          -820,
+          -300
+        ]
+      }
+    },
+    {
+      "id": "J41",
+      "layout": {
+        "at": [
+          -750,
+          -220
+        ]
+      }
+    },
+    {
+      "id": "J42",
+      "layout": {
+        "at": [
+          -750,
+          -420
+        ]
+      }
+    },
+    {
+      "id": "J43",
+      "layout": {
+        "at": [
+          -730,
+          -420
+        ]
+      }
+    },
+    {
+      "id": "J45",
+      "layout": {
+        "at": [
+          -80,
+          -980
+        ]
+      }
+    },
+    {
+      "id": "J44",
+      "layout": {
+        "at": [
+          -60,
+          -720
+        ]
+      }
+    },
+    {
+      "id": "J46",
+      "layout": {
+        "at": [
+          -110,
+          -720
+        ]
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "w_1tjhrsx",
+      "ends": [
+        "QS1.t2",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1n72638",
+      "ends": [
+        "gfci-breaker17.t1",
+        "J2"
+      ]
+    },
+    {
+      "id": "w_1jc63q0",
+      "ends": [
+        "gfci-breaker16.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_14wgiqn",
+      "ends": [
+        "gfci-breaker15.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_9vkn84",
+      "ends": [
+        "gfci-breaker1.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1j5qjee",
+      "ends": [
+        "gfci-breaker17.t2",
+        "J3"
+      ]
+    },
+    {
+      "id": "w_xwy5p9",
+      "ends": [
+        "J3",
+        "L3.t_top"
+      ]
+    },
+    {
+      "id": "w_5gqnhz",
+      "ends": [
+        "J3",
+        "J5"
+      ]
+    },
+    {
+      "id": "w_evz9wg",
+      "ends": [
+        "J5",
+        "L2.t_top"
+      ]
+    },
+    {
+      "id": "w_15bfvsj",
+      "ends": [
+        "gfci-breaker11.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1vha9vg",
+      "ends": [
+        "gfci-breaker12.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1b27rat",
+      "ends": [
+        "gfci-breaker13.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_lkc7li",
+      "ends": [
+        "gfci-breaker14.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1w02cc8",
+      "ends": [
+        "J6",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1wa1y17",
+      "ends": [
+        "J7",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1vg34ya",
+      "ends": [
+        "J8",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_3oajgu",
+      "ends": [
+        "gfci-breaker7.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_dlnred",
+      "ends": [
+        "gfci-breaker10.t2",
+        "ev-charger1.t_top"
+      ]
+    },
+    {
+      "id": "w_12vsvol",
+      "ends": [
+        "gfci-breaker9.t2",
+        "J9"
+      ]
+    },
+    {
+      "id": "w_1njlam4",
+      "ends": [
+        "gfci-breaker8.t2",
+        "J10"
+      ]
+    },
+    {
+      "id": "w_p6ttwt",
+      "ends": [
+        "gfci-breaker7.t2",
+        "L7.t_top"
+      ]
+    },
+    {
+      "id": "w_1a2iypj",
+      "ends": [
+        "gfci-breaker6.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_8a5rge",
+      "ends": [
+        "J11",
+        "J12"
+      ]
+    },
+    {
+      "id": "w_1sh8nts",
+      "ends": [
+        "J12",
+        "J13"
+      ]
+    },
+    {
+      "id": "w_1eulrdh",
+      "ends": [
+        "J13",
+        "L4.t_top"
+      ]
+    },
+    {
+      "id": "w_1uf5vol",
+      "ends": [
+        "J12",
+        "J14"
+      ]
+    },
+    {
+      "id": "w_jf4s0",
+      "ends": [
+        "gfci-breaker5.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_1r10rr2",
+      "ends": [
+        "L8.t_top",
+        "J14"
+      ]
+    },
+    {
+      "id": "w_p3b4ck",
+      "ends": [
+        "gfci-breaker11.t2",
+        "INV1.t_ac"
+      ]
+    },
+    {
+      "id": "w_k3u10z",
+      "ends": [
+        "INV1.t_dc",
+        "J15"
+      ]
+    },
+    {
+      "id": "w_1xfe9um",
+      "ends": [
+        "J15",
+        "J16"
+      ]
+    },
+    {
+      "id": "w_ligxxz",
+      "ends": [
+        "J16",
+        "PV1.t_dc"
+      ]
+    },
+    {
+      "id": "w_15zpuim",
+      "ends": [
+        "L9.t_top",
+        "J17"
+      ]
+    },
+    {
+      "id": "w_1omwhya",
+      "ends": [
+        "J17",
+        "J14"
+      ]
+    },
+    {
+      "id": "w_1h397ho",
+      "ends": [
+        "QF2.t1",
+        "J18"
+      ]
+    },
+    {
+      "id": "w_1lbrvc2",
+      "ends": [
+        "J19",
+        "contactor1.t1"
+      ]
+    },
+    {
+      "id": "w_21795g",
+      "ends": [
+        "J18",
+        "J19"
+      ]
+    },
+    {
+      "id": "w_12kw768",
+      "ends": [
+        "contactor1.t2",
+        "heater1.t1"
+      ]
+    },
+    {
+      "id": "w_1p75dwa",
+      "ends": [
+        "QF2.t2",
+        "plc1.t_top"
+      ]
+    },
+    {
+      "id": "w_n2470k",
+      "ends": [
+        "plc1.t_bottom",
+        "L10.t_top"
+      ]
+    },
+    {
+      "id": "w_zg6ng9",
+      "ends": [
+        "gfci-breaker4.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_8c3mmo",
+      "ends": [
+        "socket-outlet1.t1",
+        "socket-outlet2.t1"
+      ]
+    },
+    {
+      "id": "w_y6fhoi",
+      "ends": [
+        "socket-outlet2.t1",
+        "socket-outlet3.t1"
+      ]
+    },
+    {
+      "id": "w_mxp064",
+      "ends": [
+        "socket-outlet3.t1",
+        "socket-outlet4.t1"
+      ]
+    },
+    {
+      "id": "w_w5abia",
+      "ends": [
+        "socket-outlet4.t1",
+        "socket-outlet5.t1"
+      ]
+    },
+    {
+      "id": "w_1hlqbiw",
+      "ends": [
+        "socket-outlet5.t1",
+        "socket-outlet6.t1"
+      ]
+    },
+    {
+      "id": "w_xe07tu",
+      "ends": [
+        "socket-outlet6.t1",
+        "socket-outlet7.t1"
+      ]
+    },
+    {
+      "id": "w_va6avg",
+      "ends": [
+        "socket-outlet7.t1",
+        "socket-outlet8.t1"
+      ]
+    },
+    {
+      "id": "w_2qtoeb",
+      "ends": [
+        "socket-outlet8.t1",
+        "J20"
+      ]
+    },
+    {
+      "id": "w_1jmf2qw",
+      "ends": [
+        "J20",
+        "J21"
+      ]
+    },
+    {
+      "id": "w_w4en8r",
+      "ends": [
+        "gfci-breaker4.t2",
+        "J22"
+      ]
+    },
+    {
+      "id": "w_7huxc0",
+      "ends": [
+        "J22",
+        "socket-outlet1.t1"
+      ]
+    },
+    {
+      "id": "w_9s9gqy",
+      "ends": [
+        "J21",
+        "J22"
+      ]
+    },
+    {
+      "id": "w_1en6i0i",
+      "ends": [
+        "gfci-breaker3.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_14mdt2n",
+      "ends": [
+        "J23",
+        "socket-outlet18.t1"
+      ]
+    },
+    {
+      "id": "w_1az0lsu",
+      "ends": [
+        "J23",
+        "J24"
+      ]
+    },
+    {
+      "id": "w_15yw088",
+      "ends": [
+        "J24",
+        "J25"
+      ]
+    },
+    {
+      "id": "w_19vfytc",
+      "ends": [
+        "gfci-breaker3.t2",
+        "J26"
+      ]
+    },
+    {
+      "id": "w_p8uorm",
+      "ends": [
+        "J25",
+        "J26"
+      ]
+    },
+    {
+      "id": "w_1c3guaw",
+      "ends": [
+        "J26",
+        "J27"
+      ]
+    },
+    {
+      "id": "w_xjozwf",
+      "ends": [
+        "socket-outlet9.t1",
+        "J27"
+      ]
+    },
+    {
+      "id": "w_1sninda",
+      "ends": [
+        "J27",
+        "J28"
+      ]
+    },
+    {
+      "id": "w_1cj3kwc",
+      "ends": [
+        "socket-outlet10.t1",
+        "J28"
+      ]
+    },
+    {
+      "id": "w_1hlazfs",
+      "ends": [
+        "J28",
+        "J29"
+      ]
+    },
+    {
+      "id": "w_1vln4ck",
+      "ends": [
+        "socket-outlet11.t1",
+        "J29"
+      ]
+    },
+    {
+      "id": "w_1ec3ab9",
+      "ends": [
+        "J29",
+        "J30"
+      ]
+    },
+    {
+      "id": "w_1sr5vct",
+      "ends": [
+        "socket-outlet12.t1",
+        "J30"
+      ]
+    },
+    {
+      "id": "w_1l4ouws",
+      "ends": [
+        "J30",
+        "J31"
+      ]
+    },
+    {
+      "id": "w_m7m09p",
+      "ends": [
+        "socket-outlet13.t1",
+        "J31"
+      ]
+    },
+    {
+      "id": "w_tyfn16",
+      "ends": [
+        "J31",
+        "J32"
+      ]
+    },
+    {
+      "id": "w_1ud04nh",
+      "ends": [
+        "socket-outlet14.t1",
+        "J32"
+      ]
+    },
+    {
+      "id": "w_1h8m13k",
+      "ends": [
+        "J32",
+        "J33"
+      ]
+    },
+    {
+      "id": "w_z99lt1",
+      "ends": [
+        "socket-outlet15.t1",
+        "J33"
+      ]
+    },
+    {
+      "id": "w_103tixm",
+      "ends": [
+        "J33",
+        "J34"
+      ]
+    },
+    {
+      "id": "w_qxudf1",
+      "ends": [
+        "socket-outlet16.t1",
+        "J34"
+      ]
+    },
+    {
+      "id": "w_q8sct8",
+      "ends": [
+        "J34",
+        "J35"
+      ]
+    },
+    {
+      "id": "w_15pbb4c",
+      "ends": [
+        "J35",
+        "J23"
+      ]
+    },
+    {
+      "id": "w_padxrx",
+      "ends": [
+        "socket-outlet17.t1",
+        "J35"
+      ]
+    },
+    {
+      "id": "w_uwv48b",
+      "ends": [
+        "gfci-breaker2.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_3j25oy",
+      "ends": [
+        "J36",
+        "socket-outlet22.t1"
+      ]
+    },
+    {
+      "id": "w_1siywu0",
+      "ends": [
+        "J37",
+        "J36"
+      ]
+    },
+    {
+      "id": "w_xbr8fg",
+      "ends": [
+        "socket-outlet21.t1",
+        "J37"
+      ]
+    },
+    {
+      "id": "w_11hdvh6",
+      "ends": [
+        "J38",
+        "J37"
+      ]
+    },
+    {
+      "id": "w_qgr8om",
+      "ends": [
+        "socket-outlet20.t1",
+        "J38"
+      ]
+    },
+    {
+      "id": "w_ari71d",
+      "ends": [
+        "gfci-breaker2.t2",
+        "J39"
+      ]
+    },
+    {
+      "id": "w_1njeep8",
+      "ends": [
+        "J39",
+        "J38"
+      ]
+    },
+    {
+      "id": "w_1ba5rqz",
+      "ends": [
+        "socket-outlet19.t1",
+        "J39"
+      ]
+    },
+    {
+      "id": "w_f07mp7",
+      "ends": [
+        "gfci-breaker1.t2",
+        "socket-outlet23.t1"
+      ]
+    },
+    {
+      "id": "w_1dfmmnc",
+      "ends": [
+        "socket-outlet23.t1",
+        "J40"
+      ]
+    },
+    {
+      "id": "w_1oepzye",
+      "ends": [
+        "L3.t_top",
+        "J4"
+      ]
+    },
+    {
+      "id": "w_toskta",
+      "ends": [
+        "socket-outlet24.t1",
+        "socket-outlet25.t1"
+      ]
+    },
+    {
+      "id": "w_10a8k4e",
+      "ends": [
+        "socket-outlet25.t1",
+        "socket-outlet26.t1"
+      ]
+    },
+    {
+      "id": "w_ag2kua",
+      "ends": [
+        "socket-outlet26.t1",
+        "socket-outlet27.t1"
+      ]
+    },
+    {
+      "id": "w_1645ehm",
+      "ends": [
+        "socket-outlet27.t1",
+        "socket-outlet28.t1"
+      ]
+    },
+    {
+      "id": "w_18khvhq",
+      "ends": [
+        "socket-outlet28.t1",
+        "socket-outlet29.t1"
+      ]
+    },
+    {
+      "id": "w_1mwkj57",
+      "ends": [
+        "socket-outlet29.t1",
+        "socket-outlet30.t1"
+      ]
+    },
+    {
+      "id": "w_cub5sw",
+      "ends": [
+        "socket-outlet30.t1",
+        "socket-outlet31.t1"
+      ]
+    },
+    {
+      "id": "w_1bbk3bg",
+      "ends": [
+        "socket-outlet31.t1",
+        "socket-outlet32.t1"
+      ]
+    },
+    {
+      "id": "w_6kpjpv",
+      "ends": [
+        "gfci-breaker15.t2",
+        "socket-outlet33.t1"
+      ]
+    },
+    {
+      "id": "w_1rz9sgp",
+      "ends": [
+        "socket-outlet33.t1",
+        "socket-outlet35.t1"
+      ]
+    },
+    {
+      "id": "w_gzaopw",
+      "ends": [
+        "socket-outlet35.t1",
+        "socket-outlet36.t1"
+      ]
+    },
+    {
+      "id": "w_pafxac",
+      "ends": [
+        "socket-outlet36.t1",
+        "socket-outlet37.t1"
+      ]
+    },
+    {
+      "id": "w_1haicog",
+      "ends": [
+        "socket-outlet37.t1",
+        "socket-outlet38.t1"
+      ]
+    },
+    {
+      "id": "w_15h0s9s",
+      "ends": [
+        "socket-outlet38.t1",
+        "socket-outlet39.t1"
+      ]
+    },
+    {
+      "id": "w_zztzfn",
+      "ends": [
+        "socket-outlet39.t1",
+        "socket-outlet40.t1"
+      ]
+    },
+    {
+      "id": "w_1u4t9nm",
+      "ends": [
+        "socket-outlet40.t1",
+        "socket-outlet41.t1"
+      ]
+    },
+    {
+      "id": "w_1ytmwjj",
+      "ends": [
+        "socket-outlet32.t1",
+        "socket-outlet34.t1"
+      ]
+    },
+    {
+      "id": "w_9pn4zh",
+      "ends": [
+        "socket-outlet34.t1",
+        "J41"
+      ]
+    },
+    {
+      "id": "w_1urp96e",
+      "ends": [
+        "J41",
+        "J42"
+      ]
+    },
+    {
+      "id": "w_zdhl3p",
+      "ends": [
+        "gfci-breaker16.t2",
+        "J43"
+      ]
+    },
+    {
+      "id": "w_14imjto",
+      "ends": [
+        "J43",
+        "socket-outlet24.t1"
+      ]
+    },
+    {
+      "id": "w_en5rqg",
+      "ends": [
+        "J42",
+        "J43"
+      ]
+    },
+    {
+      "id": "w_8zoa2z",
+      "ends": [
+        "QS2.t2",
+        "J19"
+      ]
+    },
+    {
+      "id": "w_1gveodj",
+      "ends": [
+        "QS2.t1",
+        "gfci-breaker5.t2"
+      ]
+    },
+    {
+      "id": "w_upilv6",
+      "ends": [
+        "gfci-breaker18.t1",
+        "B1"
+      ]
+    },
+    {
+      "id": "w_13b5xc4",
+      "ends": [
+        "gfci-breaker18.t2",
+        "QS3.t1"
+      ]
+    },
+    {
+      "id": "w_1iz3s40",
+      "ends": [
+        "QS3.t2",
+        "contactor2.t1"
+      ]
+    },
+    {
+      "id": "w_11gmqnv",
+      "ends": [
+        "QS3.t2",
+        "QF3.t1"
+      ]
+    },
+    {
+      "id": "w_1mvuwzo",
+      "ends": [
+        "QF3.t2",
+        "plc2.t_top"
+      ]
+    },
+    {
+      "id": "w_mk97ag",
+      "ends": [
+        "contactor2.t2",
+        "motor-starter1.t_top"
+      ]
+    },
+    {
+      "id": "w_1s8kipc",
+      "ends": [
+        "motor-starter1.t_bottom",
+        "M1.t3"
+      ]
+    },
+    {
+      "id": "w_ea9sec",
+      "ends": [
+        "QF4.t1",
+        "energy-meter1.t2"
+      ]
+    },
+    {
+      "id": "w_1i3ii5f",
+      "ends": [
+        "energy-meter1.t1",
+        "FU1.t2"
+      ]
+    },
+    {
+      "id": "w_11nrxzl",
+      "ends": [
+        "FU1.t1",
+        "J45"
+      ]
+    },
+    {
+      "id": "w_e8um83",
+      "ends": [
+        "J44",
+        "B2"
+      ]
+    },
+    {
+      "id": "w_esttm1",
+      "ends": [
+        "J46",
+        "B2"
+      ]
+    },
+    {
+      "id": "w_1ud6lyc",
+      "ends": [
+        "QF4.t2",
+        "B2"
+      ]
+    },
+    {
+      "id": "w_1ly4wmp",
+      "ends": [
+        "QS1.t1",
+        "QF1.t2"
+      ]
+    }
+  ],
+  "annotations": [
+    {
+      "type": "rect",
+      "at": [
+        -290,
+        -1060
+      ],
+      "size": [
+        370,
+        400
+      ],
+      "stroke": "dashed",
+      "id": "a1",
+      "label": "Main board (shed)"
+    },
+    {
+      "type": "rect",
+      "at": [
+        -910,
+        -640
+      ],
+      "size": [
+        1710,
+        230
+      ],
+      "stroke": "dashed",
+      "id": "a3",
+      "label": "House sub-board"
+    },
+    {
+      "type": "rect",
+      "at": [
+        -10,
+        -390
+      ],
+      "size": [
+        130,
+        140
+      ],
+      "stroke": "dashed",
+      "id": "a4",
+      "label": "HW Sub-board"
+    },
+    {
+      "type": "line",
+      "at": [
+        40,
+        -200
+      ],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          50,
+          -80
+        ]
+      ],
+      "id": "a2",
+      "stroke": "dashed"
+    },
+    {
+      "type": "line",
+      "at": [
+        -100,
+        -190
+      ],
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          40,
+          -100
+        ]
+      ],
+      "id": "a5",
+      "stroke": "dashed"
+    },
+    {
+      "type": "rect",
+      "at": [
+        -140,
+        -330
+      ],
+      "size": [
+        110,
+        180
+      ],
+      "stroke": "dashed",
+      "id": "a6",
+      "label": "Retic Sub-board"
+    }
+  ]
+}

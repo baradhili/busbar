@@ -12,7 +12,7 @@
     <polyline points="-880,-300 -860,-300"/>
     <polyline points="-880,-300 -880,-210"/>
     <polyline points="-880,-210 -820,-210"/>
-    <polyline points="560,-470 560,-520"/>
+    <polyline points="560,-520 560,-520"/>
     <polyline points="620,-470 620,-520"/>
     <polyline points="680,-470 680,-520"/>
     <polyline points="740,-470 740,-520"/>
@@ -31,10 +31,10 @@
     <polyline points="210,-380 190,-380"/>
     <polyline points="90,-470 90,-520"/>
     <polyline points="190,-350 190,-380"/>
-    <polyline points="560,-430 560,-350"/>
-    <polyline points="560,-310 560,-210"/>
-    <polyline points="560,-210 600,-210"/>
-    <polyline points="600,-210 600,-220"/>
+    <polyline points="560,-560 560,-650"/>
+    <polyline points="560,-690 560,-720"/>
+    <polyline points="560,-720 600,-720"/>
+    <polyline points="600,-720 600,-730"/>
     <polyline points="150,-350 150,-380"/>
     <polyline points="150,-380 190,-380"/>
     <polyline points="20,-290 20,-320"/>
@@ -183,7 +183,7 @@
   <g id="gfci-breaker10" transform="translate(480 -450)">
     <text x="-14" y="13.8" font-family="Liberation Sans, Arial, sans-serif" font-size="6" fill="#000000">IΔ</text><line x1="2" y1="-12" x2="-2" y2="-8" fill="none" stroke="black" stroke-width="1"/><line x1="-2" y1="-12" x2="2" y2="-8" fill="none" stroke="black" stroke-width="1"/><polyline points="-5,-10 0,10 0,20" fill="none" stroke="black" stroke-width="1"/><line x1="0" y1="-20" x2="0" y2="-10" fill="none" stroke="black" stroke-width="1"/><line x1="-4" y1="-4" x2="-8" y2="-4" fill="none" stroke="black" stroke-width="0.4"/><line x1="-8" y1="-4" x2="-8" y2="-8" fill="none" stroke="black" stroke-width="0.4"/><line x1="-13" y1="-8" x2="-8" y2="-8" fill="none" stroke="black" stroke-width="0.4"/><line x1="-13" y1="-8" x2="-13" y2="-4" fill="none" stroke="black" stroke-width="0.4"/><line x1="-16" y1="-4" x2="-13" y2="-4" fill="none" stroke="black" stroke-width="0.4"/><path d="M -8 1 A 2.5 3.5 0 0 0 -13 1" fill="none" stroke="black" stroke-width="0.4"/><line x1="-8" y1="1" x2="-2" y2="1" fill="none" stroke="black" stroke-width="0.4"/><line x1="-16" y1="1" x2="-13" y2="1" fill="none" stroke="black" stroke-width="0.4"/>
   </g>
-  <g id="gfci-breaker11" transform="translate(560 -450)">
+  <g id="gfci-breaker11" transform="translate(560 -540) rotate(180)">
     <text x="-14" y="13.8" font-family="Liberation Sans, Arial, sans-serif" font-size="6" fill="#000000">IΔ</text><line x1="2" y1="-12" x2="-2" y2="-8" fill="none" stroke="black" stroke-width="1"/><line x1="-2" y1="-12" x2="2" y2="-8" fill="none" stroke="black" stroke-width="1"/><polyline points="-5,-10 0,10 0,20" fill="none" stroke="black" stroke-width="1"/><line x1="0" y1="-20" x2="0" y2="-10" fill="none" stroke="black" stroke-width="1"/><line x1="-4" y1="-4" x2="-8" y2="-4" fill="none" stroke="black" stroke-width="0.4"/><line x1="-8" y1="-4" x2="-8" y2="-8" fill="none" stroke="black" stroke-width="0.4"/><line x1="-13" y1="-8" x2="-8" y2="-8" fill="none" stroke="black" stroke-width="0.4"/><line x1="-13" y1="-8" x2="-13" y2="-4" fill="none" stroke="black" stroke-width="0.4"/><line x1="-16" y1="-4" x2="-13" y2="-4" fill="none" stroke="black" stroke-width="0.4"/><path d="M -8 1 A 2.5 3.5 0 0 0 -13 1" fill="none" stroke="black" stroke-width="0.4"/><line x1="-8" y1="1" x2="-2" y2="1" fill="none" stroke="black" stroke-width="0.4"/><line x1="-16" y1="1" x2="-13" y2="1" fill="none" stroke="black" stroke-width="0.4"/>
   </g>
   <g id="gfci-breaker12" transform="translate(620 -450)">
@@ -240,10 +240,10 @@
   <g id="heater1" transform="translate(90 -210) rotate(90)">
     <line x1="-20" y1="0" x2="-10" y2="0" fill="none" stroke="black" stroke-width="1"/><rect x="-10" y="-5" width="30" height="10" rx="0" ry="0" fill="none" stroke="black" stroke-width="1"/><line x1="20" y1="0" x2="30" y2="0" fill="none" stroke="black" stroke-width="1"/><line x1="-5" y1="-5" x2="-5" y2="5" fill="none" stroke="black" stroke-width="1"/><line x1="5" y1="-5" x2="5" y2="5" fill="none" stroke="black" stroke-width="1"/><line x1="15" y1="-5" x2="15" y2="5" fill="none" stroke="black" stroke-width="1"/>
   </g>
-  <g id="INV1" transform="translate(580 -310)">
+  <g id="INV1" transform="translate(540 -690) rotate(180)">
     <g transform="matrix(1 0 0 -1 0 -40)"><path d="M -15 -8 A 5 2.5 0 0 0 -25 -8" fill="none" stroke="black" stroke-width="1"/><line x1="-40" y1="0" x2="0" y2="-40" fill="none" stroke="black" stroke-width="1"/><path d="M -15 -8 A 5 2.5 0 0 0 -5 -8" fill="none" stroke="black" stroke-width="1"/><rect x="-40" y="-40" width="40" height="40" rx="0" ry="0" fill="none" stroke="black" stroke-width="1"/><line x1="-36" y1="-36" x2="-20" y2="-36" fill="none" stroke="black" stroke-width="1"/><line x1="-36" y1="-32" x2="-30" y2="-32" fill="none" stroke="black" stroke-width="1"/><line x1="-26" y1="-32" x2="-20" y2="-32" fill="none" stroke="black" stroke-width="1"/></g>
   </g>
-  <g id="PV1" transform="translate(600 -260)">
+  <g id="PV1" transform="translate(600 -770)">
     <line x1="-16" y1="24" x2="-26" y2="14" fill="none" stroke="black" stroke-width="1"/><line x1="-21" y1="29" x2="-31" y2="19" fill="none" stroke="black" stroke-width="1"/><polygon points="-20,23 -17,20 -15,25" fill="black" stroke="black" stroke-width="1"/><polygon points="-22,25 -25,28 -20,30" fill="black" stroke="black" stroke-width="1"/><rect x="-10" y="-20" width="60" height="60" rx="0" ry="0" fill="none" stroke="black" stroke-width="1"/><text x="15" y="7.2" font-family="Liberation Sans, Arial, sans-serif" font-size="14" fill="#000000">G</text><line x1="10" y1="20" x2="20" y2="20" fill="none" stroke="black" stroke-width="1"/><line x1="20" y1="15" x2="20" y2="25" fill="none" stroke="black" stroke-width="1"/><line x1="25" y1="10" x2="25" y2="30" fill="none" stroke="black" stroke-width="1"/><line x1="25" y1="20" x2="35" y2="20" fill="none" stroke="black" stroke-width="1"/>
   </g>
   <g id="contactor1" transform="translate(90 -270)">
@@ -437,7 +437,7 @@
     <text x="356" y="-447.6666666666667" text-anchor="start">AC2</text>
     <text x="416" y="-447.6666666666667" text-anchor="start">AC3</text>
     <text x="486" y="-447.6666666666667" text-anchor="start">EV</text>
-    <text x="566" y="-447.6666666666667" text-anchor="start">PV-in</text>
+    <text x="554" y="-542.3333333333334" text-anchor="end">PV-in</text>
     <text x="626" y="-447.6666666666667" text-anchor="start">lights-nth</text>
     <text x="686" y="-447.6666666666667" text-anchor="start">lights-sth</text>
     <text x="746" y="-447.6666666666667" text-anchor="start">lights-ext</text>
@@ -456,8 +456,8 @@
     <text x="246" y="-330" text-anchor="start">Septic Pump 1</text>
     <text x="196" y="-330" text-anchor="start">Septic Pump 2</text>
     <text x="87.66666666666667" y="-169" text-anchor="middle">HW Booster</text>
-    <text x="584" y="-327.6666666666667" text-anchor="start">INV1</text>
-    <text x="654" y="-247.66666666666666" text-anchor="start">PV1</text>
+    <text x="536" y="-672.3333333333334" text-anchor="end">INV1</text>
+    <text x="654" y="-757.6666666666666" text-anchor="start">PV1</text>
     <text x="97" y="-277.6666666666667" text-anchor="start">contactor1</text>
     <text x="26" y="-272" text-anchor="start">QF2</text>
     <text x="46" y="-197.66666666666666" text-anchor="start">plc1</text>
