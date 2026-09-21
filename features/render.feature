@@ -32,6 +32,7 @@ Feature: Rendering determinism
       | file |
       | valid/board-connects.esld |
       | valid/house.esld |
+      | valid/incomer-tour.esld |
       | valid/minimal.esld |
       | valid/quantities.esld |
       | valid/statement-tour.esld |
