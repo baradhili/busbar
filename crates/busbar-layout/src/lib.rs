@@ -618,14 +618,15 @@ pub fn build(ir: &Ir) -> Layout {
         }
     }
 
+    let mut peer_partner: BTreeMap<String, String> = BTreeMap::new();
     // Peer bonds (earth/neutral ties) belong BESIDE the thing they bond:
     // a node whose every edge is a peer edge joins its partner's row
     // instead of a distant rank row, so the dashed bond stays short and
     // never crosses the drawing (todo: feeds must not pass through
     // boards).
     for node in ir.nodes.values() {
-        if node.parent.is_some() {
-            continue;
+        if node.parent.is_some() || ir.boards.contains_key(&node.tag) {
+            continue; // boards rank by their members, never by bonds
         }
         let mut peer_rank: Option<u32> = Some(u32::MAX);
         let mut powered = false;
@@ -658,6 +659,35 @@ pub fn build(ir: &Ir) -> Layout {
         }
         if let Some(r) = peer_rank.filter(|r| *r != u32::MAX) {
             ranks.insert(node.tag.clone(), r);
+            // Remember the partner so the row places the peer directly
+            // beside it — a bond must not run across other entities.
+            let mut best: Option<(u32, String)> = None;
+            for e in &ir.edges {
+                if e.arrow != busbar_syntax::ast::Arrow::Peer {
+                    continue;
+                }
+                for (mine, other) in [
+                    (e.from.as_str(), e.to.as_str()),
+                    (e.to.as_str(), e.from.as_str()),
+                ] {
+                    let (Some((entity, _, _)), Some((other_e, _, _))) =
+                        (ir.resolve_endpoint(mine), ir.resolve_endpoint(other))
+                    else {
+                        continue;
+                    };
+                    if entity == node.tag {
+                        if let Some(r2) = ranks.get(&other_e) {
+                            let name = other_e.as_str().to_owned();
+                            if best.as_ref().is_none_or(|(br0, _)| *r2 < *br0) {
+                                best = Some((*r2, name));
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some((_, partner)) = best {
+                peer_partner.insert(node.tag.clone(), partner);
+            }
         }
     }
 
@@ -668,17 +698,103 @@ pub fn build(ir: &Ir) -> Layout {
         .collect();
 
     let mut rows: BTreeMap<u32, Vec<String>> = BTreeMap::new();
+    // Hangers: top-level nodes feeding a board member from OUTSIDE hang
+    // ABOVE that board, column-aligned to the member they feed (the PV
+    // chain above its backfeed way) — they leave the rank-row flow.
+    let mut hangs_above: BTreeMap<String, String> = BTreeMap::new(); // node -> fed member tag
+    for node in ir.nodes.values() {
+        if node.parent.is_some() || ir.boards.contains_key(&node.tag) {
+            continue;
+        }
+        for e in &ir.edges {
+            if e.arrow == busbar_syntax::ast::Arrow::Peer {
+                continue;
+            }
+            let Some((from_e, _, _)) = ir.resolve_endpoint(&e.from) else {
+                continue;
+            };
+            if from_e != node.tag {
+                continue;
+            }
+            let Some((to_e, _, owner)) = ir.resolve_endpoint(&e.to) else {
+                continue;
+            };
+            // Only CIRCUIT-PORT backfeeds hang above the board (the PV
+            // inverter onto its way) — a plain source feeding a board
+            // device keeps its rank row.
+            if owner.is_some_and(|o| ir.boards.contains_key(&o)) && ir.circuits.contains_key(&to_e)
+            {
+                hangs_above.entry(node.tag.clone()).or_insert(to_e.clone());
+            }
+        }
+    }
+    // Chains extend upward: anything feeding a hanger hangs above it
+    // (the array above the inverter above its way).
+    loop {
+        let mut grew = false;
+        for node in ir.nodes.values() {
+            if node.parent.is_some() || hangs_above.contains_key(&node.tag) {
+                continue;
+            }
+            for e in &ir.edges {
+                if e.arrow == busbar_syntax::ast::Arrow::Peer {
+                    continue;
+                }
+                let Some((from_e, _, _)) = ir.resolve_endpoint(&e.from) else {
+                    continue;
+                };
+                if from_e != node.tag {
+                    continue;
+                }
+                let Some((to_e, _, _)) = ir.resolve_endpoint(&e.to) else {
+                    continue;
+                };
+                if hangs_above.contains_key(&to_e) {
+                    hangs_above.insert(node.tag.clone(), to_e.clone());
+                    grew = true;
+                }
+            }
+        }
+        if !grew {
+            break;
+        }
+    }
     for (tag, node) in &ir.nodes {
         if node.parent.is_some() || tag.ends_with(".protection") || tag.ends_with(".controller") {
             continue;
         }
-        if in_circuit.contains(tag) {
+        if in_circuit.contains(tag) || hangs_above.contains_key(tag) {
             continue;
         }
         let rank = ranks.get(tag).copied().unwrap_or(u32::MAX);
         rows.entry(rank).or_default().push(tag.clone());
     }
 
+    // Chain headroom per board (finding: a board near the top with a
+    // two-deep hanger chain overflowed the canvas) — reserve the
+    // chain's height above the row before placing it.
+    let chain_height: BTreeMap<String, f64> = {
+        let mut m: BTreeMap<String, f64> = BTreeMap::new();
+        for (node, member) in &hangs_above {
+            let mut board = ir.circuits.get(member).map(|c| c.board.clone());
+            let mut hop = member.clone();
+            while board.is_none() {
+                let Some(next) = hangs_above.get(&hop) else {
+                    break;
+                };
+                board = ir.circuits.get(next).map(|c| c.board.clone());
+                if *next == hop {
+                    break;
+                }
+                hop = next.clone();
+            }
+            if let Some(b) = board.filter(|b| ir.boards.contains_key(b)) {
+                *m.entry(b).or_insert(0.0) += CELL + 12.0;
+            }
+            let _ = node;
+        }
+        m
+    };
     let mut max_right = MARGIN;
     let mut cur_y = MARGIN;
     for (_rank, mut tags) in rows {
@@ -700,6 +816,31 @@ pub fn build(ir: &Ir) -> Layout {
                 .then_with(|| desired_x(a).total_cmp(&desired_x(b)))
                 .then_with(|| a.cmp(b))
         });
+        // Adopted peers sit immediately after their partner — moved
+        // there, not merely appended (a peer sorting before its partner
+        // must relocate).
+        let peers: Vec<String> = peer_partner.keys().cloned().collect();
+        let mut beside: Vec<String> = Vec::new();
+        for t in tags.iter().filter(|t| !peers.contains(t)) {
+            beside.push(t.clone());
+            for (peer, partner) in &peer_partner {
+                if partner == t {
+                    beside.push(peer.clone());
+                }
+            }
+        }
+        // Orphaned peers (partner absent from this row) still place.
+        for t in &tags {
+            if peers.contains(t) && !beside.contains(t) {
+                beside.push(t.clone());
+            }
+        }
+        tags = beside;
+        let headroom = tags
+            .iter()
+            .filter_map(|t| chain_height.get(t))
+            .fold(0.0f64, |a: f64, b: &f64| a.max(*b));
+        cur_y += headroom;
         // Anchored-or-jostled placement (guidance §2.5, per review):
         // a fed board sits as close as it can BELOW its feeder column —
         // at the anchor when the row is free there, jostled right (never
@@ -752,8 +893,79 @@ pub fn build(ir: &Ir) -> Layout {
             .iter()
             .filter_map(|t| layout.boards.get(t).map(|(_, h)| *h))
             .chain(std::iter::once(CELL))
-            .fold(0.0f64, f64::max);
+            .fold(0.0f64, |a: f64, b: f64| a.max(b));
         cur_y += row_h + ROW_GAP;
+    }
+
+    // Hangers (the DC chain above its backfeed way): column-aligned to
+    // the member they feed, stacked upward from the fed board's top —
+    // the inverter sits directly above its way, the array above the
+    // inverter (todo: PV inverter directly above its bus connection).
+    {
+        // Group by fed board; stack order = BFS rank (highest first,
+        // closest to the board).
+        let mut by_board: BTreeMap<String, Vec<(String, String, u32)>> = BTreeMap::new();
+        for (node, member) in &hangs_above {
+            // Follow the chain: a circuit anchor names its board
+            // directly; a node anchor hangs above something that
+            // eventually does.
+            let mut board = ir.circuits.get(member).map(|c| c.board.clone());
+            let mut hop = member.clone();
+            while board.is_none() {
+                let Some(next) = hangs_above.get(&hop) else {
+                    break;
+                };
+                board = ir.circuits.get(next).map(|c| c.board.clone());
+                if *next == hop {
+                    break;
+                }
+                hop = next.clone();
+            }
+            if let Some(board) = board.filter(|b| ir.boards.contains_key(b)) {
+                let rank = ranks.get(node).copied().unwrap_or(0);
+                by_board.entry(board.to_owned()).or_default().push((
+                    node.to_owned(),
+                    member.clone(),
+                    rank,
+                ));
+            }
+        }
+        for (board, hangers) in &by_board {
+            let bp_xy = layout
+                .places
+                .get(board.as_str())
+                .map(|p| (p.x, p.y, p.center().0));
+            let Some((_, bp_y, bp_cx)) = bp_xy else {
+                continue;
+            };
+            let mut hangers = hangers.clone();
+            hangers.sort_by(|a, b| b.2.cmp(&a.2).then(a.0.cmp(&b.0)));
+            let mut y = bp_y;
+            for (node, member, _) in &hangers {
+                let anchor_x = layout
+                    .places
+                    .get(member.as_str())
+                    .map(|p| p.center().0)
+                    .unwrap_or(bp_cx);
+                y -= CELL + 12.0;
+                let Some(n) = ir.nodes.get(node.as_str()) else {
+                    continue;
+                };
+                layout.places.insert(
+                    node.clone(),
+                    Place {
+                        x: anchor_x - CELL / 2.0,
+                        y,
+                        w: CELL,
+                        h: CELL,
+                        label: display_label(node, &n.props),
+                        glyph: glyph_for(&n.type_name, n.kind),
+                        note: rating_note(&n.props),
+                    },
+                );
+                max_right = max_right.max(anchor_x + CELL / 2.0);
+            }
+        }
     }
 
     layout.width = max_right + MARGIN;
@@ -788,7 +1000,26 @@ pub fn build(ir: &Ir) -> Layout {
         // side facing the source — a downward wire leaves the source's
         // bottom and lands on the target's top.
         let (x1, y1) = terminal(pa, down);
-        let (x2, y2) = terminal(pb, !down);
+        let (mut x2, mut y2) = terminal(pb, !down);
+        // A backfeed from outside the board (the PV inverter onto its
+        // way) enters the BUSBAR from above at the way's column (todo:
+        // inverter incomer above the busbar) — the bar's top edge, not
+        // the below-bar tap.
+        let from_board = members_of.get(a.as_str()).copied();
+        if ir.circuits.contains_key(&b)
+            && from_board != ir.circuits.get(&b).map(|c| c.board.as_str())
+        {
+            if let Some(bar) = ir
+                .circuits
+                .get(&b)
+                .and_then(|c| ir.boards.get(&c.board))
+                .and_then(|bd| bd.sections.first())
+                .and_then(|s| layout.places.get(s))
+            {
+                x2 = x2.clamp(bar.x, bar.x + bar.w);
+                y2 = bar.y;
+            }
+        }
         // A busbar tap is perpendicular and ON the bar (guidance
         // §2.2/§3.1): the wire meets it vertically, from directly above
         // or below the thing it feeds when that column crosses the bar,
@@ -980,7 +1211,7 @@ pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {
     let d = match p.glyph {
         Glyph::Junction => 0.0,
         Glyph::Section | Glyph::Board => p.h / 2.0,
-        Glyph::Fuse | Glyph::Meter | Glyph::Ct => 30.0,
+        Glyph::Fuse | Glyph::Meter | Glyph::Ct | Glyph::Pv => 30.0,
         Glyph::Earth => 15.0,
         _ => 20.0,
     };

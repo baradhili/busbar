@@ -162,7 +162,17 @@ fn routes_land_on_their_places() {
                 let side_form = ((point.0 - place.x).abs() < 0.5
                     || (point.0 - (place.x + place.w)).abs() < 0.5)
                     && (point.1 - cy).abs() < 0.5;
-                if !side_form {
+                // A circuit-port backfeed lands on ITS board's bar top
+                // (same board prefix as the circuit tag).
+                let board_prefix = tag.rsplit_once('.').map(|(b, _)| b);
+                let bar_landing = layout.places.iter().any(|(s_tag, s)| {
+                    s.glyph == Glyph::Section
+                        && (point.1 - s.y).abs() < 0.5
+                        && point.0 >= s.x - 0.5
+                        && point.0 <= s.x + s.w + 0.5
+                        && s_tag.rsplit_once('.').map(|(b, _)| b) == board_prefix
+                });
+                if !side_form && !bar_landing {
                     assert_eq!(
                         point.1, expected.1,
                         "{name}: route end y is not a terminal of `{tag}`"
