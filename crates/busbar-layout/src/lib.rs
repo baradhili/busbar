@@ -163,6 +163,60 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
 pub fn build(ir: &Ir) -> Layout {
     let mut layout = Layout::default();
 
+    // -- Sub-main devices (todo: incomer breakers above a bus). ---------------
+    // A board-declared device whose directed feed leaves for a different
+    // board is THAT board's incomer breaker: it renders in the fed
+    // board's incomer column, above the fed bus — never in the feeding
+    // board's below-bar strip.
+    let mut submain_of: BTreeMap<String, String> = BTreeMap::new(); // device -> fed board
+    let mut foreign_incomers: BTreeMap<String, Vec<String>> = BTreeMap::new(); // fed board -> devices
+    for node in ir.nodes.values() {
+        let Some(parent) = &node.parent else { continue };
+        if !ir.boards.contains_key(parent) {
+            continue;
+        }
+        let mut fed: Vec<String> = Vec::new();
+        for e in &ir.edges {
+            let Some((from_e, _, _)) = ir.resolve_endpoint(&e.from) else {
+                continue;
+            };
+            if from_e != node.tag {
+                continue;
+            }
+            // The feed may land on a device inside the fed board (owner
+            // form) or on the fed board itself (`-> HOUSE.in` resolves to
+            // the container, which owns nothing).
+            let Some((to_e, _, owner)) = ir.resolve_endpoint(&e.to) else {
+                continue;
+            };
+            let fed_board = if ir
+                .nodes
+                .get(&to_e)
+                .is_some_and(|n| n.kind == Some(NodeKind::Container))
+            {
+                to_e.as_str()
+            } else {
+                match owner.as_deref() {
+                    Some(o) => o,
+                    None => continue,
+                }
+            };
+            if fed_board != parent.as_str()
+                && ir.boards.contains_key(fed_board)
+                && !fed.iter().any(|f| f == fed_board)
+            {
+                fed.push(fed_board.to_owned());
+            }
+        }
+        if let Some(target) = fed.into_iter().min() {
+            submain_of.insert(node.tag.clone(), target.to_owned());
+            foreign_incomers
+                .entry(target.to_owned())
+                .or_default()
+                .push(node.tag.clone());
+        }
+    }
+
     // -- Board internals: bars + feeder bands. --------------------------------
     let mut members: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for board in ir.boards.values() {
@@ -193,6 +247,7 @@ pub fn build(ir: &Ir) -> Layout {
                 || board.sections.contains(&node.tag)
                 || node.tag.ends_with(".protection")
                 || node.tag.ends_with(".controller")
+                || submain_of.contains_key(&node.tag)
             {
                 continue;
             }
@@ -206,6 +261,17 @@ pub fn build(ir: &Ir) -> Layout {
                 upstream_devs.push(node);
             } else {
                 downstream_devs.push(node);
+            }
+        }
+
+        // Sub-main breakers declared in another board feed THIS bus:
+        // they join the incomer column above it, ordered by the same
+        // directed-hop rule (so house QF1 sits above the house QS1).
+        if let Some(foreign) = foreign_incomers.get(board.tag.as_str()) {
+            for tag in foreign {
+                if let Some(node) = ir.nodes.get(tag.as_str()) {
+                    upstream_devs.push(node);
+                }
             }
         }
 

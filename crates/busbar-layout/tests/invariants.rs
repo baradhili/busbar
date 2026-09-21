@@ -452,3 +452,108 @@ connect ORPH_MAIN.FEED.out -> ORPH_SUB.in;
         main.y + main.h
     );
 }
+
+/// A sub-main breaker declared in the FEEDING board renders in the FED
+/// board's incomer column — above the fed bus, upstream of the fed
+/// board's own main switch — never in the feeding board's below-bar
+/// strip (todo: incomer breakers above a bus).
+#[test]
+fn submain_breakers_render_above_the_fed_bus() {
+    let src = r#"
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+grid GRID : grid { vs = LV; }
+LAMP : lighting { kw = 0.1kW; }
+board SHED : board {
+  vs = LV;
+  bus B2 { incomers = [GRID.out]; rating_a = 100A; }
+  main_switch QF4 : main_switch { rating_a = 100A; }
+  breaker QF1 : breaker { rating_a = 100A; breaking_ka = 10kA; technology = mccb; }
+}
+board HOUSE : board {
+  vs = LV;
+  incomers = [SHED.QF1.out];
+  busbar_rating_a = 100A;
+  main_switch QS1 : main_switch { rating_a = 100A; }
+  circuit LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP]; }
+}
+connect GRID.out -> SHED.QF4.in;
+connect SHED.QF4.out -> SHED.B2;
+connect SHED.B2 -> SHED.QF1.in;
+connect SHED.QF1.out -> HOUSE.QS1.in;
+connect HOUSE.QS1.out -> HOUSE.bus;
+"#;
+    let doc = busbar_syntax::parse(src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+
+    let shed = layout.places.get("SHED").expect("SHED placed");
+    let house = layout.places.get("HOUSE").expect("HOUSE placed");
+    let qf1 = layout.places.get("QF1").expect("QF1 placed");
+    let qs1 = layout.places.get("QS1").expect("QS1 placed");
+    let bar = layout.places.get("HOUSE.bus").expect("bar placed");
+
+    // Above the fed bus, inside the fed frame, upstream of its switch.
+    assert!(
+        qf1.y + qf1.h <= bar.y + 0.5,
+        "QF1 must sit above the HOUSE bus ({:.1} > {:.1})",
+        qf1.y + qf1.h,
+        bar.y
+    );
+    assert!(
+        qf1.y >= house.y && qf1.y + qf1.h <= house.y + house.h,
+        "QF1 must render inside the HOUSE frame"
+    );
+    assert!(qf1.y < qs1.y, "QF1 upstream of QS1 in the incomer column");
+    // And not dangling under the shed's bus.
+    let shed_b2 = layout.places.get("SHED.B2").expect("shed bar");
+    assert!(
+        qf1.y + qf1.h <= shed_b2.y || qf1.y >= shed.y + shed.h,
+        "QF1 no longer in the shed's below-bar strip"
+    );
+    let _ = shed;
+}
+
+/// The same contract for the `-> BOARD.in` feed form: the landing entity
+/// is the board itself, not a member.
+#[test]
+fn submain_breakers_above_fed_bus_board_port_form() {
+    let src = r#"
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+grid GRID : grid { vs = LV; }
+LAMP : lighting { kw = 0.1kW; }
+board SHED : board {
+  vs = LV;
+  bus B2 { incomers = [GRID.out]; rating_a = 100A; }
+  main_switch QF4 : main_switch { rating_a = 100A; }
+  breaker QF1 : breaker { rating_a = 100A; breaking_ka = 10kA; technology = mccb; }
+}
+board HOUSE : board {
+  vs = LV;
+  incomers = [SHED.QF1.out];
+  busbar_rating_a = 100A;
+  circuit LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP]; }
+}
+connect GRID.out -> SHED.QF4.in;
+connect SHED.QF4.out -> SHED.B2;
+connect SHED.B2 -> SHED.QF1.in;
+connect SHED.QF1.out -> HOUSE.in;
+"#;
+    let doc = busbar_syntax::parse(src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+    let qf1 = layout.places.get("QF1").expect("QF1 placed");
+    let bar = layout.places.get("HOUSE.bus").expect("bar placed");
+    let house = layout.places.get("HOUSE").expect("HOUSE placed");
+    assert!(
+        qf1.y + qf1.h <= bar.y + 0.5,
+        "QF1 must sit above the HOUSE bus ({:.1} > {:.1})",
+        qf1.y + qf1.h,
+        bar.y
+    );
+    assert!(
+        qf1.y >= house.y && qf1.y + qf1.h <= house.y + house.h,
+        "QF1 must render inside the HOUSE frame"
+    );
+}
