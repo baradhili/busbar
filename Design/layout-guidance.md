@@ -72,9 +72,12 @@ document drives engine behaviour; the spec (§16) remains the contract.
 ## 4. Symbols and device designation
 
 1. **IEC 60617:2024 symbols** (Energinet hard requirement; SurgePV:
-   non-standard symbols cause review delays). BusBar draws primitives
-   (breaker square+diagonal, fuse, two-circle transformer, semicircle
-   socket, M-in-circle motor, earth bars).
+   non-standard symbols cause review delays). The authoritative symbol
+   set is the reference sheet `corpus/render/symbols.svg` (SmartSLD
+   export): `busbar-render/src/symbols.rs` transcribes its geometry
+   verbatim, and glyphs without a sheet entry keep hand-drawn IEC
+   primitives (two-circle transformer, lamp, motor, SPD, ATS, heating,
+   junction dot).
 2. **Tags follow type-prefix discipline** where the author uses it
    (QA/QB/QC/QF breakers-switches, T transformers, M motors, G generators).
    BusBar renders the author's tags verbatim; the `name` property is the
@@ -133,6 +136,9 @@ busbar taps carry junction dots; feeder depth ≤ the balancing threshold.
 | `name`-property labels; rating note lines | layout `display_label`/`rating_note` |
 | Column balancing for long load chains | feeder sub-columns |
 | Sub-boards hang below their feeding feeder; boards rank with their lowest member | global pass feeder anchors |
+| Incomer chains stack above the bar in power order (directed reach) | internals pass upstream column |
+| Wires land on glyph lead terminals, never centres; same-side collisions get ±10 strip seats | route terminals + tests |
+| Symbol sheet `corpus/render/symbols.svg` transcribed (RCBO, CT, WT, generator, supply…) | `busbar-render/src/symbols.rs` |
 | `column` hints; every-edge-routed invariant | layout + tests |
 
 **Tracked for later (spec-level work)**

@@ -49,8 +49,19 @@ pub enum Glyph {
     MainSwitch,
     /// Contactor: blade with a perpendicular tick at its tip.
     Contactor,
-    /// Residual-current device: rectangle with a diagonal.
+    /// Residual-current device: blade with residual ellipse
+    /// (reference sheet `rcd1`).
     Rcd,
+    /// RCBO — breaker blade plus residual-current block ("IΔ"),
+    /// reference sheet `gfci-breaker1`.
+    Rcbo,
+    /// Current transformer (reference sheet `CT1`).
+    Ct,
+    /// Wind turbine (reference sheet `WT1`).
+    WindTurbine,
+    /// Generator: "G" box (reference sheet `G1`) — distinct from the
+    /// grid supply's "~" circle.
+    Generator,
     Fuse,
     Load,
     Lamp,
@@ -116,23 +127,27 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "fuse" => Glyph::Fuse,
         "battery" => Glyph::Battery,
         "inverter" | "rectifier" | "ups" => Glyph::Inverter,
-        "pv_array" | "pv_string" | "wind_turbine" => Glyph::Pv,
+        "pv_array" | "pv_string" => Glyph::Pv,
+        "wind_turbine" => Glyph::WindTurbine,
         "earth" => Glyph::Earth,
         "junction" => Glyph::Junction,
         "ats" | "changeover" => Glyph::Ats,
         "spd" => Glyph::Spd,
-        "ct" | "vt" | "sync_check" | "meter" => Glyph::Meter,
+        "ct" => Glyph::Ct,
+        "vt" | "sync_check" | "meter" => Glyph::Meter,
         "motor" => Glyph::Motor,
         "lighting" => Glyph::Lamp,
         "socket" => Glyph::Socket,
         "disconnector" | "isolator" | "load_break_switch" => Glyph::Disconnector,
         "main_switch" => Glyph::MainSwitch,
         "contactor" => Glyph::Contactor,
-        "rcd" | "rcbo" | "elcb" | "rccb" | "rcmcd" => Glyph::Rcd,
+        "rcd" | "rccb" => Glyph::Rcd,
+        "rcbo" | "elcb" | "rcmcd" => Glyph::Rcbo,
         "control_relay" => Glyph::Relay,
         "heating" => Glyph::Heating,
         "evse" => Glyph::Evse,
         "bus" | "busbar" => Glyph::Section,
+        "generator" => Glyph::Generator,
         "board" => Glyph::Board,
         _ => match kind {
             Some(NodeKind::Source) => Glyph::Source,
@@ -181,12 +196,12 @@ pub fn build(ir: &Ir) -> Layout {
             {
                 continue;
             }
-            let feeds_section = ir.edges.iter().any(|e| {
-                let from = ir.resolve_endpoint(&e.from).map(|(t, _, _)| t);
-                let to = ir.resolve_endpoint(&e.to).map(|(t, _, _)| t);
-                from.as_deref() == Some(node.tag.as_str())
-                    && to.is_some_and(|t| board.sections.iter().any(|s| s == &t))
-            });
+            // The whole incomer chain stacks above the bar (guidance
+            // §2.4): a device is upstream when a directed power path
+            // from it reaches a section — grid -> fuse -> meter -> main
+            // switch all promote, while an outgoing way fed from the bus
+            // never does.
+            let feeds_section = directed_hops_to_section(ir, &node.tag, board).is_some();
             if feeds_section {
                 upstream_devs.push(node);
             } else {
@@ -227,7 +242,10 @@ pub fn build(ir: &Ir) -> Layout {
         let mut y = BOARD_PAD + LABEL_STRIP;
         if !upstream_devs.is_empty() {
             let mut ordered = upstream_devs;
-            ordered.sort_by_key(|n| (u32::MAX - hops_to_sections(ir, n, board), n.tag.clone()));
+            ordered.sort_by_key(|n| {
+                let hops = directed_hops_to_section(ir, &n.tag, board).unwrap_or(u32::MAX / 2);
+                (u32::MAX - hops, n.tag.clone())
+            });
             for node in ordered {
                 member_list.push(node.tag.clone());
                 layout.places.insert(
@@ -653,8 +671,16 @@ pub fn build(ir: &Ir) -> Layout {
         let (Some(pa), Some(pb)) = (layout.places.get(&a), layout.places.get(&b)) else {
             continue;
         };
-        let (x1, y1) = pa.center();
-        let (x2, y2) = pb.center();
+        // Wires land on the glyph's own terminal — the end of its lead,
+        // on the vertical centreline (guidance §3; lead lengths per the
+        // symbol sheet) — never on its centre, so a device's in and out
+        // wires no longer share a point.
+        let down = pb.center().1 >= pa.center().1;
+        // The departure uses the side facing the target, the arrival the
+        // side facing the source — a downward wire leaves the source's
+        // bottom and lands on the target's top.
+        let (x1, y1) = terminal(pa, down);
+        let (x2, y2) = terminal(pb, !down);
         let mx = (x1 + x2) / 2.0;
         layout.routes.push(Route {
             points: vec![(x1, y1), (mx, y1), (mx, y2), (x2, y2)],
@@ -663,7 +689,62 @@ pub fn build(ir: &Ir) -> Layout {
             to_tag: b,
         });
     }
+    // Same-side relief, terminal-strip style: when a departure and an
+    // arrival share a terminal point (a tie breaker joining two bars
+    // that both sit above it, say), seat the departure 10px right of
+    // centre and the arrival 10px left — distinct connection points on
+    // the same lead. Only endpoint x moves, so elbows stay orthogonal.
+    {
+        let mut endpoints: Vec<(usize, bool, (f64, f64), String)> = Vec::new();
+        for (i, route) in layout.routes.iter().enumerate() {
+            if let Some(&p) = route.points.first() {
+                endpoints.push((i, true, p, route.from_tag.clone()));
+            }
+            if let Some(&p) = route.points.last() {
+                endpoints.push((i, false, p, route.to_tag.clone()));
+            }
+        }
+        let mut handled = std::collections::BTreeSet::new();
+        for i in 0..endpoints.len() {
+            if handled.contains(&i) {
+                continue;
+            }
+            for j in 0..endpoints.len() {
+                if handled.contains(&j) {
+                    continue;
+                }
+                let (ia, sa, pa, ta) = &endpoints[i];
+                let (ib, sb, pb, tb) = &endpoints[j];
+                if ia == ib || ta != tb || !(*sa && !*sb) || pa != pb {
+                    continue;
+                }
+                layout.routes[*ia].points[0].0 += 10.0;
+                layout.routes[*ib].points[3].0 -= 10.0;
+                handled.insert(i);
+                handled.insert(j);
+                break;
+            }
+        }
+    }
+
     layout
+}
+
+/// Wire terminal on a place: the end of the glyph's lead (or the frame
+/// edge for containers), on the vertical centreline. Extents follow the
+/// reference sheet's lead lengths (corpus/render/symbols.svg): blades
+/// and boxes terminate at ±20, the fuse at ±30, the bar at its own
+/// half-height, junctions at their dot.
+pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {
+    let (cx, cy) = p.center();
+    let d = match p.glyph {
+        Glyph::Junction => 0.0,
+        Glyph::Section | Glyph::Board => p.h / 2.0,
+        Glyph::Fuse | Glyph::Meter | Glyph::Ct => 30.0,
+        Glyph::Earth => 15.0,
+        _ => 20.0,
+    };
+    (cx, if lower { cy + d } else { cy - d })
 }
 
 /// Shifts a board's placed members (relative to the board's local origin)
@@ -698,38 +779,50 @@ fn display_label(tag: &str, props: &[busbar_syntax::ast::Property]) -> String {
     short_tag(tag)
 }
 
-/// BFS hop distance from a board device to the nearest section across
-/// resolved edges — orders the incomer column in power sequence.
-fn hops_to_sections(ir: &Ir, node: &busbar_ir::IrNode, board: &busbar_ir::Board) -> u32 {
+/// Directed hop distance from a board device along its power path to
+/// the nearest section of `board`; `None` when no directed path exists
+/// (the device does not feed the bus — an outgoing way, a bus-hung
+/// relay). Board-local only: paths crossing out of the board end.
+fn directed_hops_to_section(ir: &Ir, tag: &str, board: &busbar_ir::Board) -> Option<u32> {
     use std::collections::VecDeque;
-    let mut dist: BTreeMap<String, u32> = BTreeMap::new();
-    let mut queue: VecDeque<String> = VecDeque::new();
-    for s in &board.sections {
-        dist.insert(s.clone(), 0);
-        queue.push_back(s.clone());
-    }
+    let mut dist: BTreeMap<String, u32> = BTreeMap::from([(tag.to_owned(), 0)]);
+    let mut queue: VecDeque<String> = VecDeque::from([tag.to_owned()]);
     while let Some(t) = queue.pop_front() {
         let d = dist[&t];
+        if board.sections.iter().any(|s| s == &t) {
+            return Some(d);
+        }
         for e in &ir.edges {
-            let (Some((a, _, _)), Some((b, _, _))) =
-                (ir.resolve_endpoint(&e.from), ir.resolve_endpoint(&e.to))
-            else {
+            let Some((from_e, _, _)) = ir.resolve_endpoint(&e.from) else {
                 continue;
             };
-            let other = if a == t {
-                b
-            } else if b == t {
-                a
-            } else {
+            if from_e != t {
+                continue;
+            }
+            let Some((to_e, _, owner)) = ir.resolve_endpoint(&e.to) else {
                 continue;
             };
-            if !dist.contains_key(&other) {
-                dist.insert(other.clone(), d + 1);
-                queue.push_back(other);
+            if owner.as_deref().is_some_and(|o| o != board.tag) {
+                continue; // leaves the board — not this bar's incomer chain
+            }
+            // Feeding the board's own `bus`/`in` port is feeding its
+            // section (spec §9.2) — descend through the container.
+            if to_e == board.tag {
+                for s in &board.sections {
+                    if !dist.contains_key(s) {
+                        dist.insert(s.clone(), d + 1);
+                        queue.push_back(s.clone());
+                    }
+                }
+                continue;
+            }
+            if !dist.contains_key(&to_e) {
+                dist.insert(to_e.clone(), d + 1);
+                queue.push_back(to_e);
             }
         }
     }
-    dist.get(&node.tag).copied().unwrap_or(u32::MAX / 2)
+    None
 }
 
 /// Voltage-system summary for a board's label strip (guidance §4.5).

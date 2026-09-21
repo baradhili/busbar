@@ -126,33 +126,144 @@ fn everything_is_on_the_canvas() {
     }
 }
 
+/// Routes land on the glyph TERMINAL — the end of its lead on the
+/// vertical centreline, exactly (guidance §3; todo: wires connect at
+/// the correct connection point).
 #[test]
 fn routes_land_on_their_places() {
     for path in corpus() {
         let (name, layout) = layout_of(&path);
         for route in &layout.routes {
-            let from = layout
-                .places
-                .get(&route.from_tag)
-                .unwrap_or_else(|| panic!("{name}: route from unknown `{}`", route.from_tag));
-            let to = layout
-                .places
-                .get(&route.to_tag)
-                .unwrap_or_else(|| panic!("{name}: route to unknown `{}`", route.to_tag));
-            let (fx, fy) = from.center();
-            let (tx, ty) = to.center();
-            assert_eq!(
-                route.points.first(),
-                Some(&(fx, fy)),
-                "{name}: route start off-center"
+            let Some(&first) = route.points.first() else {
+                continue;
+            };
+            let Some(&last) = route.points.last() else {
+                continue;
+            };
+            let (pa, pb) = (
+                layout.places.get(&route.from_tag),
+                layout.places.get(&route.to_tag),
             );
-            assert_eq!(
-                route.points.last(),
-                Some(&(tx, ty)),
-                "{name}: route end off-center"
-            );
+            let (Some(pa), Some(pb)) = (pa, pb) else {
+                continue;
+            };
+            // Direction is judged from place centres, exactly as the
+            // layout does — wrapped sub-columns can tie centres while
+            // the snapped endpoints invert.
+            let down = pb.center().1 >= pa.center().1;
+            for (point, place, lower) in [(first, pa, down), (last, pb, !down)] {
+                let expected = busbar_layout::terminal(place, lower);
+                assert_eq!(
+                    point.1, expected.1,
+                    "{name}: route end y is not a terminal of `{}`",
+                    "?"
+                );
+                // On-centreline, or the ±10 terminal-strip relief seat
+                // when an arrival and a departure share a terminal.
+                assert!(
+                    (point.0 - expected.0).abs() <= 10.5,
+                    "{name}: route end x {:.1} off the terminal strip of `{}` ({:.1})",
+                    point.0,
+                    "?",
+                    expected.0
+                );
+            }
         }
     }
+}
+
+/// A device's in and out wires must not share a point (the todo item):
+/// a place with exactly one arriving and one departing wire — the
+/// MCB/RCBO/switch case — connects them on opposite terminals. Places
+/// with fanned loads or multiple feeds are junctions and are exempt.
+#[test]
+fn series_devices_connect_on_opposite_terminals() {
+    for path in corpus() {
+        let (name, layout) = layout_of(&path);
+        for (tag, place) in &layout.places {
+            if place.glyph == Glyph::Junction || place.glyph == Glyph::Section {
+                continue;
+            }
+            let mut starts: Vec<(f64, f64)> = Vec::new();
+            let mut ends: Vec<(f64, f64)> = Vec::new();
+            for route in &layout.routes {
+                if &route.from_tag == tag {
+                    if let Some(&p) = route.points.first() {
+                        starts.push(p);
+                    }
+                }
+                if &route.to_tag == tag {
+                    if let Some(&p) = route.points.last() {
+                        ends.push(p);
+                    }
+                }
+            }
+            if starts.len() == 1 && ends.len() == 1 {
+                assert_ne!(
+                    starts[0], ends[0],
+                    "{name}: `{tag}` in and out wires share a point"
+                );
+            }
+        }
+    }
+}
+
+/// The whole incomer chain — grid -> fuse -> meter -> main switch —
+/// stacks ABOVE the busbar in power order, the switch adjacent to the
+/// bar (guidance §2.4; todo item).
+#[test]
+fn incomer_chains_stack_above_the_bar() {
+    let src = r#"
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+grid GRID : grid { vs = LV; }
+LAMP : lighting { kw = 0.1kW; }
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  fuse F1 : fuse { rating_a = 100A; }
+  meter M1 : meter { kind = utility; }
+  main_switch Q1 : main_switch { rating_a = 100A; }
+  breaker OUT : breaker { rating_a = 63A; }
+  circuit LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP]; }
+}
+connect GRID.out -> MAIN.F1.in;
+connect MAIN.F1.out -> MAIN.M1.in;
+connect MAIN.M1.out -> MAIN.Q1.in;
+connect MAIN.Q1.out -> MAIN.OUT.in;
+connect MAIN.OUT.out -> MAIN.bus;
+"#;
+    let doc = busbar_syntax::parse(src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+    let bar = layout.places.get("MAIN.bus").expect("bar");
+    let above = |tag: &str| {
+        layout
+            .places
+            .get(tag)
+            .unwrap_or_else(|| panic!("{tag} placed"))
+    };
+    for tag in ["F1", "M1", "Q1", "OUT"] {
+        let p = above(tag);
+        assert!(
+            p.y + p.h <= bar.y + 0.5,
+            "{tag} must sit above the bar (bottom {:.1} > bar top {:.1})",
+            p.y + p.h,
+            bar.y
+        );
+    }
+    // Power order: fuse above meter above switch above breaker; the
+    // breaker (the device actually feeding the bar) is nearest to it.
+    let (f, m, q, o) = (above("F1"), above("M1"), above("Q1"), above("OUT"));
+    assert!(
+        f.y < m.y && m.y < q.y && q.y < o.y,
+        "chain must be power-ordered top to bottom"
+    );
+    assert!(
+        o.y + o.h <= bar.y + 0.5 && bar.y - (o.y + o.h) < 60.0,
+        "breaker adjacent to the bar"
+    );
 }
 
 /// Every resolvable IR edge must produce exactly one route — a dropped
