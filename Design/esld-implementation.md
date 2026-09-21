@@ -30,13 +30,14 @@ Build a tool that:
 
 ## 2. Delivery strategy
 
-| Phase | Deliverable | Gate |
-|---|---|---|
-| **P1** | Native CLI: parse → IR → validate → export (JSON/DOT/CSV), `fmt` | All R-1xx/R-2xx rules green on corpus |
-| **P2** | Deterministic SVG renderer (IEC symbol subset), `render` | Golden SVG snapshots stable across platforms |
-| **P3** | Solver: states, interlocks, scenarios; R-5xx/R-6xx | Spec worked examples produce expected results |
-| **P4** | WASM module + npm package + web playground | Round-trips in browser < 100 ms for 500-node doc |
-| **P5** | R-3xx/R-4xx full, code profiles, PDF, LSP | Conformance suite ≥ 40 documents |
+| Phase  | Deliverable                                                                     | Gate                                             |
+| ------ | ------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **P1** | Native CLI: parse → IR → validate → export (JSON/DOT/CSV), `fmt`                | All R-1xx/R-2xx rules green on corpus            |
+| **P2** | Deterministic SVG renderer (IEC symbol subset), `render`                        | Golden SVG snapshots stable across platforms     |
+| P2.a   | Create per Board physical layouts using manufacturer or generic device drawings | Not sure :)                                      |
+| **P3** | Solver: states, interlocks, scenarios; R-5xx/R-6xx                              | Spec worked examples produce expected results    |
+| **P4** | WASM module + npm package + web playground                                      | Round-trips in browser < 100 ms for 500-node doc |
+| **P5** | R-3xx/R-4xx full, code profiles, PDF, LSP                                       | Conformance suite ≥ 40 documents                 |
 
 The order is deliberate: everything downstream of parsing (validation, rendering, solving) is pure computation over the IR, so the CLI and WASM targets share 100% of the interesting code and differ only in the shell (argv/stdin/stdout vs. JS bindings).
 
@@ -46,12 +47,12 @@ The order is deliberate: everything downstream of parsing (validation, rendering
 
 ### 3.1 Decisions
 
-| Decision | Choice |
-|---|---|
-| Implementation language | **Rust** — all crates, both shells |
-| Acceptance & conformance testing | **Cucumber (Gherkin)** via rust-cucumber (§6) |
-| Native shell | `busbar` binary (`clap`) |
-| Web shell | `wasm-bindgen` module published as `@busbar/core` (npm name provisional) |
+| Decision                         | Choice                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| Implementation language          | **Rust** — all crates, both shells                                       |
+| Acceptance & conformance testing | **Cucumber (Gherkin)** via rust-cucumber (§6)                            |
+| Native shell                     | `busbar` binary (`clap`)                                                 |
+| Web shell                        | `wasm-bindgen` module published as `@busbar/core` (npm name provisional) |
 
 ### 3.2 Why Rust (rationale retained)
 
@@ -219,9 +220,9 @@ The solver is reachability + constraint logic only — this keeps it determinist
 ### 5.5 `busbar-layout` — deterministic layout
 
 > Drawing conventions are codified in `Design/layout-guidance.md`
-(distilled from the reference corpus in `Design/refs/`); the engine
-implements its "adopted now" table and the invariant suite
-machine-checks it.
+> (distilled from the reference corpus in `Design/refs/`); the engine
+> implements its "adopted now" table and the invariant suite
+> machine-checks it.
 
 - **Algorithm:** layered (Sugiyama-family) with fixed tie-breaking:
   1. Rank by longest-path from sources (`rank = source_to_load` default; `flow` sets orientation).
@@ -430,13 +431,13 @@ Feature: Spec examples are valid
 
 ### 6.3 Test layers
 
-| Layer | What | Tooling |
-|---|---|---|
-| Unit | lexer/parser tables, quantity normalization, unit math | `cargo test` |
-| Acceptance / conformance | corpus cases as Gherkin scenarios | **Cucumber** (rust-cucumber) |
-| Round-trip property | `fmt(parse(x))` idempotent, AST-equivalence | `proptest` in-crate; surfaced as a Cucumber scenario for corpus files |
-| Determinism | render twice, byte-compare; features re-run per OS | Cucumber + CI matrix |
-| Fuzz | lexer/parser must not panic | `cargo-fuzz` targets `lex`, `parse`, `fmt` |
+| Layer                    | What                                                   | Tooling                                                               |
+| ------------------------ | ------------------------------------------------------ | --------------------------------------------------------------------- |
+| Unit                     | lexer/parser tables, quantity normalization, unit math | `cargo test`                                                          |
+| Acceptance / conformance | corpus cases as Gherkin scenarios                      | **Cucumber** (rust-cucumber)                                          |
+| Round-trip property      | `fmt(parse(x))` idempotent, AST-equivalence            | `proptest` in-crate; surfaced as a Cucumber scenario for corpus files |
+| Determinism              | render twice, byte-compare; features re-run per OS     | Cucumber + CI matrix                                                  |
+| Fuzz                     | lexer/parser must not panic                            | `cargo-fuzz` targets `lex`, `parse`, `fmt`                            |
 
 CI matrix: Linux/macOS/Windows run the full feature suite natively; one Node job re-runs `@wasm`-tagged scenarios against the WASM build.
 
@@ -448,15 +449,15 @@ CI matrix: Linux/macOS/Windows run the full feature suite natively; one Node job
 
 ## 7. Performance budgets (P4 gates)
 
-| Operation | Budget (native / wasm) |
-|---|---|
-| Parse 500-node, 60-circuit document | ≤ 30 ms / ≤ 75 ms |
-| Full check (all rules) on same | ≤ 50 ms / ≤ 125 ms |
-| Solve one scenario | ≤ 20 ms / ≤ 50 ms |
-| Render SVG (60 circuits) | ≤ 80 ms / ≤ 200 ms |
-| Output SVG size (60 circuits) | ≤ 400 KB |
-| WASM bundle | ≤ 1.5 MB gzip |
-| Cold init (wasm instantiate) | ≤ 10 ms |
+| Operation                           | Budget (native / wasm) |
+| ----------------------------------- | ---------------------- |
+| Parse 500-node, 60-circuit document | ≤ 30 ms / ≤ 75 ms      |
+| Full check (all rules) on same      | ≤ 50 ms / ≤ 125 ms     |
+| Solve one scenario                  | ≤ 20 ms / ≤ 50 ms      |
+| Render SVG (60 circuits)            | ≤ 80 ms / ≤ 200 ms     |
+| Output SVG size (60 circuits)       | ≤ 400 KB               |
+| WASM bundle                         | ≤ 1.5 MB gzip          |
+| Cold init (wasm instantiate)        | ≤ 10 ms                |
 
 Measured with `criterion` benches against a generated 500/2000-node corpus; budgets enforced in CI (fail builds on regression > 20%).
 
@@ -483,17 +484,17 @@ Measured with `criterion` benches against a generated 500/2000-node corpus; budg
 
 ## 10. Milestones
 
-| ID | Scope | Acceptance criteria |
-|---|---|---|
-| M0 | Repo, CI matrix, crate skeletons, Cucumber scaffold, lexer | First `.feature` green; every spec example lexes correctly |
-| M1 | Full parser + AST + `fmt` | `roundtrip.feature` green; `spec-examples.feature` parses every block |
-| M2 | IR: link, type instantiation, expansion, JSON export | `export ir` on worked examples matches reviewed golden JSON |
-| M3 | `check`: R-1xx + R-2xx, human+JSON diagnostics | `rules-structural.feature` + `rules-voltage-earthing.feature` green |
-| M4 | `check`: R-3xx/R-4xx + code profiles | `rules-protection.feature` + `rules-sources-islands.feature` green |
-| M5 | `render`: layout + SVG, IEC subset | `render.feature` hashes stable across 3 OSes; 60-circuit budget met |
-| M6 | `solve`: states, interlocks, scenarios; R-5xx/R-6xx | `solve.feature` reproduces both spec worked examples' expectations |
-| M7 | WASM + npm + minimal playground page | Browser round-trip < 100 ms; bundle ≤ 1.5 MB gz; `@wasm` scenarios pass under Node |
-| M8 | PDF export, ANSI symbol set, tree-sitter grammar + LSP | Spec §16.2 renderer contract fully green |
+| ID  | Scope                                                      | Acceptance criteria                                                                |
+| --- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| M0  | Repo, CI matrix, crate skeletons, Cucumber scaffold, lexer | First `.feature` green; every spec example lexes correctly                         |
+| M1  | Full parser + AST + `fmt`                                  | `roundtrip.feature` green; `spec-examples.feature` parses every block              |
+| M2  | IR: link, type instantiation, expansion, JSON export       | `export ir` on worked examples matches reviewed golden JSON                        |
+| M3  | `check`: R-1xx + R-2xx, human+JSON diagnostics             | `rules-structural.feature` + `rules-voltage-earthing.feature` green                |
+| M4  | `check`: R-3xx/R-4xx + code profiles                       | `rules-protection.feature` + `rules-sources-islands.feature` green                 |
+| M5  | `render`: layout + SVG, IEC subset                         | `render.feature` hashes stable across 3 OSes; 60-circuit budget met                |
+| M6  | `solve`: states, interlocks, scenarios; R-5xx/R-6xx        | `solve.feature` reproduces both spec worked examples' expectations                 |
+| M7  | WASM + npm + minimal playground page                       | Browser round-trip < 100 ms; bundle ≤ 1.5 MB gz; `@wasm` scenarios pass under Node |
+| M8  | PDF export, ANSI symbol set, tree-sitter grammar + LSP     | Spec §16.2 renderer contract fully green                                           |
 
 Each milestone lands with its corpus cases and a tagged release (`v0.1.0-m1` style pre-releases until P1 completes).
 
@@ -501,15 +502,15 @@ Each milestone lands with its corpus cases and a tagged release (`v0.1.0-m1` sty
 
 ## 11. Risks and mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Layout quality below hand-drawn norms | Tool perceived as toy | Layered-with-hints first, publish layout-json so third parties can compete on rendering; hints (spec §16.1) are the escape hatch |
-| Symbol fidelity vs licensing (IEC/ANSI standards are copyrighted documents) | Legal exposure | Draw primitives from scratch informed by the standards' conventions; never embed artwork/scans; document provenance per symbol |
-| Spec churn during 0.x | Rework | Profile-gate (`esld/1.0` header) from M1; corpus versions with spec; breaking changes bump profile major |
-| WASM bundle creep | Web target unusable | Size budget in CI from M7, `opt-level=z`, no heavyweight deps (no `chrono`, no `regex` unless justified) |
-| Future second implementation drifts (e.g. a TS port) | Invalid conformance claims | Gherkin features are the shared contract — any implementation runs the same `.feature` files; CI badge per implementation |
-| Gherkin suite bloat / slow scenarios | CI friction | Scenario Outlines + Examples tables keep step code small; `@slow` excluded from PR-triggered runs |
-| Quantity/unit edge cases (`mm²`, `µ`, `2.5mm2` vs `2.5 mm2`) | Subtle validation bugs | Property tests over unit normalization table; normalize at IR boundary, never in rules |
+| Risk                                                                        | Impact                     | Mitigation                                                                                                                       |
+| --------------------------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Layout quality below hand-drawn norms                                       | Tool perceived as toy      | Layered-with-hints first, publish layout-json so third parties can compete on rendering; hints (spec §16.1) are the escape hatch |
+| Symbol fidelity vs licensing (IEC/ANSI standards are copyrighted documents) | Legal exposure             | Draw primitives from scratch informed by the standards' conventions; never embed artwork/scans; document provenance per symbol   |
+| Spec churn during 0.x                                                       | Rework                     | Profile-gate (`esld/1.0` header) from M1; corpus versions with spec; breaking changes bump profile major                         |
+| WASM bundle creep                                                           | Web target unusable        | Size budget in CI from M7, `opt-level=z`, no heavyweight deps (no `chrono`, no `regex` unless justified)                         |
+| Future second implementation drifts (e.g. a TS port)                        | Invalid conformance claims | Gherkin features are the shared contract — any implementation runs the same `.feature` files; CI badge per implementation        |
+| Gherkin suite bloat / slow scenarios                                        | CI friction                | Scenario Outlines + Examples tables keep step code small; `@slow` excluded from PR-triggered runs                                |
+| Quantity/unit edge cases (`mm²`, `µ`, `2.5mm2` vs `2.5 mm2`)                | Subtle validation bugs     | Property tests over unit normalization table; normalize at IR boundary, never in rules                                           |
 
 ---
 
