@@ -132,6 +132,7 @@ busbar taps carry junction dots; feeder depth ≤ the balancing threshold.
 | Dashed board frames; name + voltsys note in label strip | renderer + layout note |
 | `name`-property labels; rating note lines | layout `display_label`/`rating_note` |
 | Column balancing for long load chains | feeder sub-columns |
+| Sub-boards hang below their feeding feeder; boards rank with their lowest member | global pass feeder anchors |
 | `column` hints; every-edge-routed invariant | layout + tests |
 
 **Tracked for later (spec-level work)**

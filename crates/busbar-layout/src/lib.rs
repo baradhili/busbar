@@ -393,7 +393,123 @@ pub fn build(ir: &Ir) -> Layout {
     }
 
     // -- Global: rank rows, entities side by side. ----------------------------
-    let ranks = rank_from_sources(ir);
+    let mut ranks = rank_from_sources(ir);
+
+    // Circuits rank with their head device so feeds leaving a circuit
+    // (`BOARD.CIRCUIT.out`) inherit a real BFS distance.
+    for circuit in ir.circuits.values() {
+        let head = circuit
+            .controller
+            .as_ref()
+            .map(|c| c.tag.clone())
+            .or_else(|| circuit.protection.as_ref().map(|p| p.tag.clone()));
+        if let Some(head) = head {
+            let hr = ranks.get(&head).copied();
+            if let Some(r) = hr {
+                let entry = ranks.entry(circuit.tag.clone()).or_insert(u32::MAX);
+                *entry = (*entry).min(r);
+            }
+        }
+    }
+
+    // A board's row is where power first reaches it (guidance §2.1): rank
+    // with its entry member — the minimum BFS rank across its members —
+    // not where an edge happens to name the container itself. The deepest
+    // member would be wrong: it puts the frame below unrelated entities
+    // fed at intermediate ranks (e.g. the earth electrode); §2.5's
+    // parent-child floor below is what orders nested boards.
+    for board in ir.boards.keys() {
+        let mut r = ranks.get(board).copied().unwrap_or(u32::MAX);
+        let fold = |tag: &str, ranks: &BTreeMap<String, u32>, r: &mut u32| {
+            if let Some(m) = ranks.get(tag) {
+                *r = (*r).min(*m);
+            }
+        };
+        for node in ir.nodes.values() {
+            if node.parent.as_deref() == Some(board.as_str()) {
+                fold(&node.tag, &ranks, &mut r);
+            }
+        }
+        for section in ir.sections.values() {
+            if section.board == *board {
+                fold(&section.tag, &ranks, &mut r);
+            }
+        }
+        for circuit in ir.circuits.values() {
+            if circuit.board == *board {
+                fold(&circuit.tag, &ranks, &mut r);
+            }
+        }
+        ranks.insert(board.clone(), r);
+    }
+
+    // Guidance §2.5: a board fed from inside another board hangs below
+    // the feeder that feeds it. Record owner and feeding entity
+    // (deterministic pick: smallest owner, then feeder tag) and raise the
+    // child's rank so its row is strictly below the parent's; the
+    // anchor's x is read from its placed glyph when the child's row is
+    // packed.
+    let mut feeder_of: BTreeMap<String, (String, String)> = BTreeMap::new();
+    for board in ir.boards.keys() {
+        let mut candidates: Vec<(String, String)> = Vec::new();
+        for edge in &ir.edges {
+            let Some((to_entity, _, _)) = ir.resolve_endpoint(&edge.to) else {
+                continue;
+            };
+            if to_entity != *board {
+                continue;
+            }
+            let Some((from_entity, _, Some(owner))) = ir.resolve_endpoint(&edge.from) else {
+                continue;
+            };
+            if owner != *board && ir.boards.contains_key(&owner) {
+                candidates.push((owner, from_entity));
+            }
+        }
+        if let Some((owner, feeder)) = candidates.into_iter().min() {
+            let floor = ranks
+                .get(&owner)
+                .copied()
+                .unwrap_or(u32::MAX)
+                .saturating_add(1);
+            let rank = ranks.get_mut(board.as_str()).expect("board ranked above");
+            *rank = (*rank).max(floor);
+            feeder_of.insert(board.clone(), (owner, feeder));
+        }
+    }
+
+    // §2.5 must hold even when the whole cluster is unreachable from any
+    // source (orphan sub-boards, R-109 territory): u32::MAX cannot be
+    // raised, so unreachable boards are rebased by feeder-nesting depth —
+    // deeper boards occupy lower rows within the trailing MAX band. The
+    // relaxation is bounded by the board count and monotone, so cycles
+    // (R-108 feeds) cannot loop it.
+    let unranked: Vec<&String> = ir
+        .boards
+        .keys()
+        .filter(|b| ranks.get(*b).copied() == Some(u32::MAX))
+        .collect();
+    if !unranked.is_empty() {
+        let mut depth: BTreeMap<&str, u32> = unranked.iter().map(|b| (b.as_str(), 0)).collect();
+        for _ in 0..unranked.len() {
+            for b in &unranked {
+                let Some((owner, _)) = feeder_of.get(*b) else {
+                    continue;
+                };
+                let parent = depth.get(owner.as_str()).copied().unwrap_or(0);
+                let child = depth
+                    .get_mut(b.as_str())
+                    .expect("unranked board has a depth entry");
+                *child = (*child).max(parent + 1);
+            }
+        }
+        let max_depth = depth.values().copied().max().unwrap_or(0);
+        for b in &unranked {
+            let d = depth[b.as_str()];
+            ranks.insert((*b).clone(), u32::MAX - (max_depth - d));
+        }
+    }
+
     let in_circuit: std::collections::BTreeSet<String> = ir
         .circuits
         .values()
@@ -416,48 +532,111 @@ pub fn build(ir: &Ir) -> Layout {
     let mut cur_y = MARGIN;
     for (_rank, mut tags) in rows {
         // `layout { TAG { column = N; } }` hints fix left-to-right order
-        // (spec §16.1 advisory); unadorned tags keep tag order after them.
-        tags.sort_by_key(|t| {
-            (
-                ir.layout_columns.get(t).copied().unwrap_or(u64::MAX),
-                t.clone(),
-            )
+        // (spec §16.1 advisory); §2.5 feeder alignment is the natural
+        // secondary order; the tag is the deterministic tiebreak.
+        let desired_x = |tag: &String| -> f64 {
+            feeder_of
+                .get(tag)
+                .and_then(|(_, feeder)| layout.places.get(feeder))
+                .map(|p| p.center().0)
+                .unwrap_or(f64::MAX)
+        };
+        tags.sort_by(|a, b| {
+            let ha = ir.layout_columns.get(a).copied().unwrap_or(u64::MAX);
+            let hb = ir.layout_columns.get(b).copied().unwrap_or(u64::MAX);
+            ha.cmp(&hb)
+                .then_with(|| desired_x(a).total_cmp(&desired_x(b)))
+                .then_with(|| a.cmp(b))
         });
-        let row_h = tags
-            .iter()
-            .filter_map(|t| layout.boards.get(t).map(|(_, h)| *h))
-            .chain(std::iter::once(CELL))
-            .fold(0.0f64, f64::max);
-        let mut cur_x = MARGIN;
+        // Feeder-centred lanes (guidance §2.5): an anchored board sits
+        // centred under its feeder in the first lane with room; when
+        // feeders crowd (two wide sub-boards under adjacent feeder
+        // columns), the later board opens a lower lane of the same rank
+        // row instead of drifting sideways off its feeder. Only the
+        // canvas margin can still clamp the centre — geometry, not
+        // policy. Flow entities (no feeder) always use the first lane.
+        struct LaneSlot {
+            tag: String,
+            x: f64,
+            w: f64,
+            h: f64,
+        }
+        let mut lanes: Vec<(f64, Vec<LaneSlot>)> = vec![(MARGIN, Vec::new())];
         for tag in &tags {
             let (w, h) = layout.boards.get(tag).copied().unwrap_or((CELL, CELL));
-            let node = ir.nodes.get(tag);
-            let member_list = members.get(tag).cloned().unwrap_or_default();
-            offset_group(&mut layout, &member_list, cur_x, cur_y);
-            layout.places.insert(
-                tag.clone(),
-                Place {
-                    x: cur_x,
-                    y: cur_y,
-                    w,
-                    h,
-                    label: tag.clone(),
-                    glyph: node
-                        .map(|n| glyph_for(&n.type_name, n.kind))
-                        .unwrap_or(Glyph::Generic),
-                    // Boards carry their voltage system in the label
-                    // strip (guidance §4.5): "230V 1ph 50Hz".
-                    note: if layout.boards.contains_key(tag) {
-                        voltsys_note(ir, tag)
+            let desired = feeder_of
+                .get(tag)
+                .and_then(|(_, feeder)| layout.places.get(feeder))
+                .map(|p| (p.center().0 - w / 2.0).max(MARGIN));
+            match desired {
+                Some(x) => {
+                    if let Some((cur_x, slots)) = lanes.iter_mut().find(|(cx, _)| *cx <= x) {
+                        slots.push(LaneSlot {
+                            tag: tag.clone(),
+                            x,
+                            w,
+                            h,
+                        });
+                        *cur_x = x + w + COL_GAP;
                     } else {
-                        node.and_then(|n| rating_note(&n.props))
-                    },
-                },
-            );
-            cur_x += w + COL_GAP;
+                        lanes.push((
+                            x + w + COL_GAP,
+                            vec![LaneSlot {
+                                tag: tag.clone(),
+                                x,
+                                w,
+                                h,
+                            }],
+                        ));
+                    }
+                }
+                None => {
+                    let (cur_x, slots) = &mut lanes[0];
+                    let x = *cur_x;
+                    slots.push(LaneSlot {
+                        tag: tag.clone(),
+                        x,
+                        w,
+                        h,
+                    });
+                    *cur_x = x + w + COL_GAP;
+                }
+            }
         }
-        max_right = max_right.max(cur_x - COL_GAP);
-        cur_y += row_h + ROW_GAP;
+        for (_, slots) in &lanes {
+            let lane_h = slots
+                .iter()
+                .map(|s| s.h)
+                .chain(std::iter::once(CELL))
+                .fold(0.0f64, f64::max);
+            for slot in slots {
+                let node = ir.nodes.get(&slot.tag);
+                let member_list = members.get(&slot.tag).cloned().unwrap_or_default();
+                offset_group(&mut layout, &member_list, slot.x, cur_y);
+                layout.places.insert(
+                    slot.tag.clone(),
+                    Place {
+                        x: slot.x,
+                        y: cur_y,
+                        w: slot.w,
+                        h: slot.h,
+                        label: slot.tag.clone(),
+                        glyph: node
+                            .map(|n| glyph_for(&n.type_name, n.kind))
+                            .unwrap_or(Glyph::Generic),
+                        // Boards carry their voltage system in the label
+                        // strip (guidance §4.5): "230V 1ph 50Hz".
+                        note: if layout.boards.contains_key(&slot.tag) {
+                            voltsys_note(ir, &slot.tag)
+                        } else {
+                            node.and_then(|n| rating_note(&n.props))
+                        },
+                    },
+                );
+                max_right = max_right.max(slot.x + slot.w);
+            }
+            cur_y += lane_h + ROW_GAP;
+        }
     }
 
     layout.width = max_right + MARGIN;

@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
-use busbar_layout::{Glyph, Layout, Place};
+use busbar_layout::{FEEDER_W, Glyph, Layout, Place};
 
 fn corpus() -> Vec<PathBuf> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus/valid");
@@ -192,3 +192,152 @@ fn every_resolvable_edge_is_routed() {
 // when corpus grows grouped checks).
 #[allow(dead_code)]
 type _Unused = BTreeMap<String, Place>;
+
+/// Guidance §2.5: a board fed from inside another board hangs below the
+/// feeder that feeds it — its row is strictly below the parent board's,
+/// and its centre aligns with the feeder's column.
+#[test]
+fn fed_boards_hang_below_their_feeder() {
+    let src = r#"
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+grid GRID : grid { vs = LV; }
+LAMP : lighting { kw = 0.1kW; }
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  circuit LIGHTS { protection : rcbo { rating_a = 10A; rcd_ma = 30mA; }; loads = [LAMP]; }
+  circuit FEED_A { protection : mcb { rating_a = 20A; }; }
+  circuit FEED_B { protection : mcb { rating_a = 20A; }; }
+}
+board SUB_A : board {
+  vs = LV;
+  incomers = [MAIN.FEED_A.out];
+  busbar_rating_a = 20A;
+  circuit SUB_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP]; }
+}
+connect GRID.out -> MAIN.in;
+connect MAIN.FEED_A.out -> SUB_A.in;
+"#;
+    let doc = busbar_syntax::parse(src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+
+    let main = layout.places.get("MAIN").expect("MAIN placed");
+    let sub = layout.places.get("SUB_A").expect("SUB_A placed");
+    let feed_a = layout.places.get("MAIN.FEED_A").expect("feeder placed");
+    let feed_b = layout.places.get("MAIN.FEED_B").expect("feeder placed");
+
+    assert!(
+        sub.y >= main.y + main.h,
+        "SUB_A must hang below MAIN (sub top {:.1} < main bottom {:.1})",
+        sub.y,
+        main.y + main.h
+    );
+    let (sub_cx, _) = sub.center();
+    let (fa_cx, _) = feed_a.center();
+    let (fb_cx, _) = feed_b.center();
+    assert!(
+        (sub_cx - fa_cx).abs() < 0.5,
+        "SUB_A centre {:.1} must align with its feeder FEED_A at {:.1}",
+        sub_cx,
+        fa_cx
+    );
+    assert!(
+        (sub_cx - fb_cx).abs() > FEEDER_W / 2.0,
+        "SUB_A must align with FEED_A, not the unrelated FEED_B column"
+    );
+}
+
+/// §2.5 under crowding: two wide sub-boards fed by adjacent feeder
+/// columns cannot share a lane, so the second opens a lower lane — and
+/// both stay centred on their own feeder (no sideways drift).
+#[test]
+fn crowded_fed_boards_lane_instead_of_drifting() {
+    let src = r#"
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+grid GRID : grid { vs = LV; }
+LAMP : lighting { kw = 0.1kW; }
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  circuit LIGHTS { protection : rcbo { rating_a = 10A; rcd_ma = 30mA; }; loads = [LAMP]; }
+  circuit FEED_A { protection : mcb { rating_a = 20A; }; }
+  circuit FEED_B { protection : mcb { rating_a = 20A; }; }
+}
+board SUB_A : board {
+  vs = LV;
+  incomers = [MAIN.FEED_A.out];
+  busbar_rating_a = 20A;
+  circuit SUB_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP]; }
+}
+board SUB_B : board {
+  vs = LV;
+  incomers = [MAIN.FEED_B.out];
+  busbar_rating_a = 20A;
+  circuit SUB_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP]; }
+}
+connect GRID.out -> MAIN.in;
+connect MAIN.FEED_A.out -> SUB_A.in;
+connect MAIN.FEED_B.out -> SUB_B.in;
+"#;
+    let doc = busbar_syntax::parse(src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+
+    for (sub, feeder) in [("SUB_A", "MAIN.FEED_A"), ("SUB_B", "MAIN.FEED_B")] {
+        let s = layout.places.get(sub).expect("sub placed");
+        let f = layout.places.get(feeder).expect("feeder placed");
+        let (scx, _) = s.center();
+        let (fcx, _) = f.center();
+        assert!(
+            (scx - fcx).abs() < 0.5,
+            "{sub} centre {:.1} must stay aligned with {feeder} at {:.1}",
+            scx,
+            fcx
+        );
+    }
+    let a = layout.places.get("SUB_A").unwrap();
+    let b = layout.places.get("SUB_B").unwrap();
+    assert!(
+        b.y == a.y || b.y >= a.y + a.h || a.y >= b.y + b.h,
+        "crowded sub-boards must not overlap: SUB_A {a:?} vs SUB_B {b:?}"
+    );
+}
+
+/// §2.5 also holds for clusters no source can reach (orphan sub-boards,
+/// R-109 territory): the fed board still lands in a row below its
+/// feeder's board, via the unreachable-band depth rebase.
+#[test]
+fn orphaned_fed_boards_still_hang_below() {
+    let src = r#"
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+board ORPH_MAIN : board {
+  vs = LV;
+  incomers = [NOWHERE.out];
+  busbar_rating_a = 100A;
+  circuit FEED { protection : mcb { rating_a = 20A; }; }
+}
+board ORPH_SUB : board {
+  vs = LV;
+  incomers = [ORPH_MAIN.FEED.out];
+  busbar_rating_a = 20A;
+}
+connect ORPH_MAIN.FEED.out -> ORPH_SUB.in;
+"#;
+    let doc = busbar_syntax::parse(src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+    let main = layout.places.get("ORPH_MAIN").expect("parent placed");
+    let sub = layout.places.get("ORPH_SUB").expect("child placed");
+    assert!(
+        sub.y >= main.y + main.h,
+        "unreachable SUB must still hang below its parent ({:.1} < {:.1})",
+        sub.y,
+        main.y + main.h
+    );
+}
