@@ -49,6 +49,7 @@ connect GRID.out -> SHED_MAIN.FU1.in;
 connect SHED_MAIN.FU1.out -> SHED_MAIN.EM1.in;
 connect SHED_MAIN.EM1.out -> SHED_MAIN.QF4.in;
 connect SHED_MAIN.QF4.out -> SHED_MAIN.B2;
+connect SHED_MAIN.pe -- MAIN_EARTH.e;
 connect SHED_MAIN.HOUSE_FEED.out -> HOUSE_SUB.QS1.in;
 
 // ---------- House Sub-board ----------
@@ -163,6 +164,8 @@ board HW_SUB : board {
   }
 }
 
+connect HW_SUB.QS2.out -> HW_SUB.bus;
+
 // ---------- Retic Sub-board ----------
 board RETIC_SUB : board {
   vs = LV;
@@ -179,51 +182,53 @@ board RETIC_SUB : board {
   }
 }
 
+connect RETIC_SUB.QS3.out -> RETIC_SUB.bus;
+
 // ---------- Loads ----------
 // Shed load
-appliance SHED_MISC { kw = 2.0kW; on_time = 1h; period = 1d; }
+SHED_MISC : appliance { kw = 2.0kW; on_time = 1h; period = 1d; }
 
 // Intermittent low-A lighting circuits
-lighting LIGHTS_NTH_LOAD { kw = 1.2kW; points = 12; on_time = 4h; period = 1d; }
-lighting LIGHTS_STH_LOAD { kw = 1.0kW; points = 10; on_time = 4h; period = 1d; }
-lighting LIGHTS_EXT_LOAD { kw = 0.2kW; points = 4; on_time = 1h; period = 1d; }
+LIGHTS_NTH_LOAD : lighting { kw = 1.2kW; points = 12; on_time = 4h; period = 1d; }
+LIGHTS_STH_LOAD : lighting { kw = 1.0kW; points = 10; on_time = 4h; period = 1d; }
+LIGHTS_EXT_LOAD : lighting { kw = 0.2kW; points = 4; on_time = 1h; period = 1d; }
 
 // General socket circuits
-socket SOCKETS_STH_LOAD { kw = 2.4kW; points = 8; }
-socket SOCKETS_NTH_LOAD { kw = 3.3kW; points = 11; }
-socket SOCKETS_KIT_LOAD { kw = 2.7kW; points = 9; }
-socket SOCKETS_FAN_LOAD { kw = 1.0kW; points = 10; }
+SOCKETS_STH_LOAD : socket { kw = 2.4kW; points = 8; }
+SOCKETS_NTH_LOAD : socket { kw = 3.3kW; points = 11; }
+SOCKETS_KIT_LOAD : socket { kw = 2.7kW; points = 9; }
+SOCKETS_FAN_LOAD : socket { kw = 1.0kW; points = 10; }
 
 // Appliances (Intermittent)
-appliance WASHER { kw = 1.0kW; on_time = 1h; period = 1d; }
-appliance DRYER { kw = 2.0kW; on_time = 1h; period = 1d; }
-appliance DISHWASHER { kw = 1.5kW; on_time = 1h; period = 1d; }
-cooktop STOVE { kw = 7.0kW; phases = 1; }
+WASHER : appliance { kw = 1.0kW; on_time = 1h; period = 1d; }
+DRYER : appliance { kw = 2.0kW; on_time = 1h; period = 1d; }
+DISHWASHER : appliance { kw = 1.5kW; on_time = 1h; period = 1d; }
+STOVE : cooktop { kw = 7.0kW; phases = 1; }
 
 // Continuous essential loads (no on_time/period profile implies continuous)
-appliance FRIDGE { kw = 0.2kW; }
-appliance FREEZER { kw = 0.3kW; }
-appliance ROUTER { kw = 0.01kW; }
+FRIDGE : appliance { kw = 0.2kW; }
+FREEZER : appliance { kw = 0.3kW; }
+ROUTER : appliance { kw = 0.01kW; }
 
 // Intermittent motor/pumps
-appliance SEPTIC_PUMP_1 { kw = 1.0kW; on_time = 0.5h; period = 1d; }
-appliance SEPTIC_PUMP_2 { kw = 1.0kW; on_time = 0.5h; period = 1d; }
-appliance SEPTIC_AERO { kw = 0.1kW; on_time = 12h; period = 1d; }
+SEPTIC_PUMP_1 : appliance { kw = 1.0kW; on_time = 0.5h; period = 1d; }
+SEPTIC_PUMP_2 : appliance { kw = 1.0kW; on_time = 0.5h; period = 1d; }
+SEPTIC_AERO : appliance { kw = 0.1kW; on_time = 12h; period = 1d; }
 
 // HVAC
-hvac AC1 { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 4h; period = 1d; }
-hvac AC2 { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 4h; period = 1d; }
-hvac AC3 { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 4h; period = 1d; }
+AC1 : hvac { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 4h; period = 1d; }
+AC2 : hvac { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 4h; period = 1d; }
+AC3 : hvac { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 4h; period = 1d; }
 
 // EV Charger
-evse EV_CHARGER { kw = 7.0kW; phases = 1; mode = 2; v2x_capable = no; }
+EV_CHARGER : evse { kw = 7.0kW; phases = 1; mode = 2; v2x_capable = no; }
 
 // HW Sub-board loads
-heating HW_BOOSTER_LOAD { kw = 3.6kW; on_time = 2h; period = 1d; }
-motor HW_PUMP { kw = 0.2kW; starter = none; duty = "S2"; on_time = 0.2h; period = 1h; }
+HW_BOOSTER_LOAD : heating { kw = 3.6kW; on_time = 2h; period = 1d; }
+HW_PUMP : motor { kw = 0.2kW; starter = none; duty = "S2"; on_time = 0.2h; period = 1h; }
 
 // Retic Sub-board load
-motor M1 { kw = 1.1kW; starter = dol; duty = "S2"; on_time = 1h; period = 1d; }
+M1 : motor { kw = 1.1kW; starter = dol; duty = "S2"; on_time = 1h; period = 1d; }
 
 // ---------- Operating States ----------
 state "normal" {
