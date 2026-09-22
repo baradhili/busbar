@@ -358,13 +358,21 @@ pub fn build(ir: &Ir) -> Layout {
                 n as f64 * (CELL + STACK_GAP) - STACK_GAP
             }
         };
-        let bar_w = inner_w.max(strip_w(downstream_devs.len())).max(BAR_W_MIN);
+        // The bus-hung strip sits BESIDE the feeder columns, at the
+        // breaker row (review: SPD/QF1 level with SHED_LOAD, not below
+        // the band) — so the bar spans both.
+        let bar_w = if downstream_devs.is_empty() {
+            inner_w.max(BAR_W_MIN)
+        } else {
+            (inner_w + STACK_GAP + strip_w(downstream_devs.len())).max(BAR_W_MIN)
+        };
 
         // Incomer column: upstream devices stack vertically above the bar
         // in power order — the device adjacent to the section lands nearest
         // the bar (guidance §2.4). Hop distance from the sections orders
         // the chain; the tag breaks ties.
         let mut y = BOARD_PAD + LABEL_STRIP;
+        let mut band_top: Option<f64> = None;
         if !upstream_devs.is_empty() {
             has_incomer_column.insert(board.tag.clone());
             let mut ordered = upstream_devs;
@@ -429,6 +437,9 @@ pub fn build(ir: &Ir) -> Layout {
                 },
             );
             y += SECTION_BAR_H + 26.0; // bar + section label
+            if band_top.is_none() {
+                band_top = Some(y);
+            }
             // Feeder band under this bar.
             if let Some(ctags) = feeders.get(section) {
                 let mut depth = 0.0f64;
@@ -528,12 +539,14 @@ pub fn build(ir: &Ir) -> Layout {
             y += SECTION_GAP;
         }
 
-        // Devices that hang off the bus rather than feed it sit in a strip
-        // below the feeder bands (contactor / relay / board-local loads).
+        // Devices that hang off the bus sit in a strip BESIDE the
+        // feeder columns at the breaker row — same level as the ways,
+        // not below the whole band (review).
         let mut y_end = y - SECTION_GAP;
         if !downstream_devs.is_empty() {
-            y_end += 20.0;
-            let mut dx = BOARD_PAD;
+            let band_y = band_top.unwrap_or(y_end);
+            let mut dx = BOARD_PAD + inner_w + if inner_w > 0.0 { STACK_GAP } else { 0.0 };
+            y_end = y_end.max(band_y + CELL);
             for node in &downstream_devs {
                 member_list.push(node.tag.clone());
                 let wired = ir.edges.iter().any(|e| {
@@ -551,7 +564,7 @@ pub fn build(ir: &Ir) -> Layout {
                     node.tag.clone(),
                     Place {
                         x: dx,
-                        y: y_end,
+                        y: band_y,
                         w: CELL,
                         h: CELL,
                         label: display_label(&node.tag, &node.props),
@@ -561,7 +574,6 @@ pub fn build(ir: &Ir) -> Layout {
                 );
                 dx += CELL + STACK_GAP;
             }
-            y_end += CELL;
         }
 
         let board_w = bar_w + BOARD_PAD * 2.0;
