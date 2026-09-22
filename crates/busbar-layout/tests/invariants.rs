@@ -567,3 +567,64 @@ fn ties_render_between_their_sections() {
         );
     }
 }
+
+/// Fan-out wiring never crosses a load cell (visual-review regression,
+/// STH_LOOP/LAUNDRY): the first load in a column drops straight from
+/// the rail; deeper loads gutter beside the column and elbow into
+/// their top terminal. Every wire segment must avoid every load cell
+/// of its own group.
+#[test]
+fn fanout_wires_never_cross_load_cells() {
+    let src = std::fs::read_to_string(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus/valid/house.esld"),
+    )
+    .unwrap();
+    let doc = busbar_syntax::parse(&src).expect("parse");
+    let ir = busbar_ir::Ir::build(&doc).expect("ir");
+    let layout = busbar_layout::build(&ir);
+
+    // Collect every load cell from every circuit's loads list.
+    let mut cells: Vec<(String, f64, f64, f64, f64)> = Vec::new(); // tag, x, y, w, h
+    for c in ir.circuits.values() {
+        for (load, ..) in &c.loads {
+            if let Some(p) = layout.places.get(load.as_str()) {
+                cells.push((load.clone(), p.x, p.y, p.w, p.h));
+            }
+        }
+    }
+    assert!(!cells.is_empty(), "no load cells found");
+
+    // Segments from routes that land on those loads (their own wire)
+    // must not pass through any OTHER load cell of the same circuit.
+    for route in &layout.routes {
+        let from_circuit = |t: &str| {
+            ir.circuits
+                .values()
+                .any(|c| c.loads.iter().any(|(l, ..)| l == t))
+        };
+        let is_load = from_circuit(&route.to_tag) || from_circuit(&route.from_tag);
+        if !is_load {
+            continue;
+        }
+        for (tag, cx, cy, cw, ch) in &cells {
+            for (a, b) in route.points.iter().zip(route.points.iter().skip(1)) {
+                // skip zero-length and the final arrival segment (it
+                // lands ON the terminal of its own target)
+                let mid = ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0);
+                let is_own_terminal = *tag == route.to_tag && (mid.0 - (cx + cw / 2.0)).abs() < 1.0;
+                if is_own_terminal {
+                    continue;
+                }
+                let inside = mid.0 > cx + 1.0
+                    && mid.0 < cx + cw - 1.0
+                    && mid.1 > cy + 1.0
+                    && mid.1 < cy + ch - 1.0;
+                assert!(
+                    !inside,
+                    "wire {} -> {} passes through load `{}` cell",
+                    route.from_tag, route.to_tag, tag
+                );
+            }
+        }
+    }
+}

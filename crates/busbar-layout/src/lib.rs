@@ -1160,8 +1160,15 @@ pub fn build(ir: &Ir) -> Layout {
         // the BOTTOM CENTRE — never the side (review heuristic).
         let board_below = (pa.glyph == Glyph::Board && pb.center().1 > pa.y + pa.h)
             || (pb.glyph == Glyph::Board && pa.center().1 > pb.y + pb.h);
-        let horizontal =
-            !board_below && pa.glyph != Glyph::Section && pb.glyph != Glyph::Section && {
+        // Side-form exits are for peer bonds (earth beside board),
+        // never for circuit fan-outs — a protection feeding a row-0
+        // load in a sub-column is a VHV drop, not a side-exit (the
+        // FAN_LOOP case: side-exit rails sliced same-height load cells).
+        let horizontal = !board_below
+            && edge.arrow == busbar_syntax::ast::Arrow::Peer
+            && pa.glyph != Glyph::Section
+            && pb.glyph != Glyph::Section
+            && {
                 let (acx, acy) = pa.center();
                 let (bcx, bcy) = pb.center();
                 (bcy - acy).abs() < (pa.h + pb.h) / 2.0 + 1.0
@@ -1268,6 +1275,19 @@ pub fn build(ir: &Ir) -> Layout {
             if route.points[0].0 != route.points[1].0 {
                 continue; // side-form route — no vertical rail
             }
+            // Bus taps keep their clamped endpoints — the seed clamp
+            // could pull the tap y off the bar (ess-tour PSU1).
+            let touches_section = layout
+                .places
+                .get(&route.from_tag)
+                .is_some_and(|p| p.glyph == Glyph::Section)
+                || layout
+                    .places
+                    .get(&route.to_tag)
+                    .is_some_and(|p| p.glyph == Glyph::Section);
+            if touches_section {
+                continue;
+            }
             let going_down = route.points[3].1 >= route.points[0].1;
             let start_rail = if going_down {
                 route.points[0].1 + 8.0
@@ -1283,7 +1303,10 @@ pub fn build(ir: &Ir) -> Layout {
             let ke = key(false, &route.to_tag, route.points[3]);
             // The rail rides just below the shared terminal, but never
             // lower than 6px above the highest (min-y) member terminal.
-            let seed = start_rail.max(route.points[3].1 - 6.0);
+            // The rail rides just below the shared terminal, but never
+            // lower than 6px above the HIGHEST member terminal (min y)
+            // — max() pushed it INTO the cell band (FAN_LOOP).
+            let seed = start_rail.min(route.points[3].1 - 6.0);
             let ks_c = ks.clone();
             rail_y
                 .entry(ks_c)
@@ -1297,7 +1320,7 @@ pub fn build(ir: &Ir) -> Layout {
                 .entry(ks.clone())
                 .or_default()
                 .push(route.points[3]);
-            let seed_e = end_rail.max(route.points[0].1 - 6.0);
+            let seed_e = end_rail.min(route.points[0].1 - 6.0);
             rail_y
                 .entry(ke.clone())
                 .and_modify(|y| *y = (*y).min(seed_e))
@@ -1327,11 +1350,24 @@ pub fn build(ir: &Ir) -> Layout {
                 let k = key(is_start, &tag, route.points[end]);
                 if rail_n.get(&k).is_some_and(|n| *n >= 2) {
                     if let Some(&yr) = rail_y.get(&k) {
-                        let mine = route.points[end];
+                        // The member's OWN far terminal decides the gutter — the
+                        // shared departure point is identical for every member and
+                        // never distinguishes stacked loads (the STH_LOOP bug).
+                        let mine = route.points[3 - end];
                         let above = col_blocked.get(&k).is_some_and(|mates| {
-                            mates
-                                .iter()
-                                .any(|m| (m.0 - mine.0).abs() < 4.0 && m.1 < mine.1 - 4.0)
+                            mates.iter().any(|m| {
+                                // Same column, higher cell: vertical
+                                // drop would slice it.
+                                ((m.0 - mine.0).abs() < 4.0 && m.1 < mine.1 - 4.0)
+                                    // Different column, same height,
+                                    // BETWEEN the departure and the
+                                    // target: the horizontal rail
+                                    // would slice through it.
+                                    || ((m.0 - mine.0).abs() > 4.0
+                                        && (m.1 - mine.1).abs() < 30.0
+                                        && m.0 > route.points[end].0.min(mine.0) + 4.0
+                                        && m.0 < route.points[end].0.max(mine.0) - 4.0)
+                            })
                         });
                         if above {
                             // Gutter drop: vertical beside the column,
