@@ -1226,9 +1226,9 @@ pub fn build(ir: &Ir) -> Layout {
         // Only terminals shared by two or more wires are junctions worth
         // a rail; a singleton keeps its channel/midpoint shape (hugging
         // it would drag inter-board feeds through foreign frames).
-        // Members of a group branch at staggered heights (10px apart) —
-        // a tree spread instead of one overlapping comb (review:
-        // multiple loads on one breaker).
+        // A group shares ONE horizontal rail — a comb above the load
+        // band (visual review: staggered branch heights sliced through
+        // first-column load cells).
         let mut rail_y: BTreeMap<(bool, String, (u64, u64)), f64> = BTreeMap::new();
         let mut rail_n: BTreeMap<(bool, String, (u64, u64)), usize> = BTreeMap::new();
         for route in &layout.routes {
@@ -1248,28 +1248,30 @@ pub fn build(ir: &Ir) -> Layout {
             };
             let ks = key(true, &route.from_tag, route.points[0]);
             let ke = key(false, &route.to_tag, route.points[3]);
+            // The rail rides just below the shared terminal, but never
+            // lower than 6px above the highest (min-y) member terminal.
+            let seed = start_rail.max(route.points[3].1 - 6.0);
             rail_y
                 .entry(ks.clone())
-                .and_modify(|y| *y = (*y).min(start_rail))
-                .or_insert(start_rail);
+                .and_modify(|y| *y = (*y).min(seed))
+                .or_insert(seed);
             rail_n.entry(ks).and_modify(|n| *n += 1).or_insert(1);
+            let seed_e = end_rail.max(route.points[0].1 - 6.0);
             rail_y
                 .entry(ke.clone())
-                .and_modify(|y| *y = (*y).min(end_rail))
-                .or_insert(end_rail);
+                .and_modify(|y| *y = (*y).min(seed_e))
+                .or_insert(seed_e);
             rail_n.entry(ke).and_modify(|n| *n += 1).or_insert(1);
         }
-        let mut reshaped: BTreeMap<(bool, String, (u64, u64)), usize> = BTreeMap::new();
         for route in &mut layout.routes {
             if route.points[0].0 != route.points[1].0 {
                 continue; // side-form route — no vertical rail
             }
             // One rail per route: the departure group wins when both
-            // terminals are shared (its members counted first). Group
-            // members branch at staggered heights — 10px steps down
-            // from the group's rail — so a fan-out reads as a tree
-            // instead of one overlapping comb (review: multiple loads
-            // on one breaker).
+            // terminals are shared. The whole group shares ONE
+            // horizontal rail riding above every member terminal —
+            // trunk down, across, drop in. No stagger: branch heights
+            // slicing through first-column load cells (visual review).
             for (is_start, tag, end, elbow) in [
                 (true, route.from_tag.clone(), 0, 1),
                 (false, route.to_tag.clone(), 3, 2),
@@ -1277,16 +1279,8 @@ pub fn build(ir: &Ir) -> Layout {
                 let k = key(is_start, &tag, route.points[end]);
                 if rail_n.get(&k).is_some_and(|n| *n >= 2) {
                     if let Some(&yr) = rail_y.get(&k) {
-                        let idx = reshaped.entry(k.clone()).or_insert(0);
-                        // Stagger downward from the group rail, clamped
-                        // inside the route's own span so a branch never
-                        // runs past its target terminal.
-                        let lo = route.points[0].1.min(route.points[3].1) + 4.0;
-                        let hi = route.points[0].1.max(route.points[3].1) - 4.0;
-                        let staggered = (yr + 10.0 * (*idx as f64)).clamp(lo, hi);
-                        *idx += 1;
-                        route.points[1].1 = staggered;
-                        route.points[2].1 = staggered;
+                        route.points[1].1 = yr;
+                        route.points[2].1 = yr;
                         route.points[elbow].0 = route.points[end].0;
                     }
                     break;
