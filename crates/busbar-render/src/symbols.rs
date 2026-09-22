@@ -89,9 +89,9 @@ const SOCKET: &str = r##"<g transform="translate(0 -15)"><line x1="-5" y1="13" x
 
 const BATTERY: &str = r##"<line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/><line x1="5" y1="-10" x2="5" y2="10"/><line x1="5" y1="0" x2="15" y2="0"/>"##;
 
-const INVERTER: &str = r##"<g transform="matrix(1 0 0 -1 0 -40)"><path d="M -15 -8 A 5 2.5 0 0 0 -25 -8"/><line x1="-40" y1="0" x2="0" y2="-20"/><path d="M -15 -8 A 5 2.5 0 0 0 -5 -8"/><rect x="-40" y="-40" width="40" height="40" rx="0" ry="0"/><line x1="-36" y1="-36" x2="-20" y2="-36"/><line x1="-36" y1="-32" x2="-30" y2="-32"/><line x1="-26" y1="-32" x2="-20" y2="-32"/></g>"##;
+const INVERTER: &str = r##"<rect x="-20" y="-20" width="40" height="40"/><line x1="-20" y1="-20" x2="20" y2="20"/><line x1="-15" y1="-14" x2="-15" y2="-6"/><line x1="-11" y1="-14" x2="-11" y2="-6"/><path d="M 6 -12 A 4 4 0 0 1 14 -12" fill="#222222"/>"##;
 
-const PV: &str = r##"<g transform="translate(-20 -10)\"><line x1="-16" y1="24" x2="-26" y2="14"/><line x1="-21" y1="29" x2="-31" y2="19"/><polygon points="-20,23 -17,20 -15,25" fill="#222222"/><polygon points="-22,25 -25,28 -20,30" fill="#222222"/><rect x="-10" y="-20" width="60" height="60" rx="0" ry="0"/><text x="15" y="7.2" font-size="14" fill="#222222">G</text><line x1="10" y1="20" x2="20" y2="20"/><line x1="20" y1="15" x2="20" y2="25"/><line x1="25" y1="10" x2="25" y2="30"/><line x1="25" y1="20" x2="35" y2="20"/></g>"##;
+const PV: &str = r##"<rect x="-20" y="-20" width="40" height="40"/><line x1="-20" y1="20" x2="20" y2="-20"/><line x1="-17" y1="-17" x2="-11" y2="-11"/><line x1="-12" y1="-18" x2="-6" y2="-12"/>"##;
 
 const WIND_TURBINE: &str = r##"<circle cx="0" cy="0" r="20"/><text x="0" y="4" text-anchor="middle" font-size="16" fill="#222222">G</text><line x1="0" y1="-20" x2="0" y2="-32"/><line x1="0" y1="-32" x2="-10" y2="-39" stroke-width="1.5"/><line x1="0" y1="-32" x2="10" y2="-39" stroke-width="1.5"/><line x1="0" y1="-32" x2="0" y2="-44" stroke-width="1.5"/>"##;
 

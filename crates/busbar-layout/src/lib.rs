@@ -890,7 +890,7 @@ pub fn build(ir: &Ir) -> Layout {
                     .get(node.as_str())
                     .map(|n| glyph_for(&n.type_name, n.kind))
                     .unwrap_or(Glyph::Generic);
-                *m.entry(b).or_insert(0.0) += 2.0 * extent(g) + 12.0;
+                *m.entry(b).or_insert(0.0) += 2.0 * extent(g) + 28.0;
             }
         }
         m
@@ -1053,7 +1053,7 @@ pub fn build(ir: &Ir) -> Layout {
                 // Stack by real glyph extents with a 12px wire gap —
                 // a 60px PV panel over a 40px inverter must show the
                 // wire between them (todo: PV/INV1 overlap).
-                y -= 12.0 + extent(g);
+                y -= 28.0 + extent(g);
                 let centre = y;
                 y -= extent(g);
                 layout.places.insert(
@@ -1418,7 +1418,7 @@ pub fn extent(g: Glyph) -> f64 {
     match g {
         Glyph::Junction => 0.0,
         Glyph::Section | Glyph::Board => 20.0, // callers use p.h/2 for these
-        Glyph::Fuse | Glyph::Meter | Glyph::Ct | Glyph::Pv => 30.0,
+        Glyph::Fuse | Glyph::Meter | Glyph::Ct => 30.0,
         Glyph::Earth => 15.0,
         Glyph::Lamp => 10.0,
         Glyph::Motor => 15.0,
@@ -1431,7 +1431,7 @@ pub fn extent(g: Glyph) -> f64 {
         Glyph::Relay => 11.0,
         Glyph::Spd => 12.0,
         Glyph::Evse => 21.0,
-        Glyph::Generator | Glyph::WindTurbine | Glyph::Inverter => 20.0,
+        Glyph::Generator | Glyph::WindTurbine | Glyph::Inverter | Glyph::Pv => 20.0,
         _ => 14.0, // generic box family
     }
 }
