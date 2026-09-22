@@ -7,7 +7,7 @@ Feature: WASM target
   Scenario: The WASM build renders the same SVG hash
     Given the document "valid/sample1.esld"
     When I render it with symbols "iec" on the WASM build
-    Then the SVG hash is "225d2b11b304d291807618a79d2df384551f5867615232fe184e34c9e3dc5deb"
+    Then the SVG hash is "c025932ca8f6a16b1a9ba5235f1be640229bda240e20acef355562ce47925081"
 
   @incomplete
   Scenario: The WASM bundle stays within budget

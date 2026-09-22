@@ -1,0 +1,7 @@
+profile "esld/1.0";
+
+voltsys LV = { nominal = 230V; phases = 1ph; };
+
+// Node declarations need `TAG : type` (spec §6 node_decl); the colon is
+// missing here, so this is an E-PARSE-1 syntax error, not a rule finding.
+appliance PUMP { kw = 1.0kW; }

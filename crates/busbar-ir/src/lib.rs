@@ -42,6 +42,7 @@ pub struct Voltsys {
     pub neutral: Option<bool>,
     pub earthing: Option<String>,
     pub line: u32,
+    pub col: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +50,7 @@ pub struct CodeProfile {
     pub name: String,
     pub props: Vec<Property>,
     pub line: u32,
+    pub col: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +62,7 @@ pub struct IrNode {
     pub parent: Option<String>,
     pub props: Vec<Property>,
     pub line: u32,
+    pub col: u32,
 }
 
 impl IrNode {
@@ -83,6 +86,7 @@ pub struct Section {
     pub board: String,
     pub incomers: Vec<String>,
     pub line: u32,
+    pub col: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -92,6 +96,7 @@ pub struct Board {
     pub incomers: Vec<String>,
     pub circuits: Vec<String>,
     pub line: u32,
+    pub col: u32,
     pub props: Vec<Property>,
 }
 
@@ -105,8 +110,9 @@ pub struct Circuit {
     pub protection: Option<IrNode>,
     pub controller: Option<IrNode>,
     /// Load tags with the line of the `loads` property that referenced them.
-    pub loads: Vec<(String, u32)>,
+    pub loads: Vec<(String, u32, u32)>,
     pub line: u32,
+    pub col: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -116,6 +122,7 @@ pub struct Edge {
     pub to: String,
     pub arrow: ast::Arrow,
     pub line: u32,
+    pub col: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -123,6 +130,20 @@ pub struct StatePosition {
     pub target: String,
     pub position: String,
     pub line: u32,
+    pub col: u32,
+}
+
+/// A source-triggered IR build failure: message plus the position of the
+/// construct that caused it. Diagnostics are values (implementation plan
+/// §4.4) — never bare strings.
+///
+/// Diagnostic code catalog: `E-IR-1` — IR build error (bad voltsys
+/// values, …).
+#[derive(Debug, Clone)]
+pub struct IrBuildError {
+    pub message: String,
+    pub line: u32,
+    pub col: u32,
 }
 
 #[derive(Debug, Default)]
@@ -137,21 +158,23 @@ pub struct Ir {
     pub circuits: BTreeMap<String, Circuit>,
     pub edges: Vec<Edge>,
     pub states: Vec<(String, Vec<StatePosition>)>,
+    /// `layout { TAG { column = N; } }` hints (spec §16.1, advisory).
+    pub layout_columns: BTreeMap<String, u64>,
 }
 
 impl Ir {
-    pub fn build(doc: &ast::Document) -> Result<Ir, String> {
+    pub fn build(doc: &ast::Document) -> Result<Ir, IrBuildError> {
         let mut ir = Ir::default();
         ir.collect(doc)?;
         ir.expand();
         Ok(ir)
     }
 
-    fn collect(&mut self, doc: &ast::Document) -> Result<(), String> {
+    fn collect(&mut self, doc: &ast::Document) -> Result<(), IrBuildError> {
         for stmt in &doc.statements {
             match stmt {
                 ast::Statement::Voltsys { name, body, span } => {
-                    let vs = voltsys_from(name, body, span.line)?;
+                    let vs = voltsys_from(name, body, *span)?;
                     self.voltsys.insert(name.clone(), vs);
                 }
                 ast::Statement::Code { name, props, span } => {
@@ -159,6 +182,7 @@ impl Ir {
                         name: name.clone(),
                         props: props.clone(),
                         line: span.line,
+                        col: span.col,
                     });
                 }
                 ast::Statement::TypeDecl { name, .. } => {
@@ -170,10 +194,21 @@ impl Ir {
                 ast::Statement::Board {
                     tag, items, span, ..
                 } => {
-                    self.add_board(tag, items, span.line)?;
+                    self.add_board(tag, items, *span)?;
                 }
                 ast::Statement::Connect(c) => {
                     push_chain(&mut self.edges, &c.endpoints, &c.arrows);
+                }
+                ast::Statement::Layout { items, .. } => {
+                    for item in items {
+                        if let ast::LayoutItem::Target { target, props, .. } = item {
+                            if let Some(prop) = props.iter().find(|p| p.name == "column") {
+                                if let Some((v, _)) = prop.value.value.quantity() {
+                                    self.layout_columns.insert(target.clone(), v as u64);
+                                }
+                            }
+                        }
+                    }
                 }
                 ast::Statement::State { name, items, .. } => {
                     let positions = items
@@ -187,6 +222,7 @@ impl Ir {
                                 target: ident_of(target),
                                 position: position.clone(),
                                 line: span.line,
+                                col: span.col,
                             }),
                             _ => None,
                         })
@@ -199,7 +235,7 @@ impl Ir {
         Ok(())
     }
 
-    fn add_node(&mut self, node: &ast::NodeDecl, parent: Option<&str>) -> Result<(), String> {
+    fn add_node(&mut self, node: &ast::NodeDecl, parent: Option<&str>) -> Result<(), IrBuildError> {
         let kind = types::lookup(&node.type_ref).map(|t| t.kind);
         self.nodes.insert(
             node.tag.clone(),
@@ -210,18 +246,25 @@ impl Ir {
                 parent: parent.map(str::to_owned),
                 props: node.props.clone(),
                 line: node.span.line,
+                col: node.span.col,
             },
         );
         Ok(())
     }
 
-    fn add_board(&mut self, tag: &str, items: &[ast::BoardItem], line: u32) -> Result<(), String> {
+    fn add_board(
+        &mut self,
+        tag: &str,
+        items: &[ast::BoardItem],
+        span: ast::Span,
+    ) -> Result<(), IrBuildError> {
         let mut board = Board {
             tag: tag.to_owned(),
             sections: Vec::new(),
             incomers: Vec::new(),
             circuits: Vec::new(),
-            line,
+            line: span.line,
+            col: span.col,
             props: Vec::new(),
         };
 
@@ -249,6 +292,7 @@ impl Ir {
                             board: tag.to_owned(),
                             incomers,
                             line: bus.span.line,
+                            col: bus.span.col,
                         },
                     );
                     board.sections.push(qualified);
@@ -264,6 +308,7 @@ impl Ir {
                         controller: None,
                         loads: Vec::new(),
                         line: c.span.line,
+                        col: c.span.col,
                     };
                     for ci in &c.items {
                         match ci {
@@ -282,7 +327,11 @@ impl Ir {
                                     if let Value::List(entries) = &p.value.value {
                                         for entry in entries {
                                             if let Some(r) = entry.value.as_ref() {
-                                                circuit.loads.push((r.join("."), entry.span.line));
+                                                circuit.loads.push((
+                                                    r.join("."),
+                                                    entry.span.line,
+                                                    entry.span.col,
+                                                ));
                                             }
                                         }
                                     }
@@ -297,6 +346,7 @@ impl Ir {
                                     parent: Some(tag.to_owned()),
                                     props: d.props.clone(),
                                     line: d.span.line,
+                                    col: d.span.col,
                                 });
                             }
                             ast::CircuitItem::Controller(d) => {
@@ -307,6 +357,7 @@ impl Ir {
                                     parent: Some(tag.to_owned()),
                                     props: d.props.clone(),
                                     line: d.span.line,
+                                    col: d.span.col,
                                 });
                             }
                             ast::CircuitItem::Node(n) => self.add_node(n, Some(tag))?,
@@ -336,6 +387,7 @@ impl Ir {
                     board: tag.to_owned(),
                     incomers: board.incomers.clone(),
                     line: board.line,
+                    col: board.col,
                 },
             );
             board.sections.push(qualified);
@@ -351,7 +403,8 @@ impl Ir {
                 kind: Some(NodeKind::Container),
                 parent: None,
                 props: board.props.clone(),
-                line,
+                line: span.line,
+                col: span.col,
             },
         );
         self.boards.insert(tag.to_owned(), board);
@@ -394,6 +447,7 @@ impl Ir {
                 to: format!("{head}.in"),
                 arrow: ast::Arrow::Fwd,
                 line: circuit.line,
+                col: circuit.col,
             });
             let supply = circuit
                 .controller
@@ -406,14 +460,16 @@ impl Ir {
                     to: format!("{}.in", ctl.tag),
                     arrow: ast::Arrow::Fwd,
                     line: circuit.line,
+                    col: circuit.col,
                 });
             }
-            for (load, line) in &circuit.loads {
+            for (load, line, col) in &circuit.loads {
                 self.edges.push(Edge {
                     from: format!("{supply}.out"),
                     to: format!("{load}.in"),
                     arrow: ast::Arrow::Fwd,
                     line: *line,
+                    col: *col,
                 });
             }
         }
@@ -542,14 +598,14 @@ impl Ir {
         }
         // A load fed by a circuit inherits that board's system.
         for circuit in self.circuits.values() {
-            if circuit.loads.iter().any(|(l, _)| l == tag) {
+            if circuit.loads.iter().any(|(l, ..)| l == tag) {
                 return self.board_vs(&circuit.board);
             }
         }
         None
     }
 
-    fn board_vs(&self, board: &str) -> Option<String> {
+    pub fn board_vs(&self, board: &str) -> Option<String> {
         self.boards.get(board).and_then(|b| {
             b.props.iter().find(|p| p.name == "vs").and_then(|p| {
                 if let Value::Ident(vs) = &p.value.value {
@@ -587,6 +643,7 @@ fn push_chain(edges: &mut Vec<Edge>, endpoints: &[ValueNode], arrows: &[ast::Arr
             to: ident_of(to),
             arrow,
             line: from.span.line,
+            col: from.span.col,
         });
     }
 }
@@ -609,14 +666,23 @@ fn ref_list(value: &Value) -> Vec<String> {
     }
 }
 
-fn voltsys_from(name: &str, body: &ast::VoltsysBody, line: u32) -> Result<Voltsys, String> {
+fn voltsys_from(
+    name: &str,
+    body: &ast::VoltsysBody,
+    span: ast::Span,
+) -> Result<Voltsys, IrBuildError> {
     let mut nominal_v = 0.0;
     let mut phases = PhaseStyle::Single;
     let mut frequency_hz = None;
     let mut neutral = None;
     let mut earthing = None;
 
-    let mut set_phase = |v: &Value| -> Result<(), String> {
+    let err = |message: String| IrBuildError {
+        message,
+        line: span.line,
+        col: span.col,
+    };
+    let mut set_phase = |v: &Value| -> Result<(), IrBuildError> {
         phases = match v {
             Value::Ident(s) => match s.as_str() {
                 "dc" => PhaseStyle::Dc,
@@ -627,17 +693,17 @@ fn voltsys_from(name: &str, body: &ast::VoltsysBody, line: u32) -> Result<Voltsy
                     let count = other.trim_end_matches("ph");
                     let n: u32 = count
                         .parse()
-                        .map_err(|_| format!("voltsys {name}: bad phases {other:?}"))?;
+                        .map_err(|_| err(format!("voltsys {name}: bad phases {other:?}")))?;
                     PhaseStyle::Multi(n)
                 }
             },
             Value::Quantity { number, unit } if unit == "ph" => {
                 let n: u32 = number
                     .parse()
-                    .map_err(|_| format!("voltsys {name}: bad phase count {number:?}"))?;
+                    .map_err(|_| err(format!("voltsys {name}: bad phase count {number:?}")))?;
                 PhaseStyle::Multi(n)
             }
-            _ => return Err(format!("voltsys {name}: bad phases value")),
+            _ => return Err(err(format!("voltsys {name}: bad phases value"))),
         };
         Ok(())
     };
@@ -647,13 +713,13 @@ fn voltsys_from(name: &str, body: &ast::VoltsysBody, line: u32) -> Result<Voltsy
             nominal_v = a
                 .value
                 .quantity()
-                .ok_or_else(|| format!("voltsys {name}: nominal must be a quantity"))?
+                .ok_or_else(|| err(format!("voltsys {name}: nominal must be a quantity")))?
                 .0;
             set_phase(&b.value)?;
             frequency_hz = Some(
                 c.value
                     .quantity()
-                    .ok_or_else(|| format!("voltsys {name}: frequency must be a quantity"))?
+                    .ok_or_else(|| err(format!("voltsys {name}: frequency must be a quantity")))?
                     .0,
             );
         }
@@ -665,7 +731,9 @@ fn voltsys_from(name: &str, body: &ast::VoltsysBody, line: u32) -> Result<Voltsy
                             .value
                             .value
                             .quantity()
-                            .ok_or_else(|| format!("voltsys {name}: nominal must be a quantity"))?
+                            .ok_or_else(|| {
+                                err(format!("voltsys {name}: nominal must be a quantity"))
+                            })?
                             .0
                     }
                     "phases" => set_phase(&p.value.value)?,
@@ -675,7 +743,7 @@ fn voltsys_from(name: &str, body: &ast::VoltsysBody, line: u32) -> Result<Voltsy
                                 .value
                                 .quantity()
                                 .ok_or_else(|| {
-                                    format!("voltsys {name}: frequency must be a quantity")
+                                    err(format!("voltsys {name}: frequency must be a quantity"))
                                 })?
                                 .0,
                         )
@@ -706,6 +774,7 @@ fn voltsys_from(name: &str, body: &ast::VoltsysBody, line: u32) -> Result<Voltsy
         frequency_hz,
         neutral,
         earthing,
-        line,
+        line: span.line,
+        col: span.col,
     })
 }

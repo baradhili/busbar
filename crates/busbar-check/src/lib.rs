@@ -22,13 +22,54 @@ pub struct Diagnostic {
     pub severity: Severity,
     pub message: String,
     pub line: u32,
+    /// 1-based column of the construct the diagnostic points at.
+    pub col: u32,
+    /// Supplementary detail lines rendered under the diagnostic
+    /// (implementation plan §4.4 `notes`).
+    pub notes: Vec<String>,
 }
 
 /// Checks an ESLD document. `base_dir` (the document's own directory) is
 /// used for include resolution (R-112).
 pub fn check(source: &str, base_dir: Option<&Path>) -> Result<Vec<Diagnostic>, String> {
-    let doc = busbar_syntax::parse_or_string(source)?;
-    let ir = Ir::build(&doc)?;
+    // Syntax failures are diagnostics like any other (E-LEX-1/E-PARSE-1,
+    // implementation plan §4.4) so one bad file doesn't abort a run.
+    if let Err(busbar_syntax::LexError { message, line, col }) = busbar_syntax::lex(source) {
+        return Ok(vec![Diagnostic {
+            code: "E-LEX-1".to_owned(),
+            severity: Severity::Error,
+            message,
+            line,
+            col,
+            notes: Vec::new(),
+        }]);
+    }
+    let doc = match busbar_syntax::parse(source) {
+        Ok(doc) => doc,
+        Err(busbar_syntax::ParseError { message, line, col }) => {
+            return Ok(vec![Diagnostic {
+                code: "E-PARSE-1".to_owned(),
+                severity: Severity::Error,
+                message,
+                line,
+                col,
+                notes: Vec::new(),
+            }]);
+        }
+    };
+    let ir = match Ir::build(&doc) {
+        Ok(ir) => ir,
+        Err(busbar_ir::IrBuildError { message, line, col }) => {
+            return Ok(vec![Diagnostic {
+                code: "E-IR-1".to_owned(),
+                severity: Severity::Error,
+                message,
+                line,
+                col,
+                notes: Vec::new(),
+            }]);
+        }
+    };
     let mut ctx = Ctx {
         ir: &ir,
         doc: &doc,
@@ -55,8 +96,9 @@ pub fn check(source: &str, base_dir: Option<&Path>) -> Result<Vec<Diagnostic>, S
     ctx.r206_neutral();
     ctx.r207_earthing_tie();
     ctx.r208_parallel_transformers();
+    ctx.r209_r210_load_profiles();
     ctx.diags
-        .sort_by(|a, b| (&a.code, a.line).cmp(&(&b.code, b.line)));
+        .sort_by(|a, b| (&a.code, a.line, a.col).cmp(&(&b.code, b.line, b.col)));
     Ok(ctx.diags)
 }
 
@@ -69,39 +111,45 @@ struct Ctx<'a> {
 }
 
 impl Ctx<'_> {
-    fn error(&mut self, code: &str, line: u32, message: String) {
+    fn error(&mut self, code: &str, line: u32, col: u32, message: String) {
         self.diags.push(Diagnostic {
             code: code.to_owned(),
             severity: Severity::Error,
             message,
             line,
+            col,
+            notes: Vec::new(),
         });
     }
 
-    fn warn(&mut self, code: &str, line: u32, message: String) {
+    fn warn(&mut self, code: &str, line: u32, col: u32, message: String) {
         self.diags.push(Diagnostic {
             code: code.to_owned(),
             severity: Severity::Warning,
             message,
             line,
+            col,
+            notes: Vec::new(),
         });
     }
 
     /// Every declared tag in document order: (tag, line).
-    fn declared_tags(&self) -> Vec<(String, u32)> {
+    fn declared_tags(&self) -> Vec<(String, u32, u32)> {
         let mut tags = Vec::new();
         for stmt in &self.doc.statements {
             match stmt {
-                ast::Statement::Node(n) => tags.push((n.tag.clone(), n.span.line)),
+                ast::Statement::Node(n) => tags.push((n.tag.clone(), n.span.line, n.span.col)),
                 ast::Statement::Board {
                     tag, items, span, ..
                 } => {
-                    tags.push((tag.clone(), span.line));
+                    tags.push((tag.clone(), span.line, span.col));
                     for item in items {
                         match item {
-                            ast::BoardItem::Node(n) => tags.push((n.tag.clone(), n.span.line)),
+                            ast::BoardItem::Node(n) => {
+                                tags.push((n.tag.clone(), n.span.line, n.span.col))
+                            }
                             ast::BoardItem::Circuit(c) => {
-                                tags.push((format!("{tag}.{}", c.tag), c.span.line))
+                                tags.push((format!("{tag}.{}", c.tag), c.span.line, c.span.col))
                             }
                             _ => {}
                         }
@@ -123,6 +171,7 @@ impl Ctx<'_> {
                 self.error(
                     "R-101",
                     node.line,
+                    node.col,
                     format!(
                         "unknown type `{}` referenced by `{}`",
                         node.type_name, node.tag
@@ -134,11 +183,12 @@ impl Ctx<'_> {
 
     fn r102_duplicate_tags(&mut self) {
         let mut seen: BTreeMap<String, u32> = BTreeMap::new();
-        for (tag, line) in self.declared_tags() {
+        for (tag, line, col) in self.declared_tags() {
             if let Some(first) = seen.get(&tag) {
                 self.error(
                     "R-102",
                     line,
+                    col,
                     format!("duplicate tag `{tag}` (first declared at line {first})"),
                 );
             } else {
@@ -158,6 +208,7 @@ impl Ctx<'_> {
                     self.error(
                         "R-112",
                         span.line,
+                        span.col,
                         format!(
                             "include `{path}` not found (loading and cycle detection land with M2)"
                         ),
@@ -169,13 +220,13 @@ impl Ctx<'_> {
 
     /// Edge lines whose endpoint ports failed existence — R-110 skips
     /// these so the two rules never double-report.
-    fn invalid_port_edges(&self) -> Vec<u32> {
+    fn invalid_port_edges(&self) -> Vec<(u32, u32)> {
         let mut bad = Vec::new();
         for edge in &self.ir.edges {
             for text in [&edge.from, &edge.to] {
                 if let Some((entity, Some(port), _)) = self.ir.resolve_endpoint(text) {
                     if !self.port_exists(&entity, &port) {
-                        bad.push(edge.line);
+                        bad.push((edge.line, edge.col));
                     }
                 }
             }
@@ -214,6 +265,7 @@ impl Ctx<'_> {
                         self.error(
                             "R-111",
                             edge.line,
+                            edge.col,
                             format!("`{text}`: port `{port}` does not exist on `{entity}`"),
                         );
                     }
@@ -281,6 +333,7 @@ impl Ctx<'_> {
                 self.error(
                     "R-103",
                     node.line,
+                    node.col,
                     format!(
                         "required port `{}` of `{}` ({}) is unconnected",
                         pd.name, node.tag, node.type_name
@@ -292,7 +345,7 @@ impl Ctx<'_> {
     }
 
     fn r104_port_arity(&mut self) {
-        let mut incoming: BTreeMap<(String, String), Vec<u32>> = BTreeMap::new();
+        let mut incoming: BTreeMap<(String, String), Vec<(u32, u32)>> = BTreeMap::new();
         for edge in &self.ir.edges {
             let Some((entity, Some(port), _)) = self.ir.resolve_endpoint(&edge.to) else {
                 continue;
@@ -313,14 +366,18 @@ impl Ctx<'_> {
             if pd.dir != PortDir::In || pd.multi_in {
                 continue;
             }
-            incoming.entry((entity, port)).or_default().push(edge.line);
+            incoming
+                .entry((entity, port))
+                .or_default()
+                .push((edge.line, edge.col));
         }
         for ((entity, port), lines) in incoming {
             if lines.len() > 1 {
-                let max = *lines.iter().max().unwrap();
+                let (line, col) = *lines.iter().max().unwrap();
                 self.error(
                     "R-104",
-                    max,
+                    line,
+                    col,
                     format!("port `{entity}.{port}` is fed by {} sources", lines.len()),
                 );
             }
@@ -356,12 +413,14 @@ impl Ctx<'_> {
                 self.error(
                     "R-106",
                     board.line,
+                    board.col,
                     format!("board `{}` has no incomer and no feed", board.tag),
                 );
             } else if !authorized.is_empty() && !is_fed {
                 self.error(
                     "R-109",
                     board.line,
+                    board.col,
                     format!(
                         "board `{}` is declared with incomers but never fed",
                         board.tag
@@ -377,6 +436,7 @@ impl Ctx<'_> {
                 self.warn(
                     "R-107",
                     board.line,
+                    board.col,
                     format!("board `{}` has no outgoing circuits", board.tag),
                 );
             }
@@ -385,7 +445,7 @@ impl Ctx<'_> {
 
     fn r108_circular_supply(&mut self) {
         // Board-to-board arcs from cross-board feed edges.
-        let mut arcs: Vec<(String, String, u32)> = Vec::new();
+        let mut arcs: Vec<(String, String, u32, u32)> = Vec::new();
         for edge in &self.ir.edges {
             let Some((_, _, Some(tb))) = self.ir.resolve_endpoint(&edge.to) else {
                 continue;
@@ -394,7 +454,7 @@ impl Ctx<'_> {
                 continue;
             };
             if sb != tb {
-                arcs.push((sb, tb, edge.line));
+                arcs.push((sb, tb, edge.line, edge.col));
             }
         }
         let cyclic: Vec<&str> = self
@@ -420,15 +480,16 @@ impl Ctx<'_> {
         if any_alive {
             return;
         }
-        if let Some(line) = arcs
+        if let Some((line, col)) = arcs
             .iter()
-            .filter(|(_, tb, _)| cyclic.contains(&tb.as_str()))
-            .map(|(_, _, l)| *l)
+            .filter(|(_, tb, _, _)| cyclic.contains(&tb.as_str()))
+            .map(|(_, _, l, c)| (*l, *c))
             .max()
         {
             self.error(
                 "R-108",
                 line,
+                col,
                 "circular supply path with no source".to_owned(),
             );
         }
@@ -437,15 +498,23 @@ impl Ctx<'_> {
     fn r110_unlisted_feeds(&mut self) {
         let invalid = self.invalid_port_edges();
         for edge in &self.ir.edges {
-            if invalid.contains(&edge.line) || edge.arrow == busbar_syntax::ast::Arrow::Peer {
+            if invalid.contains(&(edge.line, edge.col))
+                || edge.arrow == busbar_syntax::ast::Arrow::Peer
+            {
                 continue; // R-111 already reported / ties are self-authorized (§9.4)
             }
-            let Some((_, _, Some(tb))) = self.ir.resolve_endpoint(&edge.to) else {
+            let Some((to_entity, _, Some(tb))) = self.ir.resolve_endpoint(&edge.to) else {
                 continue;
             };
             let sb = self.ir.resolve_endpoint(&edge.from).and_then(|(_, _, b)| b);
             if sb.as_deref() == Some(tb.as_str()) {
                 continue; // internal to the board
+            }
+            // A feed terminating on a circuit port enters through that
+            // circuit's own protection — the circuit IS the declaration
+            // (PV-backfeed style, spec §18.3).
+            if self.ir.circuits.contains_key(&to_entity) {
+                continue;
             }
             let Some(board) = self.ir.boards.get(tb.as_str()) else {
                 continue;
@@ -465,11 +534,18 @@ impl Ctx<'_> {
                 self.error(
                     "R-110",
                     edge.line,
+                    edge.col,
                     format!(
                         "feed `{}` into board `{}` is not listed in its incomers",
                         edge.from, tb
                     ),
                 );
+                if let Some(d) = self.diags.last_mut() {
+                    d.notes.push(format!(
+                        "add `{}` to the `incomers` of `{}`, or land the feed on a circuit port",
+                        edge.from, tb
+                    ));
+                }
             }
         }
     }
@@ -483,6 +559,7 @@ impl Ctx<'_> {
                 self.error(
                     "R-113",
                     circuit.line,
+                    circuit.col,
                     format!(
                         "circuit `{}` does not select a `bus` on multi-section board `{}`",
                         circuit.tag, board.tag
@@ -518,17 +595,12 @@ impl Ctx<'_> {
             if !needs_power {
                 continue;
             }
-            let wired = self.ir.edges.iter().any(|e| {
-                [&e.from, &e.to].iter().any(|t| {
-                    self.ir
-                        .resolve_endpoint(t)
-                        .is_some_and(|(entity, _, _)| entity == node.tag)
-                })
-            });
+            let wired = self.has_explicit_power_edge(&node.tag);
             if !wired {
                 self.error(
                     "R-113",
                     node.line,
+                    node.col,
                     format!(
                         "device `{}` ({}) requires busbar power but has no connections on multi-section board `{}` — declare a `bus` or wire it",
                         node.tag, node.type_name, parent
@@ -554,6 +626,7 @@ impl Ctx<'_> {
                     self.error(
                         "R-114",
                         pos.line,
+                        pos.col,
                         format!(
                             "state position targets `{}` ({}), which is not a switching device",
                             node.tag, node.type_name
@@ -635,13 +708,7 @@ impl Ctx<'_> {
             let Some(board) = self.ir.boards.get(parent_board) else {
                 continue;
             };
-            let explicitly_wired = self.ir.edges.iter().any(|e| {
-                [&e.from, &e.to].iter().any(|t| {
-                    self.ir
-                        .resolve_endpoint(t)
-                        .is_some_and(|(entity, _, _)| entity == node.tag)
-                })
-            });
+            let explicitly_wired = self.has_explicit_power_edge(&node.tag);
             if attachable && board.sections.len() == 1 && !explicitly_wired {
                 if let Some(section) = board.sections.first() {
                     union(&node.tag, section, &mut parent);
@@ -661,18 +728,212 @@ impl Ctx<'_> {
             .collect()
     }
 
+    /// True when any explicit edge terminates on `tag` via a power port.
+    /// Earth/PE/neutral wiring is not a power-path connection (spec §6.1
+    /// role inference) and does not defeat implicit busbar attachment
+    /// (spec §9.2) — an SPD wired only through its PE terminal still
+    /// attaches to the busbar at `in`.
+    fn has_explicit_power_edge(&self, tag: &str) -> bool {
+        const NON_POWER_PORTS: [&str; 3] = ["e", "pe", "n"];
+        self.ir.edges.iter().any(|e| {
+            [&e.from, &e.to].iter().any(|t| {
+                self.ir
+                    .resolve_endpoint(t)
+                    .is_some_and(|(entity, port, _)| {
+                        entity == tag
+                            && !port
+                                .as_deref()
+                                .is_some_and(|p| NON_POWER_PORTS.contains(&p))
+                    })
+            })
+        })
+    }
+
     fn r105_unreachable(&mut self) {
         let reach = self.reachable_from_sources();
         for node in self.ir.nodes.values() {
             if node.kind == Some(NodeKind::Source) {
                 continue;
             }
+            // Containers (boards) are groupings, not powered equipment —
+            // their members are checked individually. A board whose sole
+            // incomer device transits straight through (GRID -> QF1 ->
+            // sub-board) never joins the union itself, by design.
+            if node.kind == Some(NodeKind::Container) {
+                continue;
+            }
             if !reach.contains(&node.tag) {
                 self.warn(
                     "R-105",
                     node.line,
+                    node.col,
                     format!("`{}` is unreachable from any source", node.tag),
                 );
+            }
+        }
+    }
+
+    /// Duration unit -> seconds (spec §8.8 intermittent load profiles).
+    fn duration_seconds(value: &busbar_syntax::ast::Value) -> Option<f64> {
+        let busbar_syntax::ast::Value::Quantity { number, unit } = value else {
+            return None;
+        };
+        let per: f64 = match unit.as_str() {
+            "s" => 1.0,
+            "min" => 60.0,
+            "h" => 3600.0,
+            "d" => 86400.0,
+            _ => return None,
+        };
+        number.parse::<f64>().ok().map(|n| n * per)
+    }
+
+    /// `HH:MM..HH:MM` with valid clock times; start before end (no
+    /// midnight crossing in v1).
+    fn valid_window(text: &str) -> bool {
+        let Some((start, end)) = text.split_once("..") else {
+            return false;
+        };
+        let clock = |t: &str| -> Option<u32> {
+            let (h, m) = t.split_once(':')?;
+            if h.len() != 2 || m.len() != 2 {
+                return None;
+            }
+            let h: u32 = h.parse().ok()?;
+            let m: u32 = m.parse().ok()?;
+            (h < 24 && m < 60).then_some(h * 60 + m)
+        };
+        match (clock(start), clock(end)) {
+            (Some(a), Some(b)) => a < b,
+            _ => false,
+        }
+    }
+
+    const SEASONS: [&'static str; 4] = ["summer", "autumn", "winter", "spring"];
+
+    /// Source-text rendering of a value for diagnostics.
+    fn value_text(value: &busbar_syntax::ast::Value) -> String {
+        use busbar_syntax::ast::Value;
+        match value {
+            Value::Quantity { number, unit } => format!("{number}{unit}"),
+            Value::Number(n) => n.clone(),
+            Value::Str(s) => format!("\"{s}\""),
+            Value::Ident(i) => i.clone(),
+            Value::Bool(b) => b.to_string(),
+            _ => "(list)".to_owned(),
+        }
+    }
+
+    /// R-209/R-210: intermittent load profiles (spec §8.8).
+    fn r209_r210_load_profiles(&mut self) {
+        use busbar_syntax::ast::Value;
+        for node in self.ir.nodes.values() {
+            if node.kind != Some(NodeKind::Load) {
+                continue;
+            }
+            let prop = |name: &str| {
+                node.props
+                    .iter()
+                    .find(|p| p.name == name)
+                    .map(|p| &p.value.value)
+            };
+            // R-209: durations.
+            let on = prop("on_time").and_then(Self::duration_seconds);
+            let period = prop("period").and_then(Self::duration_seconds);
+            if let Some(p) = node.props.iter().find(|p| p.name == "on_time") {
+                if on.is_none() {
+                    self.error(
+                        "R-209",
+                        node.line,
+                        node.col,
+                        format!(
+                            "`on_time` of `{}` must be a duration (s/min/h/d), got {}",
+                            node.tag,
+                            Self::value_text(&p.value.value)
+                        ),
+                    );
+                }
+            }
+            if let Some(p) = node.props.iter().find(|p| p.name == "period") {
+                if period.is_none() {
+                    self.error(
+                        "R-209",
+                        node.line,
+                        node.col,
+                        format!(
+                            "`period` of `{}` must be a duration (s/min/h/d), got {}",
+                            node.tag,
+                            Self::value_text(&p.value.value)
+                        ),
+                    );
+                }
+            }
+            if let (Some(on), Some(period)) = (on, period) {
+                if on >= period {
+                    self.error(
+                        "R-209",
+                        node.line,
+                        node.col,
+                        format!("`on_time` of `{}` must be shorter than `period`", node.tag),
+                    );
+                    if let Some(d) = self.diags.last_mut() {
+                        d.notes.push(format!("on_time = {on}s, period = {period}s"));
+                    }
+                }
+            }
+            // R-210: windows and seasons.
+            if let Some(w) = prop("window") {
+                let windows: Vec<&str> = match w {
+                    Value::Str(s) => vec![s.as_str()],
+                    Value::List(items) => items
+                        .iter()
+                        .map(|i| match &i.value {
+                            Value::Str(s) => Some(s.as_str()),
+                            _ => None,
+                        })
+                        .collect::<Option<_>>()
+                        .unwrap_or_default(),
+                    _ => Vec::new(),
+                };
+                if windows.is_empty() || windows.iter().any(|t| !Self::valid_window(t)) {
+                    self.error(
+                        "R-210",
+                        node.line,
+                        node.col,
+                        format!(
+                            "`window` of `{}` must be \"HH:MM..HH:MM\" (start before end)",
+                            node.tag
+                        ),
+                    );
+                }
+            }
+            if let Some(s) = prop("seasons") {
+                let seasons: Vec<String> = match s {
+                    Value::Ident(i) => vec![i.clone()],
+                    Value::List(items) => items
+                        .iter()
+                        .map(|i| match &i.value {
+                            Value::Ident(v) => Some(v.clone()),
+                            _ => None,
+                        })
+                        .collect::<Option<_>>()
+                        .unwrap_or_default(),
+                    _ => Vec::new(),
+                };
+                if seasons.is_empty()
+                    || seasons.iter().any(|s| !Self::SEASONS.contains(&s.as_str()))
+                {
+                    self.error(
+                        "R-210",
+                        node.line,
+                        node.col,
+                        format!(
+                            "`seasons` of `{}` must be from {}",
+                            node.tag,
+                            Self::SEASONS.join("/")
+                        ),
+                    );
+                }
             }
         }
     }
@@ -696,6 +957,7 @@ impl Ctx<'_> {
                 self.error(
                     "R-201",
                     edge.line,
+                    edge.col,
                     format!(
                         "voltage-system mismatch across edge `{}` -> `{}` ({} vs {})",
                         edge.from, edge.to, va, vb
@@ -708,6 +970,7 @@ impl Ctx<'_> {
                     self.error(
                         "R-202",
                         edge.line,
+                        edge.col,
                         format!(
                             "frequency mismatch across edge `{}` -> `{}` ({fa}Hz vs {fb}Hz)",
                             edge.from, edge.to
@@ -746,6 +1009,7 @@ impl Ctx<'_> {
                 self.error(
                     "R-203",
                     circuit.line,
+                    circuit.col,
                     format!(
                         "single-phase circuit `{}` (poles={poles}) has no `phase` on multi-phase board `{}`",
                         circuit.tag, board.tag
@@ -787,7 +1051,7 @@ impl Ctx<'_> {
                 if idx as u32 >= n {
                     continue;
                 }
-                for (load, _) in &circuit.loads {
+                for (load, ..) in &circuit.loads {
                     if let Some(node) = self.ir.nodes.get(load) {
                         if let Some((w, _)) = node.quantity_prop("kw") {
                             per_phase[idx] += w;
@@ -809,6 +1073,7 @@ impl Ctx<'_> {
                 self.warn(
                     "R-204",
                     board.line,
+                    board.col,
                     format!(
                         "phase imbalance on board `{}` is {pct:.0}% (max {threshold:.0}%)",
                         board.tag
@@ -833,6 +1098,7 @@ impl Ctx<'_> {
                 self.error(
                     "R-205",
                     node.line,
+                    node.col,
                     format!(
                         "load `{}` uses {} phases on a {}-phase system",
                         node.tag,
@@ -863,6 +1129,7 @@ impl Ctx<'_> {
                     self.error(
                         "R-206",
                         edge.line,
+                        edge.col,
                         format!(
                             "neutral port `{text}` used but voltage system `{vs_name}` declares neutral = no"
                         ),
@@ -898,6 +1165,7 @@ impl Ctx<'_> {
                     self.error(
                         "R-207",
                         c.span.line,
+                        c.span.col,
                         format!("connection between different earthing schemes ({ea} vs {eb})"),
                     );
                 }
@@ -944,14 +1212,15 @@ impl Ctx<'_> {
                 .collect();
             let all_same = vectors.windows(2).all(|w| w[0] == w[1]);
             if !all_same {
-                let (line, tag) = group
+                let (line, col, tag) = group
                     .iter()
-                    .map(|n| (n.line, n.tag.clone()))
-                    .max_by_key(|(l, _)| *l)
+                    .map(|n| (n.line, n.col, n.tag.clone()))
+                    .max_by_key(|(l, ..)| *l)
                     .unwrap();
                 self.warn(
                     "R-208",
                     line,
+                    col,
                     format!(
                         "paralleled transformers have incompatible vector groups (`{tag}` differs)"
                     ),
@@ -976,12 +1245,12 @@ impl Ctx<'_> {
 }
 
 fn reaches(
-    arcs: &[(String, String, u32)],
+    arcs: &[(String, String, u32, u32)],
     from: &str,
     target: &str,
     seen: &mut Vec<String>,
 ) -> bool {
-    for (a, b, _) in arcs {
+    for (a, b, ..) in arcs {
         if a == from {
             if b == target {
                 return true;

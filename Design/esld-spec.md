@@ -522,9 +522,11 @@ The following types MUST be available without declaration. Implementations MAY a
 | Type | Kind | Ports | Key parameters |
 |---|---|---|---|
 | `transformer` | converter | `primary: ac_in`, `secondary: ac_out`, `tertiary: ac_out?`, `n: neutral?` | `kva`, `vs_in`, `vs_out`, `vector`, `impedance_pct`, `taps_count`, `tap_step_pct`, `cooling` |
-| `inverter` | converter | `dc_in`, `ac_in`, `ac_out`, `backup_out` | `kind` (`string`/`hybrid`/`battery`/`micro`), `kw`, `mppt_count`, `export_limit`, `island_capable`, `transfer_ms` |
+| `inverter` | converter | `dc_in`, `ac_in?`, `ac_out`, `backup_out?` | `kind` (`string`/`hybrid`/`battery`/`micro`), `kw`, `mppt_count`, `export_limit`, `island_capable`, `transfer_ms` |
 | `rectifier` | converter | `ac_in`, `dc_out` | `kw`, `v_out`, `regulation`, `float_v` |
-| `ups` | converter | `ac_in`, `bypass_in: ac_in`, `ac_out`, `batt: dc_bidi` | `kva`, `kw`, `transfer_ms`, `backup_min` |
+| `mppt` | converter | `in`, `out` | `kw` — MPPT charge controller (sheet `mppt1`) |
+| `power_supply` | converter | `in`, `out` | `kw` — AC/DC aux supply (sheet `power-supply1`) |
+| `ups` | converter | `ac_in`, `bypass_in: ac_in?`, `ac_out`, `batt: dc_bidi?` | `kva`, `kw`, `transfer_ms`, `backup_min` — box with "UPS" legend (sheet `ups1`); `batt` models an external bank |
 
 ### 8.3 Storage and DC
 
@@ -540,9 +542,11 @@ The following types MUST be available without declaration. Implementations MAY a
 |---|---|---|---|
 | `breaker` | switch | `in`, `out`, `trip: signal?` | `rating_a`, `poles`, `breaking_ka`, `technology` (`miniature`/`mccb`/`acb`/`air`/`vcb`/`sf6`/`ocb`), `trip_unit` (`thermal_magnetic`/`electronic`/`lsi`) |
 | `disconnector` | switch | `in`, `out` | `rating_a`, `poles`, `motorized`, `lockable` (no load-break) |
+| `dc_disconnector` | switch | `in`, `out` | as `disconnector`, DC-marked |
 | `load_break_switch` | switch | `in`, `out` | `rating_a`, `making_ka`, `poles` |
 | `earth_switch` | switch | `in: earth` | `rating_a`, `motorized`, `lockable` |
 | `contactor` | switch | `in`, `out`, `coil: signal` | `rating_a`, `poles`, `coil_v`, `utilization` (`AC-1`/`AC-3`...) |
+| `plc` | switch | `in?`, `out?`, `signal?` | `manufacturer`, `model` — box with diagonal + "PLC" legend |
 | `control_relay` | switch | `in`, `out`, `coil: signal` | `rating_a`, `coil_v` |
 | `ats` | switch | `in1`, `in2`, `out` | `priority`, `transfer_s`, `break_before_make`, `closed_transition` |
 | `changeover` | switch | `in1`, `in2`, `out` | `mode` (`manual`/`auto`) |
@@ -560,6 +564,7 @@ The following types MUST be available without declaration. Implementations MAY a
 | `afci` | protective | `in`, `out` | `rating_a`, `poles` |
 | `spd` | protective | `in`, `pe` | `spd_type` (1/2/3), `up_kv`, `in_ka` |
 | `fuse` | protective | `in`, `out` | `rating_a`, `class`, `breaking_ka` |
+| `dc_breaker`, `dc_fuse` | protective | `in`, `out` | as AC counterparts; the symbol carries the `=` DC mark |
 
 ### 8.6 Measurement and protection systems
 
@@ -583,15 +588,16 @@ The following types MUST be available without declaration. Implementations MAY a
 | `cable` | passive | `a`, `b` | `csa`, `cores`, `conductor` (`cu`/`al`), `insulation`, `length`, `method`, `ampacity_a` |
 | `line` | passive | `a`, `b` | `conductor`, `length_km`, `ampacity_a` |
 | `ngr` | passive | `a`, `b` | `ohm`, `current_10s_a`, `material` |
+| `dc_combiner` | passive | `in` (multi), `out` | PV string combining (ESS §8.3 reference sheet `dc-combiner1`) |
 | `reactor` | passive | `a`, `b` | `kvar`, `ohm`, `q_factor` |
 | `earth` | passive | `e: earth` | `electrode`, `ohm` |
-| `capacitor_bank` | load | `in` | `kvar`, `stages`, `harmonic_tuned` |
+| `capacitor_bank` | load | `in?` | `kvar`, `stages`, `harmonic_tuned` |
 
 ### 8.8 Loads
 
 | Type | Kind | Ports | Key parameters |
 |---|---|---|---|
-| `load` | load | `in` | `kw`, `pf`, `duty`, `diversity`, `essential` |
+| `load` | load | `in` | `kw`, `pf`, `diversity`, `essential`, `on_time`, `period`, `window`, `seasons` |
 | `lighting` | load | `in` | `kw`, `points`, `control` |
 | `socket` | load | `in` | `kw`, `points`, `rcd_required` |
 | `appliance` | load | `in` | `kw`, `dedicated` |
@@ -603,13 +609,39 @@ The following types MUST be available without declaration. Implementations MAY a
 | `pool_pump` | load | `in` | `kw`, `phases` |
 | `evse` | load | `in` | `kw`, `phases`, `mode`, `v2x_capable` |
 
+**Intermittent load profiles.** Any load type (§8.8) may declare a
+temporal profile; a load with one is *intermittent*, otherwise
+*continuous*:
+
+- `on_time` / `period` — duty cycling, both durations with units `s`,
+  `min`, `h`, or `d`. "3 minutes per day" is `on_time = 3min;
+  period = 1d;`. `on_time` MUST be shorter than `period` (**R-209**).
+- `window = "HH:MM..HH:MM"` — daily active window; a list means any of
+  the windows applies. Windows MUST be valid clock times with start
+  before end (**R-210**); midnight-crossing windows are not expressible
+  in v1 (use two windows).
+- `seasons = [summer, autumn, winter, spring]` — restricts the profile
+  to those seasons (**R-210**); omitted means year-round.
+
+Average demand of an intermittent load is `kw × on_time/period`, active
+only within its windows and seasons. Maximum demand and coincidence of
+overlapping windows is solver territory (implementation plan M6); checks
+validate the profile shape only.
+
 ### 8.9 Containers
 
 | Type | Kind | Ports | Key parameters |
 |---|---|---|---|
 | `board` | container | `in`, `out`, `n`, `pe`, `bus` | `busbar_rating_a`, `ways`, `location`, `ip_rating`, `form` (`fixed`/`drawout`) |
 
-### 8.10 Example type declaration
+### 8.10 Identification properties
+
+Any node MAY declare `manufacturer` (string) and `model` (string).
+They are documentation — designators for procurement and maintenance —
+and render in the symbol's note line when present (§16). They never
+affect connectivity or rules.
+
+### 8.11 Example type declaration
 
 ```
 type vcb_breaker : breaker {
@@ -665,9 +697,9 @@ board MV_SWBD : board {
 
 Rules:
 
-- Any feed crossing into a board from outside MUST name its **source-side port** in the target section's — or, for single-section boards, the board's — `incomers` list, else **R-110**. The feed may terminate on a section reference (`MV_SWBD.A`), the board's `bus` port, or a device inside the board (e.g. `GRID.out -> CB.in` into an incomer breaker).
+- Any feed crossing into a board from outside MUST name its **source-side port** in the target section's — or, for single-section boards, the board's — `incomers` list, else **R-110**. A feed terminating on a **circuit port** (`INV1.ac_out -> HOUSE.PV_IN.out`) is exempt: it enters through that circuit's own protection, and the circuit is the declaration. The feed may terminate on a section reference (`MV_SWBD.A`), the board's `bus` port, or a device inside the board (e.g. `GRID.out -> CB.in` into an incomer breaker).
 - Internal circuits attach to a section via the `bus` property and are not gated by `incomers`.
-- A protective or switching device declared inside a board without explicit connections attaches implicitly to the sole section's busbar at its `in` port. In a multi-section board, implicit attach of such devices is an error (R-113), same as for circuits. Measurement and relay devices (ct, vt, meter, relay, sync_check) are exempt: they associate via `measures`/`ct`/`vt` signal links, not busbar power, and never require a `bus`.
+- A protective or switching device declared inside a board without explicit connections attaches implicitly to the sole section's busbar at its `in` port. In a multi-section board, implicit attach of such devices is an error (R-113), same as for circuits. Measurement and relay devices (ct, vt, meter, relay, sync_check) are exempt: they associate via `measures`/`ct`/`vt` signal links, not busbar power, and never require a `bus`. For this purpose "explicit connections" are power-path connections: wiring that lands on an earth, PE, or neutral port (§6.1 `earth`/`neutral` edge roles) does not defeat implicit attachment — an SPD bonded only through its `pe` terminal still attaches at `in`.
 - A circuit in a multi-section board without `bus = ...` is **R-113** (error). In a single-section board it attaches to the implicit section.
 - Feeding `BOARD.in` is equivalent to feeding `BOARD.bus` and exists for RSLD compatibility; multi-section boards SHOULD use explicit section references.
 
@@ -1004,12 +1036,12 @@ Rule IDs are stable. Implementations MUST report the ID and source span. Code-de
 | R-102 | Duplicate tag in document | error |
 | R-103 | Required port unconnected | error |
 | R-104 | Port arity violated (e.g. two feeds into a single `in`) | error |
-| R-105 | Node unreachable from any source | warning |
+| R-105 | Node unreachable from any source (board containers exempt — members are checked individually) | warning |
 | R-106 | Board or bus section with no incomer and no internal feed | error |
 | R-107 | Board with no outgoing circuits | warning |
 | R-108 | Circular supply path with no source | error |
 | R-109 | Orphan sub-board (declared, never fed) | error |
-| R-110 | External feed not listed in `incomers` | error |
+| R-110 | External feed not listed in `incomers` (feeds terminating on a circuit port are exempt — the circuit is the declaration) | error |
 | R-111 | Connection to a non-existent port | error |
 | R-112 | Include cycle or missing include | error |
 | R-113 | Circuit or power-path board device without `bus` on a multi-section board (measurement/relay devices exempt — they attach via signal links) | error |
@@ -1027,6 +1059,8 @@ Rule IDs are stable. Implementations MUST report the ID and source span. Code-de
 | R-206 | Neutral connected where no neutral exists | error |
 | R-207 | Parallel or tie between different earthing schemes | error |
 | R-208 | Paralleled transformers with incompatible vector group or far-off impedance | warning |
+| R-209 | Load profile duration invalid (`on_time`/`period` not s/min/h/d, or `on_time` ≥ `period`) | error |
+| R-210 | Load profile `window` not `HH:MM..HH:MM` (start before end) or `seasons` outside summer/autumn/winter/spring | error |
 
 ### R-300 — Protection and rating
 

@@ -18,6 +18,19 @@ Feature: Parsing
       | valid/statement-tour.esld |
       | valid/two-section-tie.esld |
       | valid/voltsys-blocks.esld |
+      | valid/spd-pe-wired.esld |
       | valid/sample1.esld |
       | valid/sample2.esld |
+
+  Scenario: A missing type colon is an E-PARSE-1 diagnostic, not a rule hit
+    Given the document "invalid/e-parse-missing-colon.esld"
+    When I check it
+    Then it reports "E-PARSE-1" with severity error at line 7
+    And it reports no other errors
+
+  Scenario: A bad voltsys phase value is an E-IR-1 diagnostic
+    Given the document "invalid/e-ir-bad-phases.esld"
+    When I check it
+    Then it reports "E-IR-1" with severity error at line 5
+    And it reports no other errors
 

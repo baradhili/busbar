@@ -1,0 +1,69 @@
+profile "esld/1.0";
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+grid GRID : grid { vs = LV; }
+LAMP_A : lighting { kw = 0.1kW; }
+LAMP_B : lighting { kw = 0.1kW; }
+LAMP_C : lighting { kw = 0.1kW; }
+LAMP_D : lighting { kw = 0.1kW; }
+LAMP_DS : lighting { kw = 0.1kW; }
+
+// A: classic chain to a section — fuse, meter, main switch.
+board A_MAIN : board {
+  vs = LV;
+  bus A_BUS { incomers = [GRID.out]; rating_a = 100A; }
+  fuse A_FU : fuse { rating_a = 100A; }
+  meter A_EM : meter { kind = utility; }
+  main_switch A_QS : main_switch { rating_a = 100A; }
+  circuit A_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP_A]; }
+}
+connect GRID.out -> A_MAIN.A_FU.in;
+connect A_MAIN.A_FU.out -> A_MAIN.A_EM.in;
+connect A_MAIN.A_EM.out -> A_MAIN.A_QS.in;
+connect A_MAIN.A_QS.out -> A_MAIN.A_BUS;
+
+// B: two breakers then the switch — multiple breakers on one incomer.
+board B_MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  breaker B_CB1 : breaker { rating_a = 100A; breaking_ka = 10kA; }
+  breaker B_CB2 : breaker { rating_a = 100A; breaking_ka = 10kA; }
+  main_switch B_QS : main_switch { rating_a = 100A; }
+  circuit B_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP_B]; }
+}
+connect GRID.out -> B_MAIN.B_CB1.in;
+connect B_MAIN.B_CB1.out -> B_MAIN.B_CB2.in;
+connect B_MAIN.B_CB2.out -> B_MAIN.B_QS.in;
+connect B_MAIN.B_QS.out -> B_MAIN.bus;
+
+// C: single breaker into the board port.
+board C_MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  breaker C_CB : breaker { rating_a = 100A; breaking_ka = 10kA; }
+  circuit C_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP_C]; }
+}
+connect GRID.out -> C_MAIN.C_CB.in;
+connect C_MAIN.C_CB.out -> C_MAIN.in;
+
+// D: sub-main — breaker declared in D_MAIN feeding D_SUB.
+board D_MAIN : board {
+  vs = LV;
+  bus D_BUS { incomers = [GRID.out]; rating_a = 100A; }
+  main_switch D_QS : main_switch { rating_a = 100A; }
+  breaker D_SM : breaker { rating_a = 63A; breaking_ka = 10kA; }
+  circuit D_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP_D]; }
+}
+connect GRID.out -> D_MAIN.D_QS.in;
+connect D_MAIN.D_QS.out -> D_MAIN.D_BUS;
+connect D_MAIN.D_BUS -> D_MAIN.D_SM.in;
+connect D_MAIN.D_SM.out -> D_SUB.QS.in;
+board D_SUB : board {
+  vs = LV;
+  incomers = [D_MAIN.D_SM.out];
+  busbar_rating_a = 63A;
+  main_switch QS : main_switch { rating_a = 63A; }
+  circuit D_SUB_LIGHTS { protection : mcb { rating_a = 10A; }; loads = [LAMP_DS]; }
+}
+connect D_SUB.QS.out -> D_SUB.bus;

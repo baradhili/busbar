@@ -1,12 +1,12 @@
 name: CI
 
 # Fast-dev policy (see AGENTS.md): every branch is tested; superseded runs
-# cancel; no release-profile builds, release artifacts, or publishing run
-# from this repository while iterating — enforced by the no-release-builds
-# step below. Release automation is deliberately a later milestone.
+# cancel; no release-profile builds, artifacts, or publishing — enforced by
+# the guard below, whose patterns are split so it never matches itself.
 
 on:
   push:
+    branches-ignore: [renovate/**]
   pull_request:
 
 concurrency:
@@ -18,15 +18,23 @@ env:
 
 jobs:
   lint:
-    name: lint + docs
-    runs-on: ubuntu-latest
+    name: lint + docs (debug)
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Guard - no release builds while in fast dev
+        run: |
+          if grep -rn -- "--rel""ease" .github/workflows \
+             || grep -rn -- "upload-""artifact" .github/workflows \
+             || ls .github/workflows/rel*.yml >/dev/null 2>&1; then
+            echo "release-profile builds or artifacts are disabled during fast dev"
+            exit 1
+          fi
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo doc --workspace --no-deps
@@ -38,16 +46,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - name: Build CLI (debug) for the acceptance suite
+        run: cargo build -p busbar-cli
       - name: Unit, corpus, and Cucumber suites (debug profile)
         run: cargo test --workspace
-      - name: Cucumber suite detail (non-blocking echo)
+      - name: Cucumber summary
         if: always()
         run: cargo test --test cucumber 2>&1 | tail -5 || true
-

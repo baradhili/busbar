@@ -1,0 +1,23 @@
+// R-209: on_time must be a duration (s/min/h/d), not watts.
+profile "esld/1.0";
+
+voltsys LV = 230V, 1ph, 50Hz;
+
+grid GRID : grid { vs = LV; supply_a = 63A; };
+
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  circuit HEAT {
+    protection : mcb { rating_a = 16A; };
+    loads = [BOOSTER];
+  }
+}
+
+connect GRID.out -> MAIN.in;
+
+load BOOSTER : heating {
+  kw      = 2kW;
+  on_time = 3W;
+  period  = 1d;
+};

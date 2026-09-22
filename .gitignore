@@ -1,4 +1,23 @@
 /target
+.zcode/
 node_modules/
 *.swp
 .DS_Store
+
+# User-supplied symbol database sources — IEC/ISO copyrighted, not for
+# redistribution in the repo (extraction outputs live in extracted/)
+Design/symbols/*.pdf
+Design/symbols/*.svg
+Design/symbols/*.vssx
+# the whole visio collection is user-supplied source material
+Design/symbols/visio-electrical-master/
+# bulk poster extraction (thousands of rasters) stays local
+Design/symbols/extracted/poster/
+
+Design/symbols/extracted/elec-mate/
+
+Design/symbols/extracted/iec60617/
+
+Design/symbols/extracted/visio-electrical/
+
+Design/symbols/extracted/visio/

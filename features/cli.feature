@@ -24,6 +24,17 @@ Feature: CLI behaviour
     Then the exit code is 1
     And stdout mentions "R-104"
 
+  Scenario: Diagnostics render in compiler convention
+    When I run `busbar check corpus/invalid/r110-unlisted-feed.esld`
+    Then the exit code is 1
+    And stdout mentions "r110-unlisted-feed.esld:26:9:"
+    And stdout mentions "= note: add `GRID.out` to the `incomers` of `MAIN`"
+
+  Scenario: Syntax errors report E-PARSE-1 on stdout
+    When I run `busbar check corpus/invalid/e-parse-missing-colon.esld`
+    Then the exit code is 1
+    And stdout mentions "E-PARSE-1"
+
   Scenario: Warning-only diagnostics exit 0
     When I run `busbar check corpus/invalid/r204-phase-imbalance.esld`
     Then the exit code is 0

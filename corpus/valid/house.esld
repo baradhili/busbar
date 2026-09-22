@@ -1,0 +1,315 @@
+
+profile "esld/1.0";
+
+// TN-C-S = MEN
+
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; neutral = yes; earthing = "TN-C-S"; };
+
+code "AS/NZS 3000:2018" {
+  rcd_socket_circuits   = 30mA;
+  rcd_lighting_circuits = 30mA;
+  max_final_circuit_a   = 32A;
+  spd_required          = yes;
+  neutral_earth_bond    = "MEN at main switchboard only";
+}
+
+// ---------- Source & generation ----------
+grid GRID : grid { vs = LV; supply_a = 100A; fault_mva = 10MVA; export_allowed = yes; }
+pv_array PV1 : pv_array { kw_peak = 5.0kW; strings = 2; voc = 400V; isc = 10A; }
+inverter INV1 : inverter {
+  kind = "string"; kw = 2.5kW; vs = LV;
+  island_capable = yes; export_limit = 2.5kW; transfer_ms = 20ms;
+}
+
+// ---------- Earthing ----------
+earth MAIN_EARTH : earth { electrode = "rod"; ohm = 10ohm; }
+
+// ---------- Main board (shed) ----------
+board SHED : board {
+  vs = LV;
+  bus B2 { incomers = [GRID.out]; rating_a = 100A; }
+  ways = 6;
+
+  fuse FU1 : fuse { rating_a = 100A; breaking_ka = 10kA; class = "gG"; }
+  meter EM1 : meter { kind = utility; accuracy = "1.0"; }
+  main_switch QF4 : main_switch { rating_a = 100A; poles = 1; lockable = yes; }
+  breaker QF1 : breaker { rating_a = 100A; breaking_ka = 10kA; technology = mccb; }  // house feeder
+  spd SPD1 : spd { spd_type = 2; in_ka = 10kA; }
+
+  circuit SHED_LOAD {
+    protection : mcb { rating_a = 20A; curve = C; };  // SmartSLD QF5 "Shed"
+    loads = [SHED_MISC];
+  }
+}
+
+connect GRID.out -> SHED.FU1.in;
+connect SHED.FU1.out -> SHED.EM1.in;
+connect SHED.EM1.out -> SHED.QF4.in;
+connect SHED.QF4.out -> SHED.B2;
+connect SHED.B2 -> SHED.QF1.in;
+connect SHED.QF1.out -> HOUSE.QS1.in;
+connect SHED.pe -- MAIN_EARTH.e;
+
+// ---------- House board ----------
+
+board HOUSE : board {
+  vs = LV;
+  incomers = [SHED.QF1.out];
+  busbar_rating_a = 100A;
+  ways = 24;
+
+  main_switch QS1 : main_switch { rating_a = 100A; poles = 2; lockable = yes; }
+  
+  // Lighting (JSON has the ways but no lamp elements; counts probable).
+  circuit LIGHTS_NTH {
+    protection : rcbo { rating_a = 10A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [LIGHTS_NTH_LOAD];
+  }
+  circuit LIGHTS_STH {
+    protection : rcbo { rating_a = 10A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [LIGHTS_STH_LOAD];
+  }
+  circuit LIGHTS_EXT {
+    protection : rcbo { rating_a = 10A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [LIGHTS_EXT_LOAD];
+  }
+
+  // Socket loops - plain GPOs stay profile-free (a point is availability,
+  // not consumption); named appliances on points carry their duty.
+  circuit STH_LOOP {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [SOCKET_BATH_1, SOCKET_TOILET_1, SOCKET_BATH_2, SOCKET_TOILET_2,
+             SOCKET_BED_1, SOCKET_BED_2, SOCKET_BED_3, SOCKET_HALL];
+  }
+  circuit NTH_LOOP {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [PROJ, ENT_CENTRE, SOCKET_DINING, SOCKET_DOOR, SOCKET_NEW_DINING,
+             SOCKET_LIVING, TV, SOCKET_LOUNGE_WALL_1, SOCKET_LOUNGE_WALL_2,
+             SOCKET_CARPORT];
+  }
+  circuit KITCHEN_LOOP {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [UMWAVE, KIT_EXTRACTOR, SOCKET_STOVE_PPT, SOCKET_BENCH_L,
+             SOCKET_BENCH_R, SOCKET_CLOCK_AREA, SOCKET_BENCH_EXT_L,
+             SOCKET_BENCH_EXT_R];
+  }
+  circuit KITCHEN_STOVE_DISH {
+    protection : rcbo { rating_a = 32A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [STOVE, DISHWASHER];
+  }
+  circuit LAUNDRY {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [WASHER, DRYER, SOCKET_LAUNDRY_1, SOCKET_LAUNDRY_2];
+  }
+  circuit FAN_LOOP {
+    protection : rcbo { rating_a = 16A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [SOCKET_WC_1, SOCKET_WC_2, HRV_1, HRV_2, HRV_3, HRV_4,
+             HRV_5, HRV_6, HRV_7, HRV_8];
+  }
+  circuit HOUSE_ESSENTIAL {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    essential = yes;
+    loads = [FREEZER, ROUTER, FRIDGE];
+  }
+  circuit SEPTIC {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [SEPTIC_PUMP_1, SEPTIC_PUMP_2, SEPTIC_AERO];
+  }
+  circuit AC1_WAY {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [AC1];
+  }
+  circuit AC2_WAY {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [AC2];
+  }
+  circuit AC3_WAY {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [AC3];
+  }
+  circuit EV {
+    protection : rcbo { rating_a = 32A; curve = C; rcd_ma = 30mA; poles = 1; };
+    loads = [EV_CHARGER];
+  }
+  circuit PV_IN {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+  }
+  circuit HW_FEED {
+    protection : rcbo { rating_a = 32A; curve = C; rcd_ma = 30mA; poles = 1; };
+    cable = { csa = 6mm2; cores = 3; length = 15m; };
+  }
+  circuit RETIC_FEED {
+    protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };
+    cable = { csa = 4mm2; cores = 3; length = 40m; };
+  }
+}
+
+connect HOUSE.QS1.out -> HOUSE.bus;
+connect INV1.ac_out -> HOUSE.PV_IN.out;
+connect PV1.out -> INV1.dc_in;
+connect HOUSE.HW_FEED.out -> HW_SUB.QS2.in;
+connect HOUSE.RETIC_FEED.out -> RETIC_SUB.QS3.in;
+
+// ---------- HW sub-board ----------
+board HW_SUB : board {
+  vs = LV;
+  incomers = [HOUSE.HW_FEED.out];
+  busbar_rating_a = 32A;
+  ways = 4;
+
+  main_switch QS2 : main_switch { rating_a = 32A; poles = 2; }
+
+  // Solar-window boost: heat when the PV surplus is probable.
+  circuit HW_BOOSTER {
+    protection : mcb { rating_a = 20A; curve = C; };
+    controller : contactor { rating_a = 25A; utilization = "AC-1"; coil_v = 230V; };
+    loads = [HW_BOOSTER_LOAD];
+  }
+  circuit HW_PUMP_CTRL {
+    protection : mcb { rating_a = 10A; curve = C; };
+    controller : control_relay { rating_a = 10A; coil_v = 230V; };
+    loads = [HW_PUMP];
+  }
+}
+
+connect HW_SUB.QS2.out -> HW_SUB.bus;
+
+// ---------- Retic sub-board ----------
+board RETIC_SUB : board {
+  vs = LV;
+  incomers = [HOUSE.RETIC_FEED.out];
+  busbar_rating_a = 20A;
+  ways = 4;
+
+  main_switch QS3 : main_switch { rating_a = 20A; poles = 2; }
+
+  circuit RETIC_PUMP_WAY {
+    protection : mcb { rating_a = 16A; curve = C; };
+    controller : contactor { rating_a = 16A; utilization = "AC-3"; coil_v = 230V; };
+    loads = [RETIC_PUMP];
+  }
+}
+
+connect RETIC_SUB.QS3.out -> RETIC_SUB.bus;
+
+// ---------- Loads (typed and duty-cycled from their SmartSLD names) ----------
+
+// Shed: occasional workshop outlet.
+SHED_MISC : appliance { kw = 2.0kW; on_time = 1h; period = 1d; }
+
+// Essential refrigeration & network — thermostat cycling, day-round.
+FREEZER : appliance { kw = 0.2kW; on_time = 30min; period = 1h; name = "Freezer"; }
+FRIDGE : appliance { kw = 0.2kW; on_time = 20min; period = 1h; name = "Fridge"; }
+ROUTER : appliance { kw = 0.01kW; name = "Router"; }   // continuous
+
+// Kitchen: cooking and dishwashing are evening-meal events.
+STOVE : cooktop { kw = 7.0kW; phases = 1; on_time = 1.5h; period = 1d; window = ["17:00..19:00"]; name = "Stove"; }
+DISHWASHER : appliance { kw = 1.5kW; on_time = 1.5h; period = 1d; window = ["20:00..22:00"]; name = "Dishwasher"; }
+UMWAVE : appliance { kw = 0.8kW; on_time = 15min; period = 1d; window = ["07:00..08:00", "18:00..19:00"]; name = "uwave"; }
+KIT_EXTRACTOR : motor { kw = 0.06kW; starter = none; on_time = 1h; period = 1d; window = ["17:00..19:00"]; name = "kit extractor"; }
+
+// Laundry: morning wash, late-morning dry.
+WASHER : appliance { kw = 1.0kW; on_time = 1.5h; period = 1d; window = ["08:00..10:00"]; name = "Washer"; }
+DRYER : appliance { kw = 2.0kW; on_time = 1h; period = 1d; window = ["10:00..12:00"]; name = "Dryer"; }
+
+// Ventilation: HRV runs most of the day; bathroom/toilet fans are event use.
+HRV_1 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 1"; }
+HRV_2 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 2"; }
+HRV_3 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 3"; }
+HRV_4 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 4"; }
+HRV_5 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 5"; }
+HRV_6 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 6"; }
+HRV_7 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 7"; }
+HRV_8 : motor { kw = 0.05kW; starter = none; on_time = 18h; period = 1d; name = "HRV 8"; }
+
+// Entertainment: evening.
+TV : appliance { kw = 0.15kW; on_time = 4h; period = 1d; window = ["18:00..23:00"]; name = "TV"; }
+PROJ : appliance { kw = 0.3kW; on_time = 3h; period = 1d; window = ["19:00..23:00"]; name = "Lounge proj"; }
+ENT_CENTRE : appliance { kw = 0.1kW; on_time = 4h; period = 1d; window = ["18:00..23:00"]; name = "Lunge ent centre"; }
+
+// Septic: dosing pumps pulse around the clock; aerator half-day cycles.
+SEPTIC_PUMP_1 : motor { kw = 0.75kW; starter = none; on_time = 10min; period = 3h; name = "Septic Pump 1"; }
+SEPTIC_PUMP_2 : motor { kw = 0.75kW; starter = none; on_time = 10min; period = 3h; name = "Septic Pump 2"; }
+SEPTIC_AERO : appliance { kw = 0.1kW; on_time = 12h; period = 1d; name = "Septic-aero"; }
+
+// Comfort cooling: warm seasons, afternoons and evenings.
+AC1 : hvac { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 6h; period = 1d; window = ["12:00..22:00"]; seasons = [spring, summer, autumn]; name = "AC1"; }
+AC2 : hvac { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 6h; period = 1d; window = ["12:00..22:00"]; seasons = [spring, summer, autumn]; name = "AC2"; }
+AC3 : hvac { kw = 2.5kW; cop = 3.5; compressor = split; on_time = 6h; period = 1d; window = ["12:00..22:00"]; seasons = [spring, summer, autumn]; name = "AC3"; }
+
+// EV: overnight tariff window (midnight-crossing split into two windows).
+EV_CHARGER : evse { kw = 7.0kW; phases = 1; mode = 3; v2x_capable = no; on_time = 8h; period = 1d; window = ["22:00..23:59", "00:00..06:00"]; name = "EV"; }
+
+// Hot water: solar-window boost plus a circulation pump that short-cycles.
+HW_BOOSTER_LOAD : heating { kw = 3.6kW; on_time = 2h; period = 1d; window = ["11:00..15:00"]; name = "HW Booster"; }
+HW_PUMP : motor { kw = 0.2kW; starter = none; duty = "S2"; on_time = 12min; period = 1h; name = "HW Pump"; }
+
+// Reticulation: irrigation pump, early mornings in the growing seasons.
+RETIC_PUMP : motor { kw = 1.1kW; starter = dol; duty = "S2"; on_time = 1h; period = 1d; window = ["05:00..07:00"]; seasons = [spring, summer, autumn]; name = "Retic"; }
+
+// Lighting: evening occupancy indoors; exterior until late evening.
+LIGHTS_NTH_LOAD : lighting { kw = 1.2kW; points = 12; on_time = 5h; period = 1d; window = ["17:30..22:30"]; }
+LIGHTS_STH_LOAD : lighting { kw = 1.0kW; points = 10; on_time = 5h; period = 1d; window = ["17:30..22:30"]; }
+LIGHTS_EXT_LOAD : lighting { kw = 0.2kW; points = 4; on_time = 6h; period = 1d; window = ["18:00..23:59"]; }
+
+// General-purpose outlets — plain availability points, no inferred duty.
+SOCKET_BATH_1 : socket { kw = 0.1kW; points = 1; name = "Bath 1"; }
+SOCKET_TOILET_1 : socket { kw = 0.1kW; points = 1; name = "toilet 1"; }
+SOCKET_BATH_2 : socket { kw = 0.1kW; points = 1; name = "bath 2"; }
+SOCKET_TOILET_2 : socket { kw = 0.1kW; points = 1; name = "toilet 2"; }
+SOCKET_BED_1 : socket { kw = 0.1kW; points = 1; name = "bed 1"; }
+SOCKET_BED_2 : socket { kw = 0.1kW; points = 1; name = "bed 2"; }
+SOCKET_BED_3 : socket { kw = 0.1kW; points = 1; name = "bed 3"; }
+SOCKET_HALL : socket { kw = 0.1kW; points = 1; name = "hall"; }
+SOCKET_WC_1 : socket { kw = 0.1kW; points = 1; name = "Toilet 1"; }
+SOCKET_WC_2 : socket { kw = 0.1kW; points = 1; name = "Toilet 2"; }
+SOCKET_DINING : socket { kw = 0.1kW; points = 1; name = "dining"; }
+SOCKET_DOOR : socket { kw = 0.1kW; points = 1; name = "Door"; }
+SOCKET_NEW_DINING : socket { kw = 0.1kW; points = 1; name = "New dining"; }
+SOCKET_LIVING : socket { kw = 0.1kW; points = 1; name = "Living"; }
+SOCKET_LOUNGE_WALL_1 : socket { kw = 0.1kW; points = 1; name = "Lounge wall 1"; }
+SOCKET_LOUNGE_WALL_2 : socket { kw = 0.1kW; points = 1; name = "Lounge wall 2"; }
+SOCKET_CARPORT : socket { kw = 0.1kW; points = 1; name = "Carport"; }
+SOCKET_STOVE_PPT : socket { kw = 0.1kW; points = 1; name = "Stove ppt"; }
+SOCKET_BENCH_L : socket { kw = 0.1kW; points = 1; name = "bench L"; }
+SOCKET_BENCH_R : socket { kw = 0.1kW; points = 1; name = "bench R"; }
+SOCKET_CLOCK_AREA : socket { kw = 0.1kW; points = 1; name = "Clock area"; }
+SOCKET_BENCH_EXT_L : socket { kw = 0.1kW; points = 1; name = "Bench ext L"; }
+SOCKET_BENCH_EXT_R : socket { kw = 0.1kW; points = 1; name = "Bench ext R"; }
+SOCKET_LAUNDRY_1 : socket { kw = 0.1kW; points = 1; name = "Laundry 1"; }
+SOCKET_LAUNDRY_2 : socket { kw = 0.1kW; points = 1; name = "Laundry 2"; }
+
+// ---------- Operating states ----------
+state "normal" {
+  QF4 = closed;
+  QS1 = closed;
+  QS2 = closed;
+  QS3 = closed;
+}
+
+state "grid_outage" {
+  use "normal";
+  QF4 = open;
+  QS1 = open;
+}
+
+// ---------- Scenarios ----------
+scenario "Loss of grid from normal" {
+  use "grid_outage";
+  set GRID.status = offline;
+  set PV1.irradiance = 800W/m2;
+
+  expect de_energized(HOUSE.LIGHTS_NTH);
+  expect islanded(INV1);
+  expect energized(HOUSE.HOUSE_ESSENTIAL);
+}
+
+// ---------- Layout hints ----------
+layout {
+  rank = source_to_load;
+  flow = top_to_bottom;
+  SHED     { column = 1; }
+  HOUSE    { column = 2; }
+  HW_SUB   { column = 3; row = 1; }
+  RETIC_SUB { column = 3; row = 2; }
+}
