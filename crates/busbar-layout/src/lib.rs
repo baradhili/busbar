@@ -344,7 +344,8 @@ pub fn build(ir: &Ir) -> Layout {
                     let total = c.protection.is_some() as usize
                         + c.controller.is_some() as usize
                         + c.loads.len();
-                    let sub_cols = total.div_ceil(MAX_COL_CELLS).max(1);
+                    let per_col = (MAX_COL_CELLS - 1).max(1);
+                    let sub_cols = total.div_ceil(per_col).max(1);
                     w += sub_cols as f64 * FEEDER_W;
                 }
             }
@@ -471,14 +472,23 @@ pub fn build(ir: &Ir) -> Layout {
                     let total = circuit.protection.is_some() as usize
                         + circuit.controller.is_some() as usize
                         + circuit.loads.len();
-                    let sub_cols = total.div_ceil(MAX_COL_CELLS).max(1);
+                    let per_col = (MAX_COL_CELLS - 1).max(1);
+                    let sub_cols = total.div_ceil(per_col).max(1);
                     let mut place_cell = |tag: &str,
                                           label: &str,
                                           glyph: Glyph,
                                           note: Option<String>,
                                           slot: usize| {
-                        let col = slot / MAX_COL_CELLS;
-                        let row = slot % MAX_COL_CELLS;
+                        // Row 0 is the breaker row: the protection
+                        // occupies it in col 0 and sub-columns leave it
+                        // empty — loads always sit below breaker level
+                        // (visual review).
+                        let col = if slot == 0 { 0 } else { (slot - 1) / per_col };
+                        let row = if slot == 0 {
+                            0
+                        } else {
+                            (slot - 1) % per_col + 1
+                        };
                         member_list.push(tag.to_owned());
                         layout.places.insert(
                             tag.to_owned(),
