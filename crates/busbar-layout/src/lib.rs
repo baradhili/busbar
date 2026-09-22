@@ -996,6 +996,26 @@ pub fn build(ir: &Ir) -> Layout {
         cur_y += row_h + ROW_GAP;
     }
 
+    // Peer bonds to a BOARD hang below it, fed from the bottom
+    // centre (review heuristic: the main earth exits the board it is
+    // assigned to, bottom centre) — not beside it in the row.
+    {
+        let mut lowest = cur_y;
+        for (peer, partner) in &peer_partner {
+            let frame = layout
+                .places
+                .get(partner)
+                .and_then(|bp| (bp.glyph == Glyph::Board).then(|| (bp.center().0, bp.y + bp.h)));
+            let Some((cx, bottom)) = frame else { continue };
+            if let Some(pp) = layout.places.get_mut(peer) {
+                pp.x = cx - pp.w / 2.0;
+                pp.y = bottom + 16.0;
+                lowest = lowest.max(pp.y + pp.h + ROW_GAP);
+            }
+        }
+        cur_y = cur_y.max(lowest);
+    }
+
     // Hangers (the DC chain above its backfeed way): column-aligned to
     // the member they feed, stacked upward from the fed board's top —
     // the inverter sits directly above its way, the array above the
@@ -1136,11 +1156,17 @@ pub fn build(ir: &Ir) -> Layout {
         // the frame edge instead of diving through the drawing. Only
         // when their vertical extents overlap: a wide busbar's centre
         // sits far from its tap, which must not read as "horizontal".
-        let horizontal = pa.glyph != Glyph::Section && pb.glyph != Glyph::Section && {
-            let (acx, acy) = pa.center();
-            let (bcx, bcy) = pb.center();
-            (bcy - acy).abs() < (pa.h + pb.h) / 2.0 + 1.0 && (bcx - acx).abs() > (bcy - acy).abs()
-        };
+        // A board's peer bond (earth electrode) below the frame exits
+        // the BOTTOM CENTRE — never the side (review heuristic).
+        let board_below = (pa.glyph == Glyph::Board && pb.center().1 > pa.y + pa.h)
+            || (pb.glyph == Glyph::Board && pa.center().1 > pb.y + pb.h);
+        let horizontal =
+            !board_below && pa.glyph != Glyph::Section && pb.glyph != Glyph::Section && {
+                let (acx, acy) = pa.center();
+                let (bcx, bcy) = pb.center();
+                (bcy - acy).abs() < (pa.h + pb.h) / 2.0 + 1.0
+                    && (bcx - acx).abs() > (bcy - acy).abs()
+            };
         let (x1, x2) = match (pa.glyph, pb.glyph) {
             (Glyph::Section, _) => {
                 let t = clamp_to(pa, x2);
@@ -1215,7 +1241,7 @@ pub fn build(ir: &Ir) -> Layout {
         // horizontal rail with perpendicular drops instead of crossing
         // fans. Deterministic: groups keyed by (side, tag, point),
         // members in route order.
-        fn key(is_start: bool, tag: &str, p: (f64, f64)) -> (bool, String, (u64, u64)) {
+        fn key(is_start: bool, tag: &str, p: (f64, f64)) -> GroupKey {
             (is_start, tag.to_owned(), (p.0.to_bits(), p.1.to_bits()))
         }
         // The rail hugs the shared terminal (8px out along the wires'
@@ -1229,8 +1255,15 @@ pub fn build(ir: &Ir) -> Layout {
         // A group shares ONE horizontal rail — a comb above the load
         // band (visual review: staggered branch heights sliced through
         // first-column load cells).
-        let mut rail_y: BTreeMap<(bool, String, (u64, u64)), f64> = BTreeMap::new();
-        let mut rail_n: BTreeMap<(bool, String, (u64, u64)), usize> = BTreeMap::new();
+        #[allow(clippy::type_complexity)]
+        type GroupKey = (bool, String, (u64, u64));
+        let mut rail_y: BTreeMap<GroupKey, f64> = BTreeMap::new();
+        let mut rail_n: BTreeMap<GroupKey, usize> = BTreeMap::new();
+        // Members sharing a departure AND a column (|dx|<4): a deeper
+        // member's drop would slice the cell above it — those drop in
+        // the column gutter (+30) and elbow in (visual review: load
+        // symbols overlapped vertical wires).
+        let mut col_blocked: BTreeMap<GroupKey, Vec<(f64, f64)>> = BTreeMap::new();
         for route in &layout.routes {
             if route.points[0].0 != route.points[1].0 {
                 continue; // side-form route — no vertical rail
@@ -1251,17 +1284,32 @@ pub fn build(ir: &Ir) -> Layout {
             // The rail rides just below the shared terminal, but never
             // lower than 6px above the highest (min-y) member terminal.
             let seed = start_rail.max(route.points[3].1 - 6.0);
+            let ks_c = ks.clone();
             rail_y
-                .entry(ks.clone())
+                .entry(ks_c)
                 .and_modify(|y| *y = (*y).min(seed))
                 .or_insert(seed);
-            rail_n.entry(ks).and_modify(|n| *n += 1).or_insert(1);
+            rail_n
+                .entry(ks.clone())
+                .and_modify(|n| *n += 1)
+                .or_insert(1);
+            col_blocked
+                .entry(ks.clone())
+                .or_default()
+                .push(route.points[3]);
             let seed_e = end_rail.max(route.points[0].1 - 6.0);
             rail_y
                 .entry(ke.clone())
                 .and_modify(|y| *y = (*y).min(seed_e))
                 .or_insert(seed_e);
-            rail_n.entry(ke).and_modify(|n| *n += 1).or_insert(1);
+            rail_n
+                .entry(ke.clone())
+                .and_modify(|n| *n += 1)
+                .or_insert(1);
+            col_blocked
+                .entry(ke.clone())
+                .or_default()
+                .push(route.points[0]);
         }
         for route in &mut layout.routes {
             if route.points[0].0 != route.points[1].0 {
@@ -1279,9 +1327,26 @@ pub fn build(ir: &Ir) -> Layout {
                 let k = key(is_start, &tag, route.points[end]);
                 if rail_n.get(&k).is_some_and(|n| *n >= 2) {
                     if let Some(&yr) = rail_y.get(&k) {
-                        route.points[1].1 = yr;
-                        route.points[2].1 = yr;
-                        route.points[elbow].0 = route.points[end].0;
+                        let mine = route.points[end];
+                        let above = col_blocked.get(&k).is_some_and(|mates| {
+                            mates
+                                .iter()
+                                .any(|m| (m.0 - mine.0).abs() < 4.0 && m.1 < mine.1 - 4.0)
+                        });
+                        if above {
+                            // Gutter drop: vertical beside the column,
+                            // elbow into the load top — the wire never
+                            // crosses the cell above.
+                            let gx = mine.0 + 30.0;
+                            let ty = mine.1 - 6.0;
+                            let start = route.points[0];
+                            route.points =
+                                vec![start, (start.0, yr), (gx, yr), (gx, ty), (mine.0, ty), mine];
+                        } else {
+                            route.points[1].1 = yr;
+                            route.points[2].1 = yr;
+                            route.points[elbow].0 = route.points[end].0;
+                        }
                     }
                     break;
                 }
