@@ -15,7 +15,7 @@ Feature: Rendering determinism
   Scenario: House reference golden SVG
     Given the document "valid/house.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "65e53d35b920ea92a41c6843fd6f27d0a4673954ba2307105b00b1c4e00a2d65"
+    Then the SVG hash is "334c815a9452b4eaa59b1b9f7fa494f02d32bb3ea33e34d8a794729e16338535"
 
   Scenario: Rendering is byte-deterministic
     Given the document "valid/sample2.esld"

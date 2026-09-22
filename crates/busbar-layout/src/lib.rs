@@ -1368,11 +1368,18 @@ pub fn build(ir: &Ir) -> Layout {
                         // shared departure point is identical for every member and
                         // never distinguishes stacked loads (the STH_LOOP bug).
                         let mine = route.points[3 - end];
-                        let above = col_blocked.get(&k).is_some_and(|mates| {
-                            mates.iter().any(|m| {
-                                // Same column, higher cell: vertical
-                                // drop would slice it.
-                                ((m.0 - mine.0).abs() < 4.0 && m.1 < mine.1 - 4.0)
+                        // A target ABOVE the departure always gutters:
+                        // the wire must exit DOWN from the protection,
+                        // not arc back up through it (the bus-side
+                        // connection the user flagged on 4+-load
+                        // breakers).
+                        let upward = mine.1 < route.points[0].1 - 4.0;
+                        let above = upward
+                            || col_blocked.get(&k).is_some_and(|mates| {
+                                mates.iter().any(|m| {
+                                    // Same column, higher cell: vertical
+                                    // drop would slice it.
+                                    ((m.0 - mine.0).abs() < 4.0 && m.1 < mine.1 - 4.0)
                                     // Different column, same height,
                                     // BETWEEN the departure and the
                                     // target: the horizontal rail
@@ -1381,19 +1388,22 @@ pub fn build(ir: &Ir) -> Layout {
                                         && (m.1 - mine.1).abs() < 30.0
                                         && m.0 > route.points[end].0.min(mine.0) + 4.0
                                         && m.0 < route.points[end].0.max(mine.0) - 4.0)
-                            })
-                        });
+                                })
+                            });
                         if above {
-                            // Gutter drop: short horizontal at the rail
-                            // (clamped just below the departure — only
-                            // 30px wide, clears neighbouring columns),
-                            // vertical down in the gutter beside the
-                            // column, elbow into the load top.
+                            // Gutter drop: the horizontal ALWAYS runs
+                            // just below the departure (never above —
+                            // the wire must exit the protection's load
+                            // side), then vertical in the gutter beside
+                            // the column, elbow into the terminal — up
+                            // for row-0 sub-column loads, down for
+                            // stacked ones.
                             let gx = mine.0 + 30.0;
-                            let ty = mine.1 - 6.0;
                             let start = route.points[0];
+                            let gy = start.1 + 10.0;
+                            let ty = mine.1 - 6.0;
                             route.points =
-                                vec![start, (start.0, yr), (gx, yr), (gx, ty), (mine.0, ty), mine];
+                                vec![start, (start.0, gy), (gx, gy), (gx, ty), (mine.0, ty), mine];
                         } else {
                             route.points[1].1 = yr;
                             route.points[2].1 = yr;
