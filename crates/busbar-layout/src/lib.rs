@@ -1311,17 +1311,33 @@ pub fn build(ir: &Ir) -> Layout {
             };
             let down = dp.center().1 >= sp.center().1;
             let (_, dy1) = terminal(sp, down);
+            let (_, top_y) = terminal(sp, false);
             let (dx2, dy2) = terminal(dp, !down);
-            // Shuffle sideways, not straight down: the stub leaves the
-            // bar 18px beside the device column and elbows in, so it
-            // never runs along an outbound feeder wire (review).
-            let mut x = (dx2 + 18.0).clamp(sp.x + 2.0, sp.x + sp.w - 2.0);
-            if (x - dx2).abs() < 4.0 {
-                x = (dx2 - 18.0).max(sp.x + 2.0);
-            }
+            let straight_x = dx2.clamp(sp.x + 2.0, sp.x + sp.w - 2.0);
+            // Straight and perpendicular by default (review). Only
+            // dogleg sideways when another wire already occupies the
+            // lane at the bar — either side, per the tap-legibility
+            // rule — within 8px of the device column.
+            let lane_busy = layout.routes.iter().any(|r| {
+                r.points.iter().any(|p| {
+                    ((p.1 - dy1).abs() < 3.0 || (p.1 - top_y).abs() < 3.0)
+                        && (p.0 - straight_x).abs() < 8.0
+                        && p.0 >= sp.x - 1.0
+                        && p.0 <= sp.x + sp.w + 1.0
+                })
+            });
+            let (x, elbow_x) = if lane_busy {
+                let mut x = (straight_x + 18.0).clamp(sp.x + 2.0, sp.x + sp.w - 2.0);
+                if (x - straight_x).abs() < 4.0 {
+                    x = (straight_x - 18.0).max(sp.x + 2.0);
+                }
+                (x, dx2)
+            } else {
+                (straight_x, straight_x)
+            };
             let ym = (dy1 + dy2) / 2.0;
             layout.routes.push(Route {
-                points: vec![(x, dy1), (x, ym), (dx2, ym), (dx2, dy2)],
+                points: vec![(x, dy1), (x, ym), (elbow_x, ym), (dx2, dy2)],
                 dashed: false,
                 from_tag: section.clone(),
                 to_tag: device.clone(),
