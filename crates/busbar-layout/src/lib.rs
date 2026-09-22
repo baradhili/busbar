@@ -1350,6 +1350,20 @@ pub fn build(ir: &Ir) -> Layout {
                 let k = key(is_start, &tag, route.points[end]);
                 if rail_n.get(&k).is_some_and(|n| *n >= 2) {
                     if let Some(&yr) = rail_y.get(&k) {
+                        // Clamp the rail below the departure for
+                        // DOWNWARD members — a row-0 sub-column load
+                        // (terminal above the departure) drags the
+                        // shared rail up via min(), making downward
+                        // members arc over the protection ("connecting
+                        // above the device"). UPWARD members (row-0
+                        // sub-column loads) keep the unclamped high
+                        // rail: their wire must ride above every cell.
+                        let going_down = route.points[3].1 >= route.points[0].1;
+                        let yr = if going_down {
+                            yr.max(route.points[0].1 + 10.0)
+                        } else {
+                            yr
+                        };
                         // The member's OWN far terminal decides the gutter — the
                         // shared departure point is identical for every member and
                         // never distinguishes stacked loads (the STH_LOOP bug).
@@ -1370,9 +1384,11 @@ pub fn build(ir: &Ir) -> Layout {
                             })
                         });
                         if above {
-                            // Gutter drop: vertical beside the column,
-                            // elbow into the load top — the wire never
-                            // crosses the cell above.
+                            // Gutter drop: short horizontal at the rail
+                            // (clamped just below the departure — only
+                            // 30px wide, clears neighbouring columns),
+                            // vertical down in the gutter beside the
+                            // column, elbow into the load top.
                             let gx = mine.0 + 30.0;
                             let ty = mine.1 - 6.0;
                             let start = route.points[0];
