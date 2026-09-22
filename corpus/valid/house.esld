@@ -48,10 +48,11 @@ connect SHED.EM1.out -> SHED.QF4.in;
 connect SHED.QF4.out -> SHED.B2;
 connect SHED.B2 -> SHED.QF1.in;
 connect SHED.QF1.out -> HOUSE.QS1.in;
+connect SHED.B2 -> SHED.SPD1.in;
 connect SHED.pe -- MAIN_EARTH.e;
 
 // ---------- House board ----------
-// Seventeen ways, one per SmartSLD gfci-breaker; GFCI maps to rcbo 30mA.
+
 board HOUSE : board {
   vs = LV;
   incomers = [SHED.QF1.out];
@@ -59,8 +60,7 @@ board HOUSE : board {
   ways = 24;
 
   main_switch QS1 : main_switch { rating_a = 100A; poles = 2; lockable = yes; }
-  spd SPD2 : spd { spd_type = 2; in_ka = 10kA; }
-
+  
   // Lighting (JSON has the ways but no lamp elements; counts probable).
   circuit LIGHTS_NTH {
     protection : rcbo { rating_a = 10A; curve = C; rcd_ma = 30mA; poles = 1; };
@@ -75,7 +75,7 @@ board HOUSE : board {
     loads = [LIGHTS_EXT_LOAD];
   }
 
-  // Socket loops — plain GPOs stay profile-free (a point is availability,
+  // Socket loops - plain GPOs stay profile-free (a point is availability,
   // not consumption); named appliances on points carry their duty.
   circuit STH_LOOP {
     protection : rcbo { rating_a = 20A; curve = C; rcd_ma = 30mA; poles = 1; };

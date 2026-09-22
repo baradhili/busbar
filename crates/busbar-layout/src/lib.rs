@@ -264,6 +264,9 @@ pub fn build(ir: &Ir) -> Layout {
     // — their feed lands on the column, so they hang column-aligned.
     let mut has_incomer_column: std::collections::BTreeSet<String> =
         std::collections::BTreeSet::new();
+    // Board devices placed with NO resolvable edges (an SPD that
+    // implicitly attaches to the bus) still need their wire drawn.
+    let mut implicit_taps: Vec<(String, String)> = Vec::new(); // device, section
 
     // -- Board internals: bars + feeder bands. --------------------------------
     let mut members: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -597,6 +600,17 @@ pub fn build(ir: &Ir) -> Layout {
             let mut dx = BOARD_PAD;
             for node in &downstream_devs {
                 member_list.push(node.tag.clone());
+                let wired = ir.edges.iter().any(|e| {
+                    [&e.from, &e.to].iter().any(|t| {
+                        ir.resolve_endpoint(t)
+                            .is_some_and(|(entity, _, _)| entity == node.tag)
+                    })
+                });
+                if !wired {
+                    if let Some(section) = board.sections.first() {
+                        implicit_taps.push((node.tag.clone(), section.clone()));
+                    }
+                }
                 layout.places.insert(
                     node.tag.clone(),
                     Place {
@@ -928,9 +942,14 @@ pub fn build(ir: &Ir) -> Layout {
                 hop = next.clone();
             }
             if let Some(b) = board.filter(|b| ir.boards.contains_key(b)) {
-                *m.entry(b).or_insert(0.0) += CELL + 12.0;
+                // Same math as the stacking: 2*extent + 12px wire gap.
+                let g = ir
+                    .nodes
+                    .get(node.as_str())
+                    .map(|n| glyph_for(&n.type_name, n.kind))
+                    .unwrap_or(Glyph::Generic);
+                *m.entry(b).or_insert(0.0) += 2.0 * extent(g) + 12.0;
             }
-            let _ = node;
         }
         m
     };
@@ -1086,15 +1105,21 @@ pub fn build(ir: &Ir) -> Layout {
                     .get(member.as_str())
                     .map(|p| p.center().0)
                     .unwrap_or(bp_cx);
-                y -= CELL + 12.0;
                 let Some(n) = ir.nodes.get(node.as_str()) else {
                     continue;
                 };
+                let g = glyph_for(&n.type_name, n.kind);
+                // Stack by real glyph extents with a 12px wire gap —
+                // a 60px PV panel over a 40px inverter must show the
+                // wire between them (todo: PV/INV1 overlap).
+                y -= 12.0 + extent(g);
+                let centre = y;
+                y -= extent(g);
                 layout.places.insert(
                     node.clone(),
                     Place {
                         x: anchor_x - CELL / 2.0,
-                        y,
+                        y: centre - CELL / 2.0,
                         w: CELL,
                         h: CELL,
                         label: display_label(node, &n.props),
@@ -1306,6 +1331,78 @@ pub fn build(ir: &Ir) -> Layout {
             }
         }
 
+        // Implicit bus attachments (SPD-style: no edges, attached by
+        // declaration) get their wire drawn — a stub from the bar to
+        // the device terminal (todo: SHED.SPD1 connects properly).
+        for (device, section) in &implicit_taps {
+            let already = layout
+                .routes
+                .iter()
+                .any(|r| r.from_tag == *device || r.to_tag == *device);
+            if already {
+                continue;
+            }
+            let (Some(dp), Some(sp)) = (layout.places.get(device), layout.places.get(section))
+            else {
+                continue;
+            };
+            let down = dp.center().1 >= sp.center().1;
+            let (_, dy1) = terminal(sp, down);
+            let (dx2, dy2) = terminal(dp, !down);
+            let x = dx2.clamp(sp.x, sp.x + sp.w);
+            let ym = (dy1 + dy2) / 2.0;
+            layout.routes.push(Route {
+                points: vec![(x, dy1), (x, ym), (x, ym), (x, dy2)],
+                dashed: false,
+                from_tag: section.clone(),
+                to_tag: device.clone(),
+            });
+        }
+
+        // Bus-tap legibility (review round): a wire arriving on a bar
+        // from ABOVE must not align with one leaving BELOW — the pair
+        // reads as a single wire bypassing the bar. Later taps nudge
+        // 12px sideways off opposite-side taps (deterministic order).
+        {
+            let mut taps: BTreeMap<String, (Vec<f64>, Vec<f64>)> = BTreeMap::new();
+            for route in &mut layout.routes {
+                let mut ends: Vec<(usize, &str)> = Vec::new();
+                if let Some(p) = layout.places.get(&route.from_tag) {
+                    if p.glyph == Glyph::Section {
+                        ends.push((0, &route.from_tag));
+                    }
+                }
+                if let Some(p) = layout.places.get(&route.to_tag) {
+                    if p.glyph == Glyph::Section {
+                        ends.push((3, &route.to_tag));
+                    }
+                }
+                for (idx, tag) in ends {
+                    let p = layout.places.get(tag).expect("section place");
+                    let above = route.points[idx].1 < p.center().1;
+                    let entry = taps.entry(tag.to_string()).or_default();
+                    let (mine, other) = if above {
+                        (&mut entry.0, &entry.1)
+                    } else {
+                        (&mut entry.1, &entry.0)
+                    };
+                    let mut x = route.points[idx].0;
+                    if other.iter().any(|ox| (x - ox).abs() < 8.0) {
+                        let shifted = x + 12.0;
+                        if shifted <= p.x + p.w - 2.0 {
+                            x = shifted;
+                        } else {
+                            x = (x - 12.0).max(p.x + 2.0);
+                        }
+                    }
+                    route.points[idx].0 = x;
+                    let elbow = if idx == 0 { 1 } else { 2 };
+                    route.points[elbow].0 = x;
+                    mine.push(x);
+                }
+            }
+        }
+
         let mut handled = std::collections::BTreeSet::new();
         for i in 0..endpoints.len() {
             if handled.contains(&i) {
@@ -1345,14 +1442,13 @@ pub fn build(ir: &Ir) -> Layout {
 /// reference sheet's lead lengths (corpus/render/symbols.svg): blades
 /// and boxes terminate at ±20, the fuse at ±30, the bar at its own
 /// half-height, junctions at their dot.
-pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {
-    let (cx, cy) = p.center();
-    // Extents follow each glyph's own geometry (todo: load symbols must
-    // meet their wires — a lamp's circle ends at r12, a motor's at r15;
-    // a 20px default left wires floating short or overlapping marks).
-    let d = match p.glyph {
+/// Vertical distance from a place's centre to where a wire meets its
+/// glyph — the glyph's own geometry, so wires neither float short nor
+/// overlap marks. Shared by terminal() and the hanger-chain stacking.
+pub fn extent(g: Glyph) -> f64 {
+    match g {
         Glyph::Junction => 0.0,
-        Glyph::Section | Glyph::Board => p.h / 2.0,
+        Glyph::Section | Glyph::Board => 20.0, // callers use p.h/2 for these
         Glyph::Fuse | Glyph::Meter | Glyph::Ct | Glyph::Pv => 30.0,
         Glyph::Earth => 15.0,
         Glyph::Lamp => 10.0,
@@ -1361,7 +1457,22 @@ pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {
         Glyph::Heating => 15.0,
         Glyph::Load => 22.0,
         Glyph::Battery => 6.0,
-        _ => 20.0,
+        // Box glyphs: their rectangles end well inside the cell — a 20px
+        // default left wires overlapping the marks (todo item).
+        Glyph::Relay => 11.0,
+        Glyph::Spd => 12.0,
+        Glyph::Evse => 21.0,
+        Glyph::Generator | Glyph::WindTurbine | Glyph::Inverter => 20.0,
+        _ => 14.0, // generic box family
+    }
+}
+
+pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {
+    let (cx, cy) = p.center();
+    let d = match p.glyph {
+        Glyph::Junction => 0.0,
+        Glyph::Section | Glyph::Board => p.h / 2.0,
+        _ => extent(p.glyph),
     };
     (cx, if lower { cy + d } else { cy - d })
 }
