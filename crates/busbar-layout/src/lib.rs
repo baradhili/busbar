@@ -62,6 +62,30 @@ pub enum Glyph {
     /// Generator: "G" box (reference sheet `G1`) — distinct from the
     /// grid supply's "~" circle.
     Generator,
+    /// Programmable logic controller: box + diagonal + "PLC".
+    Plc,
+    /// DC combiner box (reference sheet `dc-combiner1`).
+    DcCombiner,
+    /// MPPT charge controller (reference sheet `mppt1`).
+    Mppt,
+    /// AC/DC power supply (reference sheet `power-supply1`).
+    PowerSupply,
+    /// UPS box (reference sheet `ups1`).
+    Ups,
+    /// DC circuit breaker: breaker blade + "=" mark.
+    DcBreaker,
+    /// DC disconnector (reference sheet `dc-disconnector1`).
+    DcDisconnector,
+    /// Earth switch: blade terminating in earth bars.
+    EarthSwitch,
+    /// Shunt capacitor: two plates.
+    Capacitor,
+    /// Reactor: series coil.
+    Reactor,
+    /// Fixed resistor (NGR).
+    Resistor,
+    /// DC fuse: fuse with the `=` DC mark.
+    DcFuse,
     Fuse,
     Load,
     Lamp,
@@ -126,7 +150,7 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "transformer" => Glyph::Transformer,
         "fuse" => Glyph::Fuse,
         "battery" => Glyph::Battery,
-        "inverter" | "rectifier" | "ups" => Glyph::Inverter,
+        "inverter" | "rectifier" => Glyph::Inverter,
         "pv_array" | "pv_string" => Glyph::Pv,
         "wind_turbine" => Glyph::WindTurbine,
         "earth" => Glyph::Earth,
@@ -134,7 +158,7 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "ats" | "changeover" => Glyph::Ats,
         "spd" => Glyph::Spd,
         "ct" => Glyph::Ct,
-        "vt" | "sync_check" | "meter" => Glyph::Meter,
+        "sync_check" | "meter" => Glyph::Meter,
         "motor" => Glyph::Motor,
         "lighting" => Glyph::Lamp,
         "socket" => Glyph::Socket,
@@ -148,6 +172,25 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "evse" => Glyph::Evse,
         "bus" | "busbar" => Glyph::Section,
         "generator" => Glyph::Generator,
+        "plc" => Glyph::Plc,
+        "dc_combiner" => Glyph::DcCombiner,
+        "mppt" => Glyph::Mppt,
+        "power_supply" => Glyph::PowerSupply,
+        "ups" => Glyph::Ups,
+        "dc_breaker" => Glyph::DcBreaker,
+        "dc_fuse" => Glyph::DcFuse,
+        "dc_disconnector" => Glyph::DcDisconnector,
+        "earth_switch" => Glyph::EarthSwitch,
+        "capacitor_bank" => Glyph::Capacitor,
+        "reactor" => Glyph::Reactor,
+        "ngr" => Glyph::Resistor,
+        // Weak-symbol fixes: a protection relay is a box (was the
+        // breaker blade), a VT is a transformer, HVAC/pool pumps are
+        // motor loads, cooking/HW loads are heating elements.
+        "relay" => Glyph::Relay,
+        "vt" => Glyph::Transformer,
+        "hvac" | "pool_pump" => Glyph::Motor,
+        "oven" | "cooktop" | "hws" => Glyph::Heating,
         "board" => Glyph::Board,
         _ => match kind {
             Some(NodeKind::Source) => Glyph::Source,
@@ -1436,6 +1479,15 @@ fn rating_note(props: &[busbar_syntax::ast::Property]) -> Option<String> {
                 _ => continue,
             };
             parts.push(text);
+        }
+    }
+    for name in ["manufacturer", "model"] {
+        if let Some(p) = props.iter().find(|p| p.name == name) {
+            if let Value::Str(s) = &p.value.value {
+                if !s.is_empty() {
+                    parts.push(s.clone());
+                }
+            }
         }
     }
     if parts.is_empty() {

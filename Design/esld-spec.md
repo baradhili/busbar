@@ -524,7 +524,9 @@ The following types MUST be available without declaration. Implementations MAY a
 | `transformer` | converter | `primary: ac_in`, `secondary: ac_out`, `tertiary: ac_out?`, `n: neutral?` | `kva`, `vs_in`, `vs_out`, `vector`, `impedance_pct`, `taps_count`, `tap_step_pct`, `cooling` |
 | `inverter` | converter | `dc_in`, `ac_in?`, `ac_out`, `backup_out?` | `kind` (`string`/`hybrid`/`battery`/`micro`), `kw`, `mppt_count`, `export_limit`, `island_capable`, `transfer_ms` |
 | `rectifier` | converter | `ac_in`, `dc_out` | `kw`, `v_out`, `regulation`, `float_v` |
-| `ups` | converter | `ac_in`, `bypass_in: ac_in`, `ac_out`, `batt: dc_bidi` | `kva`, `kw`, `transfer_ms`, `backup_min` |
+| `mppt` | converter | `in`, `out` | `kw` — MPPT charge controller (sheet `mppt1`) |
+| `power_supply` | converter | `in`, `out` | `kw` — AC/DC aux supply (sheet `power-supply1`) |
+| `ups` | converter | `ac_in`, `bypass_in: ac_in?`, `ac_out`, `batt: dc_bidi?` | `kva`, `kw`, `transfer_ms`, `backup_min` — box with "UPS" legend (sheet `ups1`); `batt` models an external bank |
 
 ### 8.3 Storage and DC
 
@@ -540,9 +542,11 @@ The following types MUST be available without declaration. Implementations MAY a
 |---|---|---|---|
 | `breaker` | switch | `in`, `out`, `trip: signal?` | `rating_a`, `poles`, `breaking_ka`, `technology` (`miniature`/`mccb`/`acb`/`air`/`vcb`/`sf6`/`ocb`), `trip_unit` (`thermal_magnetic`/`electronic`/`lsi`) |
 | `disconnector` | switch | `in`, `out` | `rating_a`, `poles`, `motorized`, `lockable` (no load-break) |
+| `dc_disconnector` | switch | `in`, `out` | as `disconnector`, DC-marked |
 | `load_break_switch` | switch | `in`, `out` | `rating_a`, `making_ka`, `poles` |
 | `earth_switch` | switch | `in: earth` | `rating_a`, `motorized`, `lockable` |
 | `contactor` | switch | `in`, `out`, `coil: signal` | `rating_a`, `poles`, `coil_v`, `utilization` (`AC-1`/`AC-3`...) |
+| `plc` | switch | `in?`, `out?`, `signal?` | `manufacturer`, `model` — box with diagonal + "PLC" legend |
 | `control_relay` | switch | `in`, `out`, `coil: signal` | `rating_a`, `coil_v` |
 | `ats` | switch | `in1`, `in2`, `out` | `priority`, `transfer_s`, `break_before_make`, `closed_transition` |
 | `changeover` | switch | `in1`, `in2`, `out` | `mode` (`manual`/`auto`) |
@@ -560,6 +564,7 @@ The following types MUST be available without declaration. Implementations MAY a
 | `afci` | protective | `in`, `out` | `rating_a`, `poles` |
 | `spd` | protective | `in`, `pe` | `spd_type` (1/2/3), `up_kv`, `in_ka` |
 | `fuse` | protective | `in`, `out` | `rating_a`, `class`, `breaking_ka` |
+| `dc_breaker`, `dc_fuse` | protective | `in`, `out` | as AC counterparts; the symbol carries the `=` DC mark |
 
 ### 8.6 Measurement and protection systems
 
@@ -583,9 +588,10 @@ The following types MUST be available without declaration. Implementations MAY a
 | `cable` | passive | `a`, `b` | `csa`, `cores`, `conductor` (`cu`/`al`), `insulation`, `length`, `method`, `ampacity_a` |
 | `line` | passive | `a`, `b` | `conductor`, `length_km`, `ampacity_a` |
 | `ngr` | passive | `a`, `b` | `ohm`, `current_10s_a`, `material` |
+| `dc_combiner` | passive | `in` (multi), `out` | PV string combining (ESS §8.3 reference sheet `dc-combiner1`) |
 | `reactor` | passive | `a`, `b` | `kvar`, `ohm`, `q_factor` |
 | `earth` | passive | `e: earth` | `electrode`, `ohm` |
-| `capacitor_bank` | load | `in` | `kvar`, `stages`, `harmonic_tuned` |
+| `capacitor_bank` | load | `in?` | `kvar`, `stages`, `harmonic_tuned` |
 
 ### 8.8 Loads
 
@@ -628,7 +634,14 @@ validate the profile shape only.
 |---|---|---|---|
 | `board` | container | `in`, `out`, `n`, `pe`, `bus` | `busbar_rating_a`, `ways`, `location`, `ip_rating`, `form` (`fixed`/`drawout`) |
 
-### 8.10 Example type declaration
+### 8.10 Identification properties
+
+Any node MAY declare `manufacturer` (string) and `model` (string).
+They are documentation — designators for procurement and maintenance —
+and render in the symbol's note line when present (§16). They never
+affect connectivity or rules.
+
+### 8.11 Example type declaration
 
 ```
 type vcb_breaker : breaker {

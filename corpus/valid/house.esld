@@ -1,24 +1,7 @@
-// House reference — rewritten from the SmartSLD source model
-// (corpus/render/house.json, smartsld.com). SmartSLD carries topology
-// only; every rating is the author's and every load type/duty-cycle is
-// inferred from the element name per spec §8.8 (an inferred profile is
-// marked intermittent, no profile means continuous).
-//
-// SmartSLD -> ESLD mapping:
-//   grid-source L12  -> GRID (grid)          fuse FU1      -> FU1
-//   energy-meter1    -> EM1 (meter)          breaker QF4   -> QF4 (main)
-//   breaker QF1      -> house feeder (unwired in the JSON; wired here
-//                       per its position between B2 and the house run).
-//                       QF5 "Shed" becomes the SHED_LOAD circuit mcb.
-//   disconnector QS* -> main_switch          gfci-breaker* -> rcbo 30mA
-//   socket-outlet*    -> socket (0.1kW GPO) or typed load by name
-//   load L1..L11      -> typed load by name  heater1       -> heating
-//   ev-charger1       -> evse                 inverter/pv   -> inverter/pv_array
-//   contactor*        -> circuit controller   plc*          -> control_relay
-//   motor-starter1    -> folded into the retic contactor (AC-3)
-//   async-motor M1    -> RETIC_PUMP (motor)
 
 profile "esld/1.0";
+
+// TN-C-S = MEN
 
 voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; neutral = yes; earthing = "TN-C-S"; };
 
@@ -34,8 +17,8 @@ code "AS/NZS 3000:2018" {
 grid GRID : grid { vs = LV; supply_a = 100A; fault_mva = 10MVA; export_allowed = yes; }
 pv_array PV1 : pv_array { kw_peak = 5.0kW; strings = 2; voc = 400V; isc = 10A; }
 inverter INV1 : inverter {
-  kind = "string"; kw = 5.0kW; vs = LV;
-  island_capable = yes; export_limit = 5kW; transfer_ms = 20ms;
+  kind = "string"; kw = 2.5kW; vs = LV;
+  island_capable = yes; export_limit = 2.5kW; transfer_ms = 20ms;
 }
 
 // ---------- Earthing ----------

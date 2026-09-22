@@ -103,9 +103,13 @@ registry! {
         p("ac_out", PortDir::Out), opt("backup_out", PortDir::Out),
     ], &[];
     "rectifier" => Converter, IN_OUT, &[];
+    "mppt" => Converter, IN_OUT, &[];
+    "power_supply" => Converter, IN_OUT, &[];
     "ups" => Converter, &[
         p("ac_in", PortDir::In), opt("bypass_in", PortDir::In),
-        p("ac_out", PortDir::Out), p("batt", PortDir::Bidi),
+        p("ac_out", PortDir::Out),
+        // External battery bank; integrated-battery UPSes leave it unset.
+        opt("batt", PortDir::Bidi),
     ], &[];
 
     // Storage and DC (§8.3)
@@ -116,9 +120,11 @@ registry! {
     // Switchgear and switching (§8.4)
     "breaker" => Switch, &[p("in", PortDir::In), p("out", PortDir::Out), opt("trip", PortDir::None)], &[];
     "disconnector" => Switch, IN_OUT, &[];
+    "dc_disconnector" => Switch, IN_OUT, &[];
     "load_break_switch" => Switch, IN_OUT, &[];
     "earth_switch" => Switch, &[p("in", PortDir::None)], &[];
     "contactor" => Switch, &[p("in", PortDir::In), p("out", PortDir::Out), opt("coil", PortDir::None)], &[];
+    "plc" => Switch, &[opt("in", PortDir::In), opt("out", PortDir::Out), opt("signal", PortDir::None)], &[];
     "control_relay" => Switch, &[opt("in", PortDir::In), opt("out", PortDir::Out), opt("coil", PortDir::None)], &[];
     "ats" => Switch, &[p("in1", PortDir::In), p("in2", PortDir::In), p("out", PortDir::Out)], &[];
     "changeover" => Switch, &[p("in1", PortDir::In), p("in2", PortDir::In), p("out", PortDir::Out)], &[];
@@ -135,6 +141,8 @@ registry! {
 
     // Measurement and protection systems (§8.6)
     "spd" => Protective, &[p("in", PortDir::In), opt("pe", PortDir::None)], &[];
+    "dc_breaker" => Protective, IN_OUT, POLES_DEFAULT;
+    "dc_fuse" => Protective, IN_OUT, &[];
     "ct" => Measurement, &[opt("signal", PortDir::None)], &[];
     "vt" => Measurement, &[opt("signal", PortDir::None)], &[];
     "sync_check" => Measurement, &[opt("signal", PortDir::None)], &[];
@@ -148,6 +156,8 @@ registry! {
     "cable" => Passive, &[p("a", PortDir::Bidi), p("b", PortDir::Bidi)], &[];
     "line" => Passive, &[p("a", PortDir::Bidi), p("b", PortDir::Bidi)], &[];
     "ngr" => Passive, &[p("a", PortDir::Bidi), p("b", PortDir::Bidi)], &[];
+    "dc_combiner" => Passive, &[multi("in", PortDir::In), p("out", PortDir::Out)], &[];
+    "capacitor_bank" => Load, &[opt("in", PortDir::In)], &[];
     "reactor" => Passive, &[p("a", PortDir::Bidi), p("b", PortDir::Bidi)], &[];
     "earth" => Passive, &[p("e", PortDir::None)], &[];
     "capacitor_bank" => Load, &[opt("in", PortDir::In)], &[];

@@ -1,0 +1,67 @@
+// ESS and control vocabulary tour — exercises the new symbols:
+// DC combiner, DC breaker/disconnector, MPPT, earth switch, NGR,
+// reactor, capacitor bank, PLC, power supply, UPS. Identification
+// properties (spec §8.10) shown on the PLC and the load.
+profile "esld/1.0";
+
+voltsys LV = { nominal = 230V; phases = 1ph; frequency = 50Hz; };
+voltsys DC = { nominal = 400V; phases = dc; };
+
+grid GRID : grid { vs = LV; supply_a = 100A; }
+pv_array PV1 : pv_array { vs = DC; kw_peak = 5.0kW; strings = 2; }
+battery BATT1 : battery { kw = 5.0kW; manufacturer = "BYD"; model = "HVS 5.1"; }
+
+board ESS_BOARD : board {
+  vs = DC;
+  incomers = [PV1.out];
+  busbar_rating_a = 32A;
+
+  dc_combiner COMB1 : dc_combiner { }
+  dc_breaker DCB1 : dc_breaker { rating_a = 20A; }
+  dc_disconnector DCD1 : dc_disconnector { rating_a = 32A; }
+  mppt MPPT1 : mppt { kw = 5.0kW; }
+
+  circuit BATT_WAY {
+    protection : dc_breaker { rating_a = 20A; };
+  }
+}
+
+connect PV1.out -> ESS_BOARD.COMB1.in;
+connect ESS_BOARD.COMB1.out -> ESS_BOARD.DCB1.in;
+connect ESS_BOARD.DCB1.out -> ESS_BOARD.MPPT1.in;
+connect ESS_BOARD.MPPT1.out -> ESS_BOARD.DCD1.in;
+connect ESS_BOARD.DCD1.out -> ESS_BOARD.bus;
+connect ESS_BOARD.BATT_WAY.out -- BATT1.dc_bidi;
+
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+
+  plc PLC1 : plc { manufacturer = "Siemens"; model = "S7-1200"; }
+  power_supply PSU1 : power_supply { kw = 0.1kW; }
+  ups UPS1 : ups { kw = 1.0kW; }
+  earth_switch ES1 : earth_switch { rating_a = 100A; }
+  earth ROD : earth { electrode = "rod"; ohm = 10ohm; }
+  ngr NGR1 : ngr { ohm = 10ohm; }
+  reactor REAC1 : reactor { kvar = 5kvar; ohm = 2ohm; }
+  capacitor_bank CAP1 : capacitor_bank { kvar = 10kvar; }
+
+  circuit UPS_WAY {
+    protection : breaker { rating_a = 16A; breaking_ka = 6kA; };
+  }
+}
+
+CRIT_LOAD : heating { kw = 0.5kW; manufacturer = "APC"; model = "SRX1500"; }
+
+connect GRID.out -> MAIN.in;
+connect MAIN.bus -- MAIN.ES1;
+connect MAIN.pe -- ROD.e;
+connect MAIN.NGR1.a -- MAIN.bus;
+connect MAIN.NGR1.b -- ROD.e;
+connect MAIN.REAC1.a -- MAIN.bus;
+connect MAIN.REAC1.b -- CAP1.in;
+connect MAIN.PSU1.in -- MAIN.bus;
+connect MAIN.PLC1.in -- MAIN.PSU1.out;
+connect MAIN.UPS_WAY.out -> MAIN.UPS1.ac_in;
+connect MAIN.UPS1.ac_out -> CRIT_LOAD.in;

@@ -36,6 +36,18 @@ pub fn fragment(glyph: crate::Glyph) -> Option<&'static str> {
         crate::Glyph::Inverter => INVERTER,
         crate::Glyph::Pv => PV,
         crate::Glyph::WindTurbine => WIND_TURBINE,
+        crate::Glyph::Plc => PLC,
+        crate::Glyph::DcCombiner => DC_COMBINER,
+        crate::Glyph::Mppt => MPPT,
+        crate::Glyph::PowerSupply => POWER_SUPPLY,
+        crate::Glyph::Ups => UPS,
+        crate::Glyph::DcBreaker => DC_BREAKER,
+        crate::Glyph::DcDisconnector => DC_DISCONNECTOR,
+        crate::Glyph::EarthSwitch => EARTH_SWITCH,
+        crate::Glyph::Capacitor => CAPACITOR,
+        crate::Glyph::Reactor => REACTOR,
+        crate::Glyph::Resistor => RESISTOR,
+        crate::Glyph::DcFuse => DC_FUSE,
         _ => return None,
     })
 }
@@ -82,3 +94,27 @@ const INVERTER: &str = r##"<g transform="matrix(1 0 0 -1 0 -40)"><path d="M -15 
 const PV: &str = r##"<g transform="translate(-20 -10)\"><line x1="-16" y1="24" x2="-26" y2="14"/><line x1="-21" y1="29" x2="-31" y2="19"/><polygon points="-20,23 -17,20 -15,25" fill="#222222"/><polygon points="-22,25 -25,28 -20,30" fill="#222222"/><rect x="-10" y="-20" width="60" height="60" rx="0" ry="0"/><text x="15" y="7.2" font-size="14" fill="#222222">G</text><line x1="10" y1="20" x2="20" y2="20"/><line x1="20" y1="15" x2="20" y2="25"/><line x1="25" y1="10" x2="25" y2="30"/><line x1="25" y1="20" x2="35" y2="20"/></g>"##;
 
 const WIND_TURBINE: &str = r##"<circle cx="0" cy="0" r="20"/><text x="0" y="4" text-anchor="middle" font-size="16" fill="#222222">G</text><line x1="0" y1="-20" x2="0" y2="-32"/><line x1="0" y1="-32" x2="-10" y2="-39" stroke-width="1.5"/><line x1="0" y1="-32" x2="10" y2="-39" stroke-width="1.5"/><line x1="0" y1="-32" x2="0" y2="-44" stroke-width="1.5"/>"##;
+
+const PLC: &str = r##"<line x1="0" y1="-20" x2="0" y2="-10"/><polyline points="-5,-10 0,10 0,20"/><line x1="0" y1="6" x2="-5" y2="-10"/><rect x="-14" y="-2" width="10" height="8" fill="#222222"/><line x1="0" y1="20" x2="0" y2="20"/><text x="4" y="-6" font-size="7" fill="#222222">PLC</text>"##;
+
+const DC_COMBINER: &str = r##"<g transform="translate(0 0)"><rect x="-25" y="-15" width="50" height="30"/><line x1="-18" y1="-30" x2="-18" y2="-15"/><line x1="-6" y1="-30" x2="-6" y2="-15"/><line x1="6" y1="-30" x2="6" y2="-15"/><line x1="18" y1="-30" x2="18" y2="-15"/><line x1="0" y1="15" x2="0" y2="30"/><text x="-9" y="5" font-size="7" fill="#222222">DC</text></g>"##;
+
+const MPPT: &str = r##"<line x1="-40" y1="0" x2="0" y2="-40"/><rect x="-40" y="-40" width="40" height="40" rx="0" ry="0"/><line x1="-36" y1="-36" x2="-20" y2="-36"/><line x1="-20" y1="-8" x2="-4" y2="-8"/><line x1="-20" y1="-4" x2="-14" y2="-4"/><line x1="-10" y1="-4" x2="-4" y2="-4"/><line x1="-36" y1="-32" x2="-30" y2="-32"/><line x1="-26" y1="-32" x2="-20" y2="-32"/>"##;
+
+const POWER_SUPPLY: &str = r##"<g transform="translate(0 0)"><rect x="-22" y="-20" width="44" height="40"/><line x1="-22" y1="20" x2="22" y2="-20"/><text x="-15" y="-5" font-size="9" fill="#222222">~</text><text x="8" y="15" font-size="9" fill="#222222">=</text><line x1="0" y1="-40" x2="0" y2="-20"/><line x1="0" y1="20" x2="0" y2="40"/></g>"##;
+
+const UPS: &str = r##"<g transform="translate(0 0)"><rect x="-24" y="-20" width="48" height="40"/><text x="0" y="4" text-anchor="middle" font-size="11" fill="#222222">UPS</text><line x1="0" y1="-40" x2="0" y2="-20"/><line x1="0" y1="20" x2="0" y2="40"/></g>"##;
+
+const DC_BREAKER: &str = r##"<line x1="0" y1="-20" x2="0" y2="-10"/><polyline points="-5,-10 0,10 0,20"/><line x1="2" y1="-8" x2="-2" y2="-12"/><line x1="-2" y1="-8" x2="2" y2="-12"/><text x="6" y="-10" font-size="7" fill="#222222">=</text>"##;
+
+const DC_DISCONNECTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/><text x="6" y="-10" font-size="7" fill="#222222">=</text>"##;
+
+const EARTH_SWITCH: &str = r##"<line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/><line x1="0" y1="0" x2="0" y2="8"/><line x1="-10" y1="8" x2="10" y2="8"/><line x1="-7" y1="13" x2="7" y2="13"/><line x1="-4" y1="18" x2="4" y2="18"/>"##;
+
+const CAPACITOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-6"/><line x1="-14" y1="-6" x2="14" y2="-6"/><line x1="-14" y1="6" x2="14" y2="6"/><line x1="0" y1="6" x2="0" y2="20"/>"##;
+
+const REACTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-12"/><path d="M 0 -12 A 6 6 0 0 0 0 0"/><path d="M 0 0 A 6 6 0 0 0 0 12"/><path d="M 0 12 A 6 6 0 0 0 0 24"/><line x1="0" y1="24" x2="0" y2="24"/>"##;
+
+const RESISTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/>"##;
+
+const DC_FUSE: &str = r##"<line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text>"##;

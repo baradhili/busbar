@@ -48,21 +48,21 @@ symbol lands.
 
 | Type | Corpus uses | Current rendering | Needed | Priority |
 |---|---|---|---|---|
-| `hvac` | 3 | default plain square | compressor/AHU symbol (or reuse `motor` with a note) | P3 |
-| `oven`, `cooktop` | 3 + 1 | default plain square | heating-element box (reuse `heating` glyph) | P3 |
-| `pool_pump` | 2 | default plain square | pump symbol (reuse `motor`) | P3 |
-| `hws` | 1 | default plain square | hot-water cylinder symbol (or reuse `heating`) | P3 |
+| (resolved 2026-09) `hvac`, `pool_pump` | | motor circle | done — mapped to `motor` |
+| (resolved 2026-09) `oven`, `cooktop`, `hws` | | heating box | done — mapped to `heating` |
+
 
 ## Missing — spec built-ins not yet exercised by the corpus
 
 | Type | Current rendering | Needed | Priority |
 |---|---|---|---|
-| `relay` (protection relay) | **switch-blade-with-× — the circuit-breaker symbol. Semantically wrong.** The sheet's `time-relay1`/`relay-coil1` are control-side, not protection boxes. | relay box with device-function designations (ANSI/IEC numbers) | **P1** — wrong symbol, not just missing |
-| `earth_switch` | plain switch blade | disconnector blade terminating in earth bars | P2 |
-| `capacitor_bank` | default plain square (Load kind) | shunt capacitor (two plates) | P3 |
-| `reactor` | default plain square | coil / arc-reactor symbol | P3 |
-| `ngr` | default plain square | resistor to earth | P3 |
-| `vt`, `sync_check` | share the integrating-meter (kWh) circle — a VT drawn as a watt-hour meter | distinct VT / sync-check symbols (CT now has its own) | P3 |
+| (resolved 2026-09) `relay` | relay box | done — protection relay now the coil box (was the breaker blade) |
+| (resolved 2026-09) `earth_switch` | blade + earth bars | done |
+| (resolved 2026-09) `capacitor_bank` | two-plate capacitor | done |
+| (resolved 2026-09) `reactor` | series coil | done |
+| (resolved 2026-09) `ngr` | resistor rectangle | done |
+| (resolved 2026-09) `vt` | transformer two-circle | done — a VT is a transformer |
+| `sync_check` | kWh meter circle | distinct sync-check function mark | P4 |
 | `bms`, `dc_load` | default plain square | decide when storage chains land (M6) | P4 |
 | `cable`, `line` | no glyph (edge entities) | none needed as a placed symbol — wire annotations are the tracked item (guidance §4.4) | — |
 
@@ -71,12 +71,12 @@ symbol lands.
 The reference sheet (`corpus/render/symbols.svg`) also carries symbols
 whose ESLD types do not exist in the spec's built-in registry — tracked
 here so the vocabulary is on record for future spec work:
-fuse-block (`FBL1`), DC disconnector mark (`dc-disconnector1`),
-auxiliary/make contact (`make-contact1`), push-button (`push-button1`),
-time relay (`time-relay1`), thermocouple (`thermocouple1`),
-AC/DC power supply (`power-supply1`), UPS box (`ups1` — `ups` the type
-currently shares the inverter glyph), battery PCS (`PCS1`),
-DC combiner (`dc-combiner1`), MPPT charge controller (`mppt1`).
+fuse-block (`FBL1`), auxiliary/make contact (`make-contact1`),
+push-button (`push-button1`), time relay (`time-relay1`),
+thermocouple (`thermocouple1`), battery PCS (`PCS1`). Resolved into
+types 2026-09: `dc_disconnector`, `power_supply`, `ups` (own box),
+`dc_combiner`, `mppt`, plus `dc_breaker`/`dc_fuse` (DC-marked) and
+`plc` (box + diagonal).
 
 ## Adjacent gaps (annotations, not symbol bodies)
 
