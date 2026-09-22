@@ -32,7 +32,7 @@ board SHED : board {
 
   fuse FU1 : fuse { rating_a = 100A; breaking_ka = 10kA; class = "gG"; }
   meter EM1 : meter { kind = utility; accuracy = "1.0"; }
-  main_switch QF4 : main_switch { rating_a = 100A; poles = 2; lockable = yes; }
+  main_switch QF4 : main_switch { rating_a = 100A; poles = 1; lockable = yes; }
   breaker QF1 : breaker { rating_a = 100A; breaking_ka = 10kA; technology = mccb; }  // house feeder
   spd SPD1 : spd { spd_type = 2; in_ka = 10kA; }
 
@@ -48,7 +48,6 @@ connect SHED.EM1.out -> SHED.QF4.in;
 connect SHED.QF4.out -> SHED.B2;
 connect SHED.B2 -> SHED.QF1.in;
 connect SHED.QF1.out -> HOUSE.QS1.in;
-connect SHED.B2 -> SHED.SPD1.in;
 connect SHED.pe -- MAIN_EARTH.e;
 
 // ---------- House board ----------
