@@ -45,7 +45,9 @@ pub enum Glyph {
     Protective,
     /// Disconnector: blade with a short bar across the fixed contact.
     Disconnector,
-    /// Switch-disconnector (main switch): bar + x.
+    /// Switch-disconnector (main switch): IEC isolator form — blade
+    /// with the bar across the fixed contact. No release mark: the x
+    /// belongs to circuit breakers (60617-7), not disconnectors.
     MainSwitch,
     /// Contactor: blade with a perpendicular tick at its tip.
     Contactor,
@@ -207,69 +209,15 @@ pub fn build(ir: &Ir) -> Layout {
     let mut layout = Layout::default();
 
     // -- Sub-main devices (todo: incomer breakers above a bus). ---------------
-    // A board-declared device whose directed feed leaves for a different
-    // board is THAT board's incomer breaker: it renders in the fed
-    // board's incomer column, above the fed bus — never in the feeding
-    // board's below-bar strip.
-    let mut submain_of: BTreeMap<String, String> = BTreeMap::new(); // device -> fed board
-    let mut foreign_incomers: BTreeMap<String, Vec<String>> = BTreeMap::new(); // fed board -> devices
-    for node in ir.nodes.values() {
-        let Some(parent) = &node.parent else { continue };
-        if !ir.boards.contains_key(parent) {
-            continue;
-        }
-        let mut fed: Vec<String> = Vec::new();
-        for e in &ir.edges {
-            let Some((from_e, _, _)) = ir.resolve_endpoint(&e.from) else {
-                continue;
-            };
-            if from_e != node.tag {
-                continue;
-            }
-            // The feed may land on a device inside the fed board (owner
-            // form) or on the fed board itself (`-> HOUSE.in` resolves to
-            // the container, which owns nothing).
-            let Some((to_e, _, owner)) = ir.resolve_endpoint(&e.to) else {
-                continue;
-            };
-            let fed_board = if ir
-                .nodes
-                .get(&to_e)
-                .is_some_and(|n| n.kind == Some(NodeKind::Container))
-            {
-                to_e.as_str()
-            } else {
-                match owner.as_deref() {
-                    Some(o) => o,
-                    None => continue,
-                }
-            };
-            if fed_board != parent.as_str()
-                && ir.boards.contains_key(fed_board)
-                && !fed.iter().any(|f| f == fed_board)
-            {
-                fed.push(fed_board.to_owned());
-            }
-        }
-        if let Some(target) = fed.into_iter().min() {
-            submain_of.insert(node.tag.clone(), target.to_owned());
-            foreign_incomers
-                .entry(target.to_owned())
-                .or_default()
-                .push(node.tag.clone());
-        }
-    }
-
-    // Boards whose incomer column exists (own chain or foreign sub-mains)
-    // — their feed lands on the column, so they hang column-aligned.
+    // -- Board internals: bars + feeder bands. --------------------------------
+    let mut members: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    // Boards whose incomer column exists (own chain) — their feed
+    // lands on the column, so they hang column-aligned.
     let mut has_incomer_column: std::collections::BTreeSet<String> =
         std::collections::BTreeSet::new();
     // Board devices placed with NO resolvable edges (an SPD that
     // implicitly attaches to the bus) still need their wire drawn.
     let mut implicit_taps: Vec<(String, String)> = Vec::new(); // device, section
-
-    // -- Board internals: bars + feeder bands. --------------------------------
-    let mut members: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for board in ir.boards.values() {
         let member_list = members.entry(board.tag.clone()).or_default();
 
@@ -300,7 +248,6 @@ pub fn build(ir: &Ir) -> Layout {
                 || board.sections.contains(&node.tag)
                 || node.tag.ends_with(".protection")
                 || node.tag.ends_with(".controller")
-                || submain_of.contains_key(&node.tag)
             {
                 continue;
             }
@@ -384,17 +331,6 @@ pub fn build(ir: &Ir) -> Layout {
                 upstream_devs.push(node);
             } else {
                 downstream_devs.push(node);
-            }
-        }
-
-        // Sub-main breakers declared in another board feed THIS bus:
-        // they join the incomer column above it, ordered by the same
-        // directed-hop rule (so house QF1 sits above the house QS1).
-        if let Some(foreign) = foreign_incomers.get(board.tag.as_str()) {
-            for tag in foreign {
-                if let Some(node) = ir.nodes.get(tag.as_str()) {
-                    upstream_devs.push(node);
-                }
             }
         }
 
@@ -692,10 +628,7 @@ pub fn build(ir: &Ir) -> Layout {
     // child's rank so its row is strictly below the parent's; the
     // anchor's x is read from its placed glyph when the child's row is
     // packed.
-    // board -> (owner, feeder, self_placed): a self-placed feeder (a
-    // sub-main breaker rendered inside the FED board's column) has no
-    // global position until the fed board lands, so it cannot anchor.
-    let mut feeder_of: BTreeMap<String, (String, String, bool)> = BTreeMap::new();
+    let mut feeder_of: BTreeMap<String, (String, String)> = BTreeMap::new();
     for board in ir.boards.keys() {
         let mut candidates: Vec<(String, String)> = Vec::new();
         for edge in &ir.edges {
@@ -732,10 +665,7 @@ pub fn build(ir: &Ir) -> Layout {
                 .saturating_add(1);
             let rank = ranks.get_mut(board.as_str()).expect("board ranked above");
             *rank = (*rank).max(floor);
-            let self_placed = foreign_incomers
-                .get(board.as_str())
-                .is_some_and(|tags| tags.contains(&feeder));
-            feeder_of.insert(board.clone(), (owner, feeder, self_placed));
+            feeder_of.insert(board.clone(), (owner, feeder));
         }
     }
 
@@ -754,7 +684,7 @@ pub fn build(ir: &Ir) -> Layout {
         let mut depth: BTreeMap<&str, u32> = unranked.iter().map(|b| (b.as_str(), 0)).collect();
         for _ in 0..unranked.len() {
             for b in &unranked {
-                let Some((owner, _, _)) = feeder_of.get(*b) else {
+                let Some((owner, _)) = feeder_of.get(*b) else {
                     continue;
                 };
                 let parent = depth.get(owner.as_str()).copied().unwrap_or(0);
@@ -962,8 +892,7 @@ pub fn build(ir: &Ir) -> Layout {
         let desired_x = |tag: &String| -> f64 {
             feeder_of
                 .get(tag)
-                .filter(|(_, _, self_placed)| !self_placed)
-                .and_then(|(_, feeder, _)| layout.places.get(feeder))
+                .and_then(|(_, feeder)| layout.places.get(feeder))
                 .map(|p| p.center().0)
                 .unwrap_or(f64::MAX)
         };
@@ -1008,7 +937,7 @@ pub fn build(ir: &Ir) -> Layout {
         for tag in &tags {
             let (w, h) = layout.boards.get(tag).copied().unwrap_or((CELL, CELL));
             let mut x = cur_x;
-            if let Some((_, feeder, false)) = feeder_of.get(tag) {
+            if let Some((_, feeder)) = feeder_of.get(tag) {
                 if let Some(p) = layout.places.get(feeder) {
                     // Column-aligned when the board has an incomer
                     // column (the feed drops onto the incomer device),
@@ -1285,6 +1214,9 @@ pub fn build(ir: &Ir) -> Layout {
         // Only terminals shared by two or more wires are junctions worth
         // a rail; a singleton keeps its channel/midpoint shape (hugging
         // it would drag inter-board feeds through foreign frames).
+        // Members of a group branch at staggered heights (10px apart) —
+        // a tree spread instead of one overlapping comb (review:
+        // multiple loads on one breaker).
         let mut rail_y: BTreeMap<(bool, String, (u64, u64)), f64> = BTreeMap::new();
         let mut rail_n: BTreeMap<(bool, String, (u64, u64)), usize> = BTreeMap::new();
         for route in &layout.routes {
@@ -1304,17 +1236,28 @@ pub fn build(ir: &Ir) -> Layout {
             };
             let ks = key(true, &route.from_tag, route.points[0]);
             let ke = key(false, &route.to_tag, route.points[3]);
-            rail_y.entry(ks.clone()).or_insert(start_rail);
+            rail_y
+                .entry(ks.clone())
+                .and_modify(|y| *y = (*y).min(start_rail))
+                .or_insert(start_rail);
             rail_n.entry(ks).and_modify(|n| *n += 1).or_insert(1);
-            rail_y.entry(ke.clone()).or_insert(end_rail);
+            rail_y
+                .entry(ke.clone())
+                .and_modify(|y| *y = (*y).min(end_rail))
+                .or_insert(end_rail);
             rail_n.entry(ke).and_modify(|n| *n += 1).or_insert(1);
         }
+        let mut reshaped: BTreeMap<(bool, String, (u64, u64)), usize> = BTreeMap::new();
         for route in &mut layout.routes {
             if route.points[0].0 != route.points[1].0 {
                 continue; // side-form route — no vertical rail
             }
             // One rail per route: the departure group wins when both
-            // terminals are shared (its members counted first).
+            // terminals are shared (its members counted first). Group
+            // members branch at staggered heights — 10px steps down
+            // from the group's rail — so a fan-out reads as a tree
+            // instead of one overlapping comb (review: multiple loads
+            // on one breaker).
             for (is_start, tag, end, elbow) in [
                 (true, route.from_tag.clone(), 0, 1),
                 (false, route.to_tag.clone(), 3, 2),
@@ -1322,8 +1265,16 @@ pub fn build(ir: &Ir) -> Layout {
                 let k = key(is_start, &tag, route.points[end]);
                 if rail_n.get(&k).is_some_and(|n| *n >= 2) {
                     if let Some(&yr) = rail_y.get(&k) {
-                        route.points[1].1 = yr;
-                        route.points[2].1 = yr;
+                        let idx = reshaped.entry(k.clone()).or_insert(0);
+                        // Stagger downward from the group rail, clamped
+                        // inside the route's own span so a branch never
+                        // runs past its target terminal.
+                        let lo = route.points[0].1.min(route.points[3].1) + 4.0;
+                        let hi = route.points[0].1.max(route.points[3].1) - 4.0;
+                        let staggered = (yr + 10.0 * (*idx as f64)).clamp(lo, hi);
+                        *idx += 1;
+                        route.points[1].1 = staggered;
+                        route.points[2].1 = staggered;
                         route.points[elbow].0 = route.points[end].0;
                     }
                     break;
@@ -1349,10 +1300,16 @@ pub fn build(ir: &Ir) -> Layout {
             let down = dp.center().1 >= sp.center().1;
             let (_, dy1) = terminal(sp, down);
             let (dx2, dy2) = terminal(dp, !down);
-            let x = dx2.clamp(sp.x, sp.x + sp.w);
+            // Shuffle sideways, not straight down: the stub leaves the
+            // bar 18px beside the device column and elbows in, so it
+            // never runs along an outbound feeder wire (review).
+            let mut x = (dx2 + 18.0).clamp(sp.x + 2.0, sp.x + sp.w - 2.0);
+            if (x - dx2).abs() < 4.0 {
+                x = (dx2 - 18.0).max(sp.x + 2.0);
+            }
             let ym = (dy1 + dy2) / 2.0;
             layout.routes.push(Route {
-                points: vec![(x, dy1), (x, ym), (x, ym), (x, dy2)],
+                points: vec![(x, dy1), (x, ym), (dx2, ym), (dx2, dy2)],
                 dashed: false,
                 from_tag: section.clone(),
                 to_tag: device.clone(),

@@ -58,7 +58,7 @@ const BREAKER: &str = r##"<polyline points="0,20 0,10 -5,-10"/><line x1="0" y1="
 
 const DISCONNECTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/>"##;
 
-const MAIN_SWITCH: &str = r##"<line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/><line x1="2" y1="-8" x2="-2" y2="-12"/><line x1="2" y1="-12" x2="-2" y2="-8"/>"##;
+const MAIN_SWITCH: &str = r##"<line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/>"##;
 
 const CONTACTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><path d="M 0 -24.5 A 2.5 2.5 0 0 0 0 -19.5"/>"##;
 
