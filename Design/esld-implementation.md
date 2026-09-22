@@ -34,10 +34,10 @@ Build a tool that:
 | ------ | ------------------------------------------------------------------------------- | ------------------------------------------------ |
 | **P1** | Native CLI: parse → IR → validate → export (JSON/DOT/CSV), `fmt`                | All R-1xx/R-2xx rules green on corpus            |
 | **P2** | Deterministic SVG renderer (IEC symbol subset), `render`                        | Golden SVG snapshots stable across platforms     |
-| P2.a   | Create per Board physical layouts using manufacturer or generic device drawings | Not sure :)                                      |
 | **P3** | Solver: states, interlocks, scenarios; R-5xx/R-6xx                              | Spec worked examples produce expected results    |
-| **P4** | WASM module + npm package + web playground                                      | Round-trips in browser < 100 ms for 500-node doc |
-| **P5** | R-3xx/R-4xx full, code profiles, PDF, LSP                                       | Conformance suite ≥ 40 documents                 |
+| **P4** | Create per Board physical layouts using manufacturer or generic device drawings | Correct SVG snapshots across all platforms       |
+| **P5** | WASM module + npm package + web playground                                      | Round-trips in browser < 100 ms for 500-node doc |
+| **P6** | R-3xx/R-4xx full, code profiles, PDF, LSP                                       | Conformance suite ≥ 40 documents                 |
 
 The order is deliberate: everything downstream of parsing (validation, rendering, solving) is pure computation over the IR, so the CLI and WASM targets share 100% of the interesting code and differ only in the shell (argv/stdin/stdout vs. JS bindings).
 
