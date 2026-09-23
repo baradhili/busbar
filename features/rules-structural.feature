@@ -3,25 +3,29 @@ Feature: Structural validation rules (R-1xx)
   document per rule. Warnings may accompany the expected diagnostic; the
   "no other errors" step constrains errors only.
 
-  Scenario: Converted seed sample 1 checks clean
-    Given the document "valid/sample1.esld"
+  Scenario Outline: Every valid corpus document checks clean
+    Given the document "<file>"
     When I check it
     Then there are no error diagnostics
 
-  Scenario: Multi-section tie board checks clean
-    Given the document "valid/two-section-tie.esld"
-    When I check it
-    Then there are no error diagnostics
-
-  Scenario: Converted seed sample 2 checks clean
-    Given the document "valid/sample2.esld"
-    When I check it
-    Then there are no error diagnostics
-
-  Scenario: House reference checks clean
-    Given the document "valid/house.esld"
-    When I check it
-    Then there are no error diagnostics
+    Examples:
+      | file |
+      | valid/board-connects.esld |
+      | valid/ess-tour.esld |
+      | valid/fed-subboards.esld |
+      | valid/house.esld |
+      | valid/incomer-chain.esld |
+      | valid/incomer-tour.esld |
+      | valid/intermittent-loads.esld |
+      | valid/long-feeder.esld |
+      | valid/minimal.esld |
+      | valid/quantities.esld |
+      | valid/sample1.esld |
+      | valid/sample2.esld |
+      | valid/spd-pe-wired.esld |
+      | valid/statement-tour.esld |
+      | valid/two-section-tie.esld |
+      | valid/voltsys-blocks.esld |
 
   Scenario: SPD wired only through PE keeps implicit busbar attachment
     Given the document "valid/spd-pe-wired.esld"

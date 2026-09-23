@@ -97,6 +97,8 @@ name = "busbar"
 version = "0.1.0"
 dependencies = [
  "busbar-check",
+ "busbar-ir",
+ "busbar-layout",
  "busbar-render",
  "busbar-syntax",
  "cucumber",

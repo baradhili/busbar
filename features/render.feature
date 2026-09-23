@@ -17,6 +17,16 @@ Feature: Rendering determinism
     When I render it with symbols "iec"
     Then the SVG hash is "d78c0bcea7887876232a7dd2783c7a3bc39336d827f4d444b5c1c362b8052c0a"
 
+  Scenario: Multi-section tie board golden SVG
+    Given the document "valid/two-section-tie.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "8936eec6c92f3d90a327f02e8068dcf3cbc19d2e3db872813dd5afb92f5b0160"
+
+  Scenario: ESS tour golden SVG
+    Given the document "valid/ess-tour.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "5ba51395594e43eb6754c6a34e92027ea90fd539c8fcea58dc7fb78b672922d7"
+
   Scenario: Rendering is byte-deterministic
     Given the document "valid/sample2.esld"
     When I render it with symbols "iec"
@@ -41,6 +51,9 @@ Feature: Rendering determinism
       | valid/sample1.esld |
       | valid/sample2.esld |
       | valid/voltsys-blocks.esld |
+      | valid/incomer-chain.esld |
+      | valid/fed-subboards.esld |
+      | valid/long-feeder.esld |
 
   Scenario: Unknown symbol registries fail cleanly
     Given the document "valid/minimal.esld"

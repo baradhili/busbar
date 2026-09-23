@@ -62,3 +62,32 @@ Feature: CLI behaviour
   Scenario: -o with multiple inputs is a usage error
     When I run `busbar render corpus/valid/minimal.esld corpus/valid/sample1.esld -o /tmp/x.svg`
     Then the exit code is 2
+
+  Scenario: Checking a missing file is a usage error
+    When I run `busbar check corpus/valid/does-not-exist.esld`
+    Then the exit code is 2
+
+  Scenario: Checking several files reports every rule
+    When I run `busbar check corpus/invalid/r101-unknown-type.esld corpus/invalid/r102-duplicate-tag.esld`
+    Then the exit code is 1
+    And stdout mentions "R-101"
+    And stdout mentions "R-102"
+
+  Scenario: fmt without files is a usage error
+    When I run `busbar fmt`
+    Then the exit code is 2
+
+  Scenario: render without files is a usage error
+    When I run `busbar render`
+    Then the exit code is 2
+
+  Scenario: render --symbols without a value is a usage error
+    When I run `busbar render corpus/valid/minimal.esld --symbols`
+    Then the exit code is 2
+
+  Scenario: fmt canonicalises a scratch copy in place
+    Given a scratch copy of "corpus/roundtrip/unformatted.esld" at "target/cli-out/unformatted.esld"
+    When I run `busbar fmt target/cli-out/unformatted.esld`
+    Then the exit code is 0
+    When I run `busbar fmt --check target/cli-out/unformatted.esld`
+    Then the exit code is 0

@@ -1,0 +1,50 @@
+profile "esld/1.0";
+voltsys LV = {
+  nominal = 230V;
+  phases = 1ph;
+  frequency = 50Hz;
+};
+grid GRID : grid {
+  vs = LV;
+}
+lighting LAMP : lighting {
+  kw = 0.1kW;
+}
+lighting SUB_LAMP : lighting {
+  kw = 0.1kW;
+}
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  circuit LIGHTS {
+    protection : rcbo {
+      rating_a = 10A;
+      rcd_ma = 30mA;
+    };
+    loads = [LAMP];
+  };
+  circuit FEED_A {
+    protection : mcb {
+      rating_a = 20A;
+    };
+  };
+  circuit FEED_B {
+    protection : mcb {
+      rating_a = 20A;
+    };
+  };
+}
+board SUB_A : board {
+  vs = LV;
+  incomers = [MAIN.FEED_A.out];
+  busbar_rating_a = 20A;
+  circuit SUB_LIGHTS {
+    protection : mcb {
+      rating_a = 10A;
+    };
+    loads = [SUB_LAMP];
+  };
+}
+connect GRID.out -> MAIN.in;
+connect MAIN.FEED_A.out -> SUB_A.in;

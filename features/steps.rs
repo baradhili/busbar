@@ -8,6 +8,7 @@
 //!
 //! Feature files live in `features/`; corpus documents in `corpus/`.
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::path::PathBuf;
 
@@ -66,6 +67,7 @@ struct BusbarWorld {
     fmt_second: Option<Result<String, String>>,
     render_first: Option<Result<String, String>>,
     render_second: Option<Result<String, String>>,
+    layout: Option<Result<(busbar_ir::Ir, busbar_layout::Layout), String>>,
     cli: Option<(i32, String, String)>,
     /// Diagnostic asserted by the last "it reports" step, so the
     /// following "no other errors" step excludes exactly it.
@@ -98,6 +100,16 @@ fn check(source: &str, base_dir: Option<&std::path::Path>) -> Result<Vec<Diagnos
 
 fn format_once(source: &str) -> Result<String, String> {
     busbar_syntax::fmt::format(source).map_err(|e| format!("line {}: {}", e.line, e.message))
+}
+
+/// Parses and lowers to the IR, then builds the deterministic layout
+/// (spec §16.1). Both are kept: the invariants cross-reference them.
+fn lay_out(source: &str) -> Result<(busbar_ir::Ir, busbar_layout::Layout), String> {
+    let doc =
+        busbar_syntax::parse(source).map_err(|e| format!("line {}: {}", e.line, e.message))?;
+    let ir = busbar_ir::Ir::build(&doc).map_err(|e| format!("line {}: {}", e.line, e.message))?;
+    let layout = busbar_layout::build(&ir);
+    Ok((ir, layout))
 }
 
 fn asts_equal(original: &str, formatted: &str) -> Result<bool, String> {
@@ -136,6 +148,7 @@ async fn the_document(world: &mut BusbarWorld, rel: String) {
     world.fmt_second = None;
     world.render_first = None;
     world.render_second = None;
+    world.layout = None;
     world.cli = None;
     world.expected = None;
 }
@@ -296,6 +309,309 @@ async fn render_fails_mentioning(world: &mut BusbarWorld, needle: String) {
     }
 }
 
+// -- Layout steps (features/layout.feature) --------------------------------
+// The drafting contract of layout-guidance §6 / spec §16.1, asserted over
+// the corpus. Geometry tolerance matches busbar-layout/tests/invariants.rs.
+
+/// Tolerance for layout geometry: places are laid out on a float grid and
+/// compared with a half-cell slack, exactly like the unit invariant suite.
+const LAYOUT_EPS: f64 = 0.5;
+
+fn layout_of(world: &BusbarWorld) -> &(busbar_ir::Ir, busbar_layout::Layout) {
+    unwrap_or_panic(world.layout.as_ref().expect("`When I lay it out` not run"))
+}
+
+fn places_overlap(a: &busbar_layout::Place, b: &busbar_layout::Place) -> bool {
+    a.x + LAYOUT_EPS < b.x + b.w - LAYOUT_EPS
+        && b.x + LAYOUT_EPS < a.x + a.w - LAYOUT_EPS
+        && a.y + LAYOUT_EPS < b.y + b.h - LAYOUT_EPS
+        && b.y + LAYOUT_EPS < a.y + a.h - LAYOUT_EPS
+}
+
+#[cucumber::when(regex = r"^I lay it out$")]
+async fn lay_it_out(world: &mut BusbarWorld) {
+    let source = source_of(world).to_owned();
+    world.layout = Some(lay_out(&source));
+}
+
+#[cucumber::then(regex = r"^no glyphs overlap$")]
+async fn no_glyphs_overlap(world: &mut BusbarWorld) {
+    let (_, layout) = layout_of(world);
+    let cells: Vec<(&String, &busbar_layout::Place)> = layout.places.iter().collect();
+    for i in 0..cells.len() {
+        for j in i + 1..cells.len() {
+            // A board frame legitimately intersects its members; only
+            // same-category pairs (board/board, glyph/glyph) must not
+            // overlap each other.
+            let board_i = cells[i].1.glyph == busbar_layout::Glyph::Board;
+            let board_j = cells[j].1.glyph == busbar_layout::Glyph::Board;
+            if board_i != board_j {
+                continue;
+            }
+            assert!(
+                !places_overlap(cells[i].1, cells[j].1),
+                "`{}` overlaps `{}` at ({:.1},{:.1}) vs ({:.1},{:.1})",
+                cells[i].0,
+                cells[j].0,
+                cells[i].1.x,
+                cells[i].1.y,
+                cells[j].1.x,
+                cells[j].1.y
+            );
+        }
+    }
+}
+
+#[cucumber::then(regex = r"^everything is on the canvas$")]
+async fn everything_on_canvas(world: &mut BusbarWorld) {
+    let (_, layout) = layout_of(world);
+    for (tag, p) in &layout.places {
+        assert!(p.x >= 0.0 && p.y >= 0.0, "`{tag}` is off-canvas at origin");
+        assert!(
+            p.x + p.w <= layout.width + LAYOUT_EPS,
+            "`{tag}` overflows the right edge"
+        );
+        assert!(
+            p.y + p.h <= layout.height + LAYOUT_EPS,
+            "`{tag}` overflows the bottom edge"
+        );
+    }
+}
+
+#[cucumber::then(regex = r"^every resolvable edge is routed$")]
+async fn every_resolvable_edge_is_routed(world: &mut BusbarWorld) {
+    let (ir, layout) = layout_of(world);
+    let mut expected: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for edge in &ir.edges {
+        if let (Some((a, _, _)), Some((b, _, _))) = (
+            ir.resolve_endpoint(&edge.from),
+            ir.resolve_endpoint(&edge.to),
+        ) {
+            *expected.entry((a, b)).or_insert(0) += 1;
+        }
+    }
+    for ((a, b), n) in expected {
+        let got = layout
+            .routes
+            .iter()
+            .filter(|r| r.from_tag == a && r.to_tag == b)
+            .count();
+        assert_eq!(
+            got, n,
+            "edge `{a}` -> `{b}` routed {got}x, expected {n}x — a dropped route is a dropped wire"
+        );
+    }
+}
+
+#[cucumber::then(regex = r"^all routes are orthogonal$")]
+async fn all_routes_are_orthogonal(world: &mut BusbarWorld) {
+    let (_, layout) = layout_of(world);
+    for route in &layout.routes {
+        for (a, b) in route.points.iter().zip(route.points.iter().skip(1)) {
+            assert!(
+                (a.0 - b.0).abs() < LAYOUT_EPS || (a.1 - b.1).abs() < LAYOUT_EPS,
+                "route `{}` -> `{}` has a diagonal segment",
+                route.from_tag,
+                route.to_tag
+            );
+        }
+    }
+}
+
+#[cucumber::then(regex = r"^protection sits above the loads of its circuit$")]
+async fn protection_above_loads(world: &mut BusbarWorld) {
+    let (ir, layout) = layout_of(world);
+    for (ctag, circuit) in &ir.circuits {
+        let Some(prot) = &circuit.protection else {
+            continue;
+        };
+        let pp = layout
+            .places
+            .get(&prot.tag)
+            .unwrap_or_else(|| panic!("{ctag}: protection `{}` not placed", prot.tag));
+        for (load, ..) in &circuit.loads {
+            let lp = layout
+                .places
+                .get(load.as_str())
+                .unwrap_or_else(|| panic!("{ctag}: load `{load}` not placed"));
+            assert!(
+                pp.y < lp.y,
+                "{ctag}: protection `{}` sits below load `{load}`",
+                prot.tag
+            );
+        }
+    }
+}
+
+/// Column key for cell counting: x is on a float grid, so bucket at 0.1
+/// granularity before grouping.
+fn column_key(x: f64) -> i64 {
+    (x * 10.0).round() as i64
+}
+
+#[cucumber::then(regex = r"^no feeder column holds more than 4 cells$")]
+async fn no_oversized_feeder_columns(world: &mut BusbarWorld) {
+    let (ir, layout) = layout_of(world);
+    for (ctag, circuit) in &ir.circuits {
+        let mut columns: BTreeMap<i64, usize> = BTreeMap::new();
+        let mut count = |tag: &str| {
+            let p = layout
+                .places
+                .get(tag)
+                .unwrap_or_else(|| panic!("{ctag}: cell `{tag}` not placed"));
+            *columns.entry(column_key(p.x)).or_insert(0) += 1;
+        };
+        if let Some(prot) = &circuit.protection {
+            count(&prot.tag);
+        }
+        if let Some(ctl) = &circuit.controller {
+            count(&ctl.tag);
+        }
+        for (load, ..) in &circuit.loads {
+            count(load.as_str());
+        }
+        for (x, n) in columns {
+            assert!(
+                n <= busbar_layout::MAX_COL_CELLS,
+                "{ctag}: column at x={} holds {n} cells (max {})",
+                x as f64 / 10.0,
+                busbar_layout::MAX_COL_CELLS
+            );
+        }
+    }
+}
+
+#[cucumber::then(regex = r#"^the loads of circuit "([^"]+)" occupy more than one feeder column$"#)]
+async fn loads_wrap_into_sub_columns(world: &mut BusbarWorld, ctag: String) {
+    let (ir, layout) = layout_of(world);
+    let Some(circuit) = ir.circuits.get(&ctag) else {
+        panic!("circuit `{ctag}` unknown");
+    };
+    let mut xs: Vec<i64> = Vec::new();
+    for (load, ..) in &circuit.loads {
+        let p = layout
+            .places
+            .get(load.as_str())
+            .unwrap_or_else(|| panic!("{ctag}: load `{load}` not placed"));
+        let key = column_key(p.x);
+        if !xs.contains(&key) {
+            xs.push(key);
+        }
+    }
+    assert!(
+        xs.len() > 1,
+        "loads of {ctag} all landed in one column — the ragged-cascade regression"
+    );
+}
+
+#[cucumber::then(regex = r"^fed boards hang below the board that feeds them$")]
+async fn fed_boards_hang_below(world: &mut BusbarWorld) {
+    let (ir, layout) = layout_of(world);
+    for (btag, board) in &ir.boards {
+        for incomer in &board.incomers {
+            let Some((feeder, _)) = incomer.rsplit_once('.') else {
+                continue;
+            };
+            let Some(parent) = feeder.split('.').next() else {
+                continue;
+            };
+            if parent == btag.as_str() || !ir.boards.contains_key(parent) {
+                continue;
+            }
+            let child = layout
+                .places
+                .get(btag)
+                .unwrap_or_else(|| panic!("board `{btag}` not placed"));
+            let parent_place = layout
+                .places
+                .get(parent)
+                .unwrap_or_else(|| panic!("board `{parent}` not placed"));
+            assert!(
+                child.y >= parent_place.y + parent_place.h - LAYOUT_EPS,
+                "`{btag}` hangs above its feeding board `{parent}`"
+            );
+        }
+    }
+}
+
+#[cucumber::then(
+    regex = r#"^the tie "([^"]+)" sits between section "([^"]+)" and section "([^"]+)"$"#
+)]
+async fn tie_sits_between_sections(
+    world: &mut BusbarWorld,
+    tie: String,
+    upper: String,
+    lower: String,
+) {
+    let (_, layout) = layout_of(world);
+    let Some(t) = layout.places.get(&tie) else {
+        panic!("tie `{tie}` not placed");
+    };
+    let (Some(a), Some(b)) = (layout.places.get(&upper), layout.places.get(&lower)) else {
+        panic!("sections `{upper}`/`{lower}` not placed");
+    };
+    assert!(
+        t.y > a.y + a.h - LAYOUT_EPS && t.y + t.h < b.y + LAYOUT_EPS,
+        "tie `{tie}` must sit between `{upper}` and `{lower}`"
+    );
+}
+
+#[cucumber::then(regex = r#"^the chain "([^"]+)" stacks above the bar "([^"]+)" in order$"#)]
+async fn chain_stacks_above_the_bar(world: &mut BusbarWorld, chain: String, bar: String) {
+    let (_, layout) = layout_of(world);
+    let Some(bar_place) = layout.places.get(&bar) else {
+        panic!("bar `{bar}` not placed");
+    };
+    let mut prev_y: Option<f64> = None;
+    for tag in chain.split(',').map(str::trim) {
+        let Some(p) = layout.places.get(tag) else {
+            panic!("device `{tag}` not placed");
+        };
+        assert!(
+            p.y + p.h <= bar_place.y + LAYOUT_EPS,
+            "`{tag}` sits below the bar `{bar}`"
+        );
+        if let Some(above_y) = prev_y {
+            assert!(
+                above_y < p.y,
+                "`{tag}` breaks power order — it must stack below the device above it"
+            );
+        }
+        prev_y = Some(p.y);
+    }
+}
+
+#[cucumber::then(
+    regex = r#"^board "([^"]+)" hangs below board "([^"]+)" aligned with feeder "([^"]+)"$"#
+)]
+async fn board_hangs_below_aligned(
+    world: &mut BusbarWorld,
+    sub: String,
+    parent: String,
+    feeder: String,
+) {
+    let (_, layout) = layout_of(world);
+    let Some(s) = layout.places.get(&sub) else {
+        panic!("board `{sub}` not placed");
+    };
+    let Some(p) = layout.places.get(&parent) else {
+        panic!("board `{parent}` not placed");
+    };
+    let Some(f) = layout.places.get(&feeder) else {
+        panic!("feeder `{feeder}` not placed");
+    };
+    assert!(
+        s.y >= p.y + p.h - LAYOUT_EPS,
+        "`{sub}` must hang below `{parent}`"
+    );
+    let (sub_cx, _) = s.center();
+    let (feeder_cx, _) = f.center();
+    assert!(
+        (sub_cx - feeder_cx).abs() <= LAYOUT_EPS,
+        "`{sub}` must align with its feeder `{feeder}` column"
+    );
+}
+
 // -- CLI steps (features/cli.feature) -------------------------------------
 
 #[cucumber::given(regex = r#"^a scratch output path "([^"]+)"$"#)]
@@ -307,6 +623,19 @@ async fn scratch_output_path(_world: &mut BusbarWorld, path: String) {
         std::fs::create_dir_all(parent).expect("create scratch parent dir");
     }
     let _ = std::fs::remove_file(&full);
+}
+
+#[cucumber::given(regex = r#"^a scratch copy of "([^"]+)" at "([^"]+)"$"#)]
+async fn scratch_copy(_world: &mut BusbarWorld, from: String, to: String) {
+    // Copies a corpus file to a workspace-relative scratch path so
+    // in-place commands (fmt) never mutate the corpus itself.
+    let src = PathBuf::from(ROOT).join(&from);
+    let dst = PathBuf::from(ROOT).join(&to);
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent).expect("create scratch parent dir");
+    }
+    std::fs::copy(&src, &dst)
+        .unwrap_or_else(|e| panic!("copy {} -> {}: {e}", src.display(), dst.display()));
 }
 
 #[cucumber::when(regex = r"^I run `busbar(.*)`$")]
