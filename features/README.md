@@ -17,6 +17,7 @@ until its milestone lands — then the tag comes off.
 | `rules-scenarios.feature` | spec §15 R-5xx | @incomplete → M6 |
 | `rules-states-interlocks.feature` | spec §15 R-6xx | @incomplete → M6 |
 | `render.feature` | spec §16.2 determinism, golden hashes | green (M5) |
+| `layout.feature` | spec §16.1 + layout-guidance §6 drafting invariants | green (M5) |
 | `cli.feature` | plan §5.7 command surface + exit codes | green |
 | `interchange.feature` | spec §17 export (IR/DOT/CSV), §15.2 schedules | @incomplete → M2 |
 | `solve.feature` | spec §10.7, §13, §14 states/interlocks/scenarios | @incomplete → M6 |
@@ -26,5 +27,5 @@ until its milestone lands — then the tag comes off.
 Corpus conventions live in `../corpus/README.md`; fixture anchors are
 asserted in the Examples tables. Unit-level tests (not Gherkin) cover the
 lexer/parser tables, robustness (µ, EOF, ranges, trailing comments), the
-load-port and expansion contracts, and R-113 device behaviour in each
-crate's `tests/`.
+load-port and expansion contracts, R-113 device behaviour, and the exact
+terminal-landing geometry of routes in each crate's `tests/`.

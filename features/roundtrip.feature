@@ -12,6 +12,20 @@ Feature: Round-trip stability
     Examples:
       | file |
       | roundtrip/comments-and-unknown-props.esld |
+      | roundtrip/unformatted.esld |
       | valid/minimal.esld |
+      | valid/board-connects.esld |
+      | valid/quantities.esld |
+      | valid/statement-tour.esld |
+      | valid/two-section-tie.esld |
+      | valid/voltsys-blocks.esld |
+      | valid/spd-pe-wired.esld |
+      | valid/ess-tour.esld |
+      | valid/house.esld |
+      | valid/incomer-tour.esld |
+      | valid/intermittent-loads.esld |
+      | valid/incomer-chain.esld |
+      | valid/fed-subboards.esld |
+      | valid/long-feeder.esld |
       | valid/sample1.esld |
       | valid/sample2.esld |

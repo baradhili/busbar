@@ -37,6 +37,8 @@ all = { level = "warn", priority = -1 }
 
 [dev-dependencies]
 busbar-check = { path = "crates/busbar-check" }
+busbar-ir = { path = "crates/busbar-ir" }
+busbar-layout = { path = "crates/busbar-layout" }
 busbar-render = { path = "crates/busbar-render" }
 busbar-syntax = { path = "crates/busbar-syntax" }
 sha2 = "0.11" 

@@ -1,0 +1,40 @@
+profile "esld/1.0";
+voltsys LV = {
+  nominal = 230V;
+  phases = 1ph;
+  frequency = 50Hz;
+};
+grid GRID : grid {
+  vs = LV;
+}
+lighting LAMP : lighting {
+  kw = 0.1kW;
+}
+board MAIN : board {
+  vs = LV;
+  incomers = [GRID.out];
+  busbar_rating_a = 100A;
+  fuse F1 : fuse {
+    rating_a = 100A;
+  }
+  meter M1 : meter {
+    kind = utility;
+  }
+  main_switch Q1 : main_switch {
+    rating_a = 100A;
+  }
+  breaker OUT : breaker {
+    rating_a = 63A;
+  }
+  circuit LIGHTS {
+    protection : mcb {
+      rating_a = 10A;
+    };
+    loads = [LAMP];
+  };
+}
+connect GRID.out -> MAIN.F1.in;
+connect MAIN.F1.out -> MAIN.M1.in;
+connect MAIN.M1.out -> MAIN.Q1.in;
+connect MAIN.Q1.out -> MAIN.OUT.in;
+connect MAIN.OUT.out -> MAIN.bus;
