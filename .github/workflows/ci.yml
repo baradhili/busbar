@@ -60,3 +60,24 @@ jobs:
       - name: Cucumber summary
         if: always()
         run: cargo test --test cucumber 2>&1 | tail -5 || true
+
+  commitlint:
+    # Merge-commit repo: every PR commit lands in history, so lint the
+    # commit range, not the PR title. pull_request only — the post-merge
+    # push to main would otherwise lint "Merge pull request" commits,
+    # which are not conventional by design.
+    if: github.event_name == 'pull_request'
+    name: commitlint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint commits against the base branch
+        run: npx commitlint --from "origin/${{ github.base_ref }}" --to HEAD

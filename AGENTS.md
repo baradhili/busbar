@@ -43,6 +43,7 @@ make cucumber-incomplete # @incomplete scenarios — RED until milestones land
 make lint           # cargo clippy --workspace --all-targets -- -D warnings
 make fmt-check      # cargo fmt --all -- --check
 make wasm           # cargo build -p busbar-wasm --target wasm32-unknown-unknown
+make commitlint    # npx commitlint --from origin/main (one-time `npm install`)
 ```
 
 Toolchain: stable, pinned via `rust-toolchain.toml` (rustfmt + clippy
@@ -66,7 +67,10 @@ define them in `features/steps.rs` and untag its scenarios.
   change from `main` (`feat/…`, `fix/…`, `test/…`, `build/…`) and merge
   via PR once the gate is green.
 - **Conventional commits** (`docs:`, `build:`, `feat:`, `fix:`, `test:`),
-  matching existing history.
+  matching existing history. Enforced by commitlint
+  (`@commitlint/config-conventional` preset, `commitlint.config.js`) on
+  every PR commit in CI and locally via `make commitlint` (needs a
+  one-time `npm install`).
 - **No `unsafe`** anywhere — workspace lints forbid it.
 - **Core crates are pure and deterministic**: no filesystem, environment,
   clock, randomness, or `HashMap` iteration reaching output; use
@@ -85,8 +89,9 @@ define them in `features/steps.rs` and untag its scenarios.
   step in `.github/workflows/ci.yml`. Line endings are forced LF via
   `.gitattributes` so `fmt --check` holds on Windows.
 - **Dependency currency is automated**: Renovate (`renovate.json`) opens
-  weekly grouped update PRs for crates and actions, plus lock-file
-  maintenance; major updates come as separate PRs.
+  weekly grouped update PRs for crates, actions, and npm tooling
+  (commitlint), plus lock-file maintenance; major updates come as
+  separate PRs.
 
 ## Before you commit
 
