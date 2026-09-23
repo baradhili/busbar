@@ -1,0 +1,14 @@
+{
+  "name": "busbar",
+  "private": true,
+  "description": "Repo tooling for BusBar (ESLD toolchain). The toolchain itself is Rust — this file only carries commit lint; see AGENTS.md.",
+  "license": "MIT",
+  "repository": "github:baradhili/busbar",
+  "scripts": {
+    "commitlint": "commitlint --from origin/main --to HEAD"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1"
+  }
+}

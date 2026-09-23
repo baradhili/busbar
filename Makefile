@@ -1,5 +1,5 @@
 # BusBar dev environment — see AGENTS.md and Design/esld-implementation.md
-.PHONY: build test cucumber fmt fmt-check lint doc wasm clean
+.PHONY: build test cucumber fmt fmt-check lint doc wasm commitlint clean
 
 build:
 	cargo build --workspace
@@ -18,6 +18,11 @@ fmt-check:
 
 lint:
 	cargo clippy --workspace --all-targets -- -D warnings
+
+# Conventional-commit lint over everything not yet on origin/main
+# (needs a one-time `npm install`; CI runs the same check on PRs).
+commitlint:
+	npx commitlint --from origin/main --to HEAD
 
 doc:
 	cargo doc --workspace --no-deps
