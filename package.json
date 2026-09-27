@@ -8,7 +8,7 @@
     "commitlint": "commitlint --from origin/main --to HEAD"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1"
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3"
   }
 }
