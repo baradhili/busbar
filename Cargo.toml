@@ -42,7 +42,7 @@ busbar-layout = { path = "crates/busbar-layout" }
 busbar-render = { path = "crates/busbar-render" }
 busbar-syntax = { path = "crates/busbar-syntax" }
 sha2 = "0.11" 
-cucumber = "0.21"
+cucumber = "0.23"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [[test]]
