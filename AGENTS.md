@@ -63,9 +63,10 @@ define them in `features/steps.rs` and untag its scenarios.
 
 ## Conventions
 
-- **Feature branches only**: never commit directly to `main`; branch every
-  change from `main` (`feat/…`, `fix/…`, `test/…`, `build/…`) and merge
-  via PR once the gate is green.
+- **Feature branches only, chores excepted**: branch every change from
+  `main` (`feat/…`, `fix/…`, `test/…`, `build/…`) and merge via PR once
+  the gate is green; `chore:` commits (dependency bumps, tooling, repo
+  upkeep) land directly on `main` once the local gate is green.
 - **Conventional commits** (`docs:`, `build:`, `feat:`, `fix:`, `test:`),
   matching existing history. Enforced by commitlint
   (`@commitlint/config-conventional` preset, `commitlint.config.js`) on
