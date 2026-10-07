@@ -29,3 +29,5 @@ Feature: Round-trip stability
       | valid/long-feeder.esld |
       | valid/sample1.esld |
       | valid/sample2.esld |
+      | EV/simple.esld |
+      | EV/complex_preview.esld |

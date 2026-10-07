@@ -10,22 +10,32 @@ Feature: Rendering determinism
   Scenario: Sample 2 golden SVG
     Given the document "valid/sample2.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "c3257422d4e1bb11546dea5a4ad21dc4b8457f153baf4b9c3165dbadb2971f61"
+    Then the SVG hash is "2bf49b948ea0fc1dd3b05bfe3b38d9693f10abf145643432231e5305039e98d9"
 
   Scenario: House reference golden SVG
     Given the document "valid/house.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "d78c0bcea7887876232a7dd2783c7a3bc39336d827f4d444b5c1c362b8052c0a"
+    Then the SVG hash is "1094f9499db50fc9105c03370bd03f92efa31303e18857d8bae9cbb9328a6f25"
 
   Scenario: Multi-section tie board golden SVG
     Given the document "valid/two-section-tie.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "8936eec6c92f3d90a327f02e8068dcf3cbc19d2e3db872813dd5afb92f5b0160"
+    Then the SVG hash is "cc35664d3440be56244829ba8716298a54af821660de913da29d294e136e4d51"
 
   Scenario: ESS tour golden SVG
     Given the document "valid/ess-tour.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "5ba51395594e43eb6754c6a34e92027ea90fd539c8fcea58dc7fb78b672922d7"
+    Then the SVG hash is "5bbeb94158fae30ed51aaf72dea4055ab3dc53611645df8aa234a3f46da203cb"
+
+  Scenario: Simple EV conversion golden SVG
+    Given the document "EV/simple.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "b3ea315acef6e9491c06d63f8c7691cfe18dab4b8fff907352034111a6a6797a"
+
+  Scenario: Complex EV conversion golden SVG
+    Given the document "EV/complex_preview.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "b73c2e7cacb3bd775a7ee7becec8dffe4d567341ef951a159d0af56a83e285f9"
 
   Scenario: Rendering is byte-deterministic
     Given the document "valid/sample2.esld"
@@ -54,6 +64,8 @@ Feature: Rendering determinism
       | valid/incomer-chain.esld |
       | valid/fed-subboards.esld |
       | valid/long-feeder.esld |
+      | EV/simple.esld |
+      | EV/complex_preview.esld |
 
   Scenario: Unknown symbol registries fail cleanly
     Given the document "valid/minimal.esld"

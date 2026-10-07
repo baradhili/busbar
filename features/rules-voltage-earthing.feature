@@ -25,6 +25,16 @@ Feature: Voltage, phase, frequency, earthing rules (R-2xx)
       | invalid/r210-malformed-window.esld | R-210 | error | 19 |
       | invalid/r210-unknown-season.esld | R-210 | error | 19 |
 
+  Scenario: Control-signal links across voltage systems are exempt
+    A 12V coil on a 144V traction contactor is sound practice: R-201
+    and R-202 check the power path, not signal-class ports (coil,
+    trip, measures). The EV conversion wires coils, throttle and BMS
+    links across three voltage systems and must check clean.
+
+    Given the document "EV/complex_preview.esld"
+    When I check it
+    Then there are no error diagnostics
+
   Scenario: Intermittent load profiles check clean
     Given the document "valid/intermittent-loads.esld"
     When I check it

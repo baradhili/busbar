@@ -11,12 +11,21 @@ use busbar_layout::{FEEDER_W, Glyph, Layout, Place};
 const COL_EPS: f64 = 1.0;
 
 fn corpus() -> Vec<PathBuf> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus/valid");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(root)
-        .expect("corpus/valid")
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == "esld"))
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    // Every directory whose documents must hold the drafting contract.
+    const DIRS: [&str; 2] = ["valid", "EV"];
+    let mut files: Vec<PathBuf> = DIRS
+        .iter()
+        .flat_map(|d| {
+            let mut v: Vec<PathBuf> = std::fs::read_dir(root.join(d))
+                .unwrap_or_else(|e| panic!("corpus/{d}: {e}"))
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|e| e == "esld"))
+                .collect();
+            v.sort();
+            v
+        })
         .collect();
     files.sort();
     files

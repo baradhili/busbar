@@ -6,7 +6,8 @@ Feature: Parsing
   board-connects (in-board/in-circuit connects), ess-tour/incomer-tour
   (DC and incomer chains), house (full reference), intermittent-loads
   (§8.8 profiles), incomer-chain/fed-subboards/long-feeder (layout
-  fixtures), and the converted seed samples.
+  fixtures), and the converted seed samples. The EV conversions (corpus/EV)
+  exercise project type declarations end to end.
 
   Scenario Outline: Valid documents parse cleanly
     Given the document "<file>"
@@ -31,6 +32,8 @@ Feature: Parsing
       | valid/long-feeder.esld |
       | valid/sample1.esld |
       | valid/sample2.esld |
+      | EV/simple.esld |
+      | EV/complex_preview.esld |
 
   Scenario: A missing type colon is an E-PARSE-1 diagnostic, not a rule hit
     Given the document "invalid/e-parse-missing-colon.esld"

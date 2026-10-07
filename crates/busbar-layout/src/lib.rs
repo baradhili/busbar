@@ -84,10 +84,22 @@ pub enum Glyph {
     Capacitor,
     /// Reactor: series coil.
     Reactor,
-    /// Fixed resistor (NGR).
+    /// Fixed resistor (NGR, precharge).
     Resistor,
     /// DC fuse: fuse with the `=` DC mark.
     DcFuse,
+    /// Battery management system: box with "BMS" legend.
+    Bms,
+    /// DC/DC converter: box with `=` marks either side of the diagonal.
+    DcDc,
+    /// Motor controller (DC drive): converter box, `=` in, M out.
+    MotorController,
+    /// Battery charger: converter box, `~` in, `=` out.
+    Charger,
+    /// Potentiometer throttle: resistor with a wiper arrow.
+    Pot,
+    /// Vehicle management system: controller box with "EVMS" legend.
+    Evms,
     Fuse,
     Load,
     Lamp,
@@ -186,6 +198,15 @@ pub fn glyph_for(type_name: &str, kind: Option<NodeKind>) -> Glyph {
         "capacitor_bank" => Glyph::Capacitor,
         "reactor" => Glyph::Reactor,
         "ngr" => Glyph::Resistor,
+        // EV-domain project types (corpus/EV vocabulary — the spec has no
+        // built-ins for these yet; the documents declare them with `type`).
+        "bms" => Glyph::Bms,
+        "dc_dc" => Glyph::DcDc,
+        "motor_controller" => Glyph::MotorController,
+        "charger" => Glyph::Charger,
+        "pot_box" => Glyph::Pot,
+        "evms" => Glyph::Evms,
+        "resistor" => Glyph::Resistor,
         // Weak-symbol fixes: a protection relay is a box (was the
         // breaker blade), a VT is a transformer, HVAC/pool pumps are
         // motor loads, cooking/HW loads are heating elements.
@@ -1008,15 +1029,32 @@ pub fn build(ir: &Ir) -> Layout {
 
     // Peer bonds to a BOARD hang below it, fed from the bottom
     // centre (review heuristic: the main earth exits the board it is
-    // assigned to, bottom centre) — not beside it in the row.
+    // assigned to, bottom centre) — not beside it in the row. A bond
+    // to something the board CONTAINS (a way, a bar-hung device — the
+    // ESS battery on its BATT_WAY) resolves to that board: the peer
+    // leaves the row flow and hangs under the frame, keeping the bond
+    // short instead of slicing the drawing.
     {
         let mut lowest = cur_y;
         for (peer, partner) in &peer_partner {
-            let frame = layout
-                .places
-                .get(partner)
-                .and_then(|bp| (bp.glyph == Glyph::Board).then(|| (bp.center().0, bp.y + bp.h)));
-            let Some((cx, bottom)) = frame else { continue };
+            let owning_board = |tag: &str| -> Option<String> {
+                let p = layout.places.get(tag)?;
+                if p.glyph == Glyph::Board {
+                    return Some(tag.to_owned());
+                }
+                let owner = ir
+                    .circuits
+                    .get(tag)
+                    .map(|c| c.board.clone())
+                    .or_else(|| ir.sections.get(tag).map(|s| s.board.clone()))
+                    .or_else(|| ir.nodes.get(tag).and_then(|n| n.parent.clone()));
+                owner.filter(|b| layout.places.contains_key(b))
+            };
+            let Some((cx, bottom)) = owning_board(partner)
+                .and_then(|b| layout.places.get(&b).map(|bp| (bp.center().0, bp.y + bp.h)))
+            else {
+                continue;
+            };
             if let Some(pp) = layout.places.get_mut(peer) {
                 pp.x = cx - pp.w / 2.0;
                 pp.y = bottom + 16.0;
@@ -1304,15 +1342,7 @@ pub fn build(ir: &Ir) -> Layout {
             } else {
                 route.points[0].1 - 8.0
             };
-            let end_rail = if going_down {
-                route.points[3].1 - 8.0
-            } else {
-                route.points[3].1 + 8.0
-            };
             let ks = key(true, &route.from_tag, route.points[0]);
-            let ke = key(false, &route.to_tag, route.points[3]);
-            // The rail rides just below the shared terminal, but never
-            // lower than 6px above the highest (min-y) member terminal.
             // The rail rides just below the shared terminal, but never
             // lower than 6px above the HIGHEST member terminal (min y)
             // — max() pushed it INTO the cell band (FAN_LOOP).
@@ -1330,33 +1360,23 @@ pub fn build(ir: &Ir) -> Layout {
                 .entry(ks.clone())
                 .or_default()
                 .push(route.points[3]);
-            let seed_e = end_rail.min(route.points[0].1 - 6.0);
-            rail_y
-                .entry(ke.clone())
-                .and_modify(|y| *y = (*y).min(seed_e))
-                .or_insert(seed_e);
-            rail_n
-                .entry(ke.clone())
-                .and_modify(|n| *n += 1)
-                .or_insert(1);
-            col_blocked
-                .entry(ke.clone())
-                .or_default()
-                .push(route.points[0]);
+            // Arrival groups share nothing: dual feeds into one In port
+            // are R-104, and the surviving shared arrivals (bidi and
+            // custom signal ports) fan in from independent directions —
+            // a forced common rail drags members sideways through
+            // foreign cells (EV conversion: EVMS + MAINS into the
+            // charger). Their plain VHV midpoints already cross nothing.
         }
         for route in &mut layout.routes {
             if route.points[0].0 != route.points[1].0 {
                 continue; // side-form route — no vertical rail
             }
-            // One rail per route: the departure group wins when both
-            // terminals are shared. The whole group shares ONE
-            // horizontal rail riding above every member terminal —
-            // trunk down, across, drop in. No stagger: branch heights
-            // slicing through first-column load cells (visual review).
-            for (is_start, tag, end, elbow) in [
-                (true, route.from_tag.clone(), 0, 1),
-                (false, route.to_tag.clone(), 3, 2),
-            ] {
+            // One rail per route, on its DEPARTURE group: the whole
+            // group shares ONE horizontal rail riding above every member
+            // terminal — trunk down, across, drop in. No stagger: branch
+            // heights slicing through first-column load cells (visual
+            // review).
+            for (is_start, tag, end, elbow) in [(true, route.from_tag.clone(), 0, 1)] {
                 let k = key(is_start, &tag, route.points[end]);
                 if rail_n.get(&k).is_some_and(|n| *n >= 2) {
                     if let Some(&yr) = rail_y.get(&k) {
@@ -1533,6 +1553,15 @@ pub fn build(ir: &Ir) -> Layout {
                 if ia == ib || ta != tb || !(*sa && !*sb) || pa != pb {
                     continue;
                 }
+                // Bus taps are perpendicular dots anywhere along the bar —
+                // the ±10 sideways seat would slide them off its end.
+                if layout
+                    .places
+                    .get(ta.as_str())
+                    .is_some_and(|p| p.glyph == Glyph::Section)
+                {
+                    continue;
+                }
                 let vertical_a = layout.routes[*ia].points[0].0 == layout.routes[*ia].points[1].0;
                 layout.routes[*ia].points[0].0 += 10.0;
                 if vertical_a {
@@ -1579,6 +1608,9 @@ pub fn extent(g: Glyph) -> f64 {
         Glyph::Spd => 12.0,
         Glyph::Evse => 21.0,
         Glyph::Generator | Glyph::WindTurbine | Glyph::Inverter | Glyph::Pv => 20.0,
+        // EV box family (relay-coil proportions: box to ±10, leads to ±20).
+        Glyph::Bms | Glyph::DcDc | Glyph::MotorController | Glyph::Charger | Glyph::Evms => 11.0,
+        Glyph::Pot => 14.0,
         _ => 14.0, // generic box family
     }
 }
@@ -1697,7 +1729,7 @@ fn voltsys_note(ir: &Ir, board_tag: &str) -> Option<String> {
 fn rating_note(props: &[busbar_syntax::ast::Property]) -> Option<String> {
     use busbar_syntax::ast::Value;
     let mut parts = Vec::new();
-    for name in ["rating_a", "kw", "kvar", "rcd_ma"] {
+    for name in ["rating_a", "kw", "kvar", "rcd_ma", "ohm", "kwh"] {
         if let Some(p) = props.iter().find(|p| p.name == name) {
             let text = match &p.value.value {
                 Value::Quantity { number, unit } => format!("{number}{unit}"),
@@ -1729,7 +1761,10 @@ fn rank_from_sources(ir: &Ir) -> BTreeMap<String, u32> {
     let mut ranks: BTreeMap<String, u32> = BTreeMap::new();
     let mut queue = VecDeque::new();
     for node in ir.nodes.values() {
-        if node.kind == Some(NodeKind::Source) {
+        // Sources AND storage are power-entry points: a battery-only
+        // document (an EV traction system, an islanded DC bus) ranks from
+        // its packs exactly as a grid-fed one ranks from its incomers.
+        if matches!(node.kind, Some(NodeKind::Source) | Some(NodeKind::Storage)) {
             ranks.insert(node.tag.clone(), 0);
             queue.push_back(node.tag.clone());
         }

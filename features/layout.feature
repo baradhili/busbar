@@ -35,6 +35,8 @@ Feature: Layout invariants
       | valid/statement-tour.esld |
       | valid/two-section-tie.esld |
       | valid/voltsys-blocks.esld |
+      | EV/simple.esld |
+      | EV/complex_preview.esld |
 
   Scenario: Bus ties render between their sections
     Given the document "valid/two-section-tie.esld"

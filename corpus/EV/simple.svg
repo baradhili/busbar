@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 344.00 696.00" font-family="Helvetica, Arial, sans-serif" font-size="9">
+<rect x="0" y="0" width="344.00" height="696.00" fill="#ffffff"/>
+<polyline points="172.00,74.00 172.00,120.00 172.00,120.00 172.00,166.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,194.00 172.00,204.00 172.00,204.00 172.00,278.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,194.00 172.00,204.00 276.00,204.00 276.00,278.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="182.00,306.00 182.00,355.00 266.00,355.00 266.00,404.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="276.00,306.00 276.00,355.00 276.00,355.00 276.00,404.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="286.00,404.00 286.00,454.50 68.00,454.50 68.00,505.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="68.00,527.00 68.00,570.00 68.00,570.00 68.00,613.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="152.00,516.00 120.00,516.00 120.00,516.00 88.00,516.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="68.00,74.00 68.00,120.00 68.00,120.00 68.00,166.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="68.00,194.00 68.00,236.00 68.00,236.00 68.00,278.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="68.00,306.00 68.00,348.00 172.00,348.00 172.00,390.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,418.00 172.00,404.00 58.00,404.00 58.00,390.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="78.00,390.00 78.00,348.00 162.00,348.00 162.00,306.00" fill="none" stroke="#333333" stroke-width="1"/>
+<path d="M 65.20 607.00 L 68.00 613.00 L 70.80 607.00" fill="none" stroke="#333333" stroke-width="1"/>
+<g transform="translate(68.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/><line x1="5" y1="-10" x2="5" y2="10"/><line x1="5" y1="0" x2="15" y2="0"/></g>
+<g transform="translate(68.00 516.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><line x1="6" y1="-7" x2="14" y2="-7"/><line x1="6" y1="-4" x2="14" y2="-4"/><text x="-12" y="7" font-size="8" fill="#222222">M</text></g>
+<g transform="translate(68.00 180.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text></g>
+<g transform="translate(68.00 404.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/></g>
+<g transform="translate(172.00 404.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/></g>
+<circle cx="276.00" cy="404.00" r="3" fill="#222222"/>
+<g transform="translate(68.00 292.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/></g>
+<g transform="translate(172.00 292.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><path d="M 0 -24.5 A 2.5 2.5 0 0 0 0 -19.5"/></g>
+<g transform="translate(172.00 180.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text></g>
+<g transform="translate(172.00 516.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-10" y1="14" x2="8" y2="-14"/><line x1="8" y1="-14" x2="3" y2="-12"/><line x1="8" y1="-14" x2="6" y2="-9"/></g>
+<g transform="translate(276.00 292.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/></g>
+<circle cx="68.00" cy="628.00" r="14.00" stroke="#222222" stroke-width="1.4" fill="none"/>
+<text x="68.00" y="629.00" text-anchor="middle" dominant-baseline="middle" fill="#222222" font-size="8">M</text>
+<g transform="translate(172.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/><line x1="5" y1="-10" x2="5" y2="10"/><line x1="5" y1="0" x2="15" y2="0"/></g>
+<text x="68.00" y="98.00" text-anchor="middle" fill="#222222">AUX_BATT</text>
+<text x="68.00" y="546.00" text-anchor="middle" fill="#222222">CTRL</text>
+<text x="68.00" y="556.00" text-anchor="middle" fill="#666666">40kW</text>
+<text x="68.00" y="210.00" text-anchor="middle" fill="#222222">CTRL_FUSE</text>
+<text x="68.00" y="220.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="68.00" y="434.00" text-anchor="middle" fill="#222222">ESTOP</text>
+<text x="68.00" y="444.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="172.00" y="434.00" text-anchor="middle" fill="#222222">INERTIA</text>
+<text x="172.00" y="444.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="276.00" y="434.00" text-anchor="middle" fill="#222222">J_LOAD</text>
+<text x="68.00" y="322.00" text-anchor="middle" fill="#222222">KEY_SW</text>
+<text x="68.00" y="332.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="172.00" y="322.00" text-anchor="middle" fill="#222222">MAIN_CONTACTOR</text>
+<text x="172.00" y="332.00" text-anchor="middle" fill="#666666">400A</text>
+<text x="172.00" y="210.00" text-anchor="middle" fill="#222222">PACK_FUSE</text>
+<text x="172.00" y="220.00" text-anchor="middle" fill="#666666">400A</text>
+<text x="172.00" y="546.00" text-anchor="middle" fill="#222222">POT</text>
+<text x="172.00" y="556.00" text-anchor="middle" fill="#666666">5kohm</text>
+<text x="276.00" y="322.00" text-anchor="middle" fill="#222222">PRECHARGE</text>
+<text x="276.00" y="332.00" text-anchor="middle" fill="#666666">100ohm</text>
+<text x="68.00" y="658.00" text-anchor="middle" fill="#222222">TRACTION_MOTOR</text>
+<text x="68.00" y="668.00" text-anchor="middle" fill="#666666">30kW</text>
+<text x="172.00" y="98.00" text-anchor="middle" fill="#222222">TRACTION_PACK</text>
+<text x="172.00" y="108.00" text-anchor="middle" fill="#666666">20kWh</text>
+</svg>

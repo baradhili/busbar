@@ -1,0 +1,333 @@
+// A more complete wiring diagram for DC electric vehicles — ZEVA (Zero
+// Emission Vehicles Australia), 2009. Converted to ESLD from
+// corpus/EV/complex_preview.jpg. Two BMS-managed battery packs feed an
+// HV DC bus through per-pack fuses and contactors; a charger backfeeds
+// the bus from the 240V charge inlet; the motor way runs bus -> main
+// contactor (precharge contactor + resistor in parallel) -> controller
+// -> series traction motor. A DC/DC converter floats the 12V system,
+// whose control chain (key, inertia, e-stop) energises the contactor
+// coils; the EVMS watches pack current, both BMS modules and the charge
+// door. The two 72V packs are jumpered in series on the vehicle: as
+// single-line incomers of one 144V system they read parallel.
+// Terminal-level wiring (A1/A2/S1/S2) is below single-line granularity.
+profile "esld/1.0";
+
+voltsys TRACTION = {
+  nominal = 144V;
+  phases = dc;
+  earthing = isolated;
+};
+
+voltsys AUX = {
+  nominal = 12V;
+  phases = dc;
+  earthing = isolated;
+};
+
+voltsys MAINS_AC = {
+  nominal = 240V;
+  phases = 1ph;
+  frequency = 50Hz;
+  earthing = "TN-C-S";
+};
+
+// EV project types (spec §19.1) — renderer symbols from the EV family.
+type motor_controller {
+  ports {
+    in : dc_in;
+    out : dc_out;
+    throttle : signal;
+  }
+  params {
+    kw : quantity(kW);
+  }
+};
+
+type resistor {
+  ports {
+    a : dc_bidi;
+    b : dc_bidi;
+  }
+  params {
+    ohm : quantity(ohm);
+  }
+};
+
+type pot_box {
+  ports {
+    wiper : signal;
+  }
+  params {
+    ohm : quantity(ohm);
+  }
+};
+
+type dc_dc {
+  ports {
+    in : dc_in;
+    out : dc_out;
+  }
+  params {
+    kw : quantity(kW);
+    v_in : quantity(V);
+    v_out : quantity(V);
+  }
+};
+
+type charger {
+  ports {
+    ac_in : ac_in;
+    out : dc_out;
+    enable : signal;
+  }
+  params {
+    kw : quantity(kW);
+    v_out : quantity(V);
+  }
+};
+
+type evms {
+  ports {
+    bms : signal;
+    current : signal;
+    chg_enable : signal;
+    door : signal;
+  }
+};
+
+// ---------- Packs and BMS ----------
+
+battery REAR_PACK : battery {
+  vs = TRACTION;
+  kwh = 10kWh;
+  v_nominal = 72V;
+  name = "Rear Pack";
+}
+
+battery FRONT_PACK : battery {
+  vs = TRACTION;
+  kwh = 10kWh;
+  v_nominal = 72V;
+  name = "Front Pack";
+}
+
+bms BMS_REAR : bms {
+  cells = 36;
+  comms = "CAN";
+  name = "Rear BMS";
+}
+
+bms BMS_FRONT : bms {
+  cells = 36;
+  comms = "CAN";
+  name = "Front BMS";
+}
+
+bms BMS_MASTER : bms {
+  name = "BMS Master";
+}
+
+// ---------- HV traction board ----------
+
+board HV : board {
+  vs = TRACTION;
+  incomers = [REAR_PACK.dc_bidi, FRONT_PACK.dc_bidi, CHARGER.out];
+  busbar_rating_a = 400A;
+  dc_fuse FUSE_R : dc_fuse {
+    rating_a = 250A;
+    name = "Rear Fuse";
+  }
+  dc_fuse FUSE_F : dc_fuse {
+    rating_a = 250A;
+    name = "Front Fuse";
+  }
+  contactor CON_R : contactor {
+    rating_a = 250A;
+    coil_v = 12V;
+    name = "Rear Contactor";
+  }
+  contactor CON_F : contactor {
+    rating_a = 250A;
+    coil_v = 12V;
+    name = "Front Contactor";
+  }
+  ct PACK_I : ct {
+    primary_a = 400A;
+    name = "Current Sensor";
+  }
+  contactor PRE_CON : contactor {
+    rating_a = 10A;
+    coil_v = 12V;
+    name = "Precharge Contactor";
+  }
+  resistor PRECHARGE : resistor {
+    ohm = 100ohm;
+    name = "Precharge 100R";
+  }
+  circuit MOTOR_WAY {
+    protection : contactor {
+      rating_a = 400A;
+      coil_v = 12V;
+      name = "Main Contactor";
+    };
+    controller : motor_controller {
+      kw = 40kW;
+      name = "Controller";
+    };
+    loads = [TRACTION_MOTOR];
+  }
+}
+
+connect REAR_PACK.dc_bidi -> HV.FUSE_R.in;
+connect HV.FUSE_R.out -> HV.CON_R.in;
+connect HV.CON_R.out -> HV.bus;
+connect FRONT_PACK.dc_bidi -> HV.FUSE_F.in;
+connect HV.FUSE_F.out -> HV.CON_F.in;
+connect HV.CON_F.out -> HV.bus;
+
+// Precharge: contactor 2 + resistor across the main contactor.
+connect HV.bus -> HV.PRE_CON.in;
+connect HV.PRE_CON.out -> HV.PRECHARGE.a;
+connect HV.PRECHARGE.b -> HV.MOTOR_WAY.protection.out;
+
+// ---------- Charging ----------
+
+grid MAINS : grid {
+  vs = MAINS_AC;
+  supply_a = 10A;
+  name = "240VAC Charge Inlet";
+}
+
+charger CHARGER : charger {
+  kw = 2kW;
+  v_out = 154V;
+  name = "Charger";
+}
+
+connect MAINS.out -> CHARGER.ac_in;
+connect CHARGER.out -> HV.bus;
+
+// ---------- Traction motor ----------
+
+motor TRACTION_MOTOR : motor {
+  vs = TRACTION;
+  kw = 30kW;
+  starter = rheostat;
+  name = "Traction Motor";
+}
+
+// ---------- 12V system ----------
+
+dc_dc DCDC : dc_dc {
+  kw = 0.4kW;
+  v_in = 144V;
+  v_out = 13.8V;
+  name = "DC/DC Converter";
+}
+
+battery AUX_BATT : battery {
+  vs = AUX;
+  v_nominal = 12V;
+  name = "Aux Battery";
+}
+
+dc_fuse CTRL_FUSE : dc_fuse {
+  rating_a = 10A;
+  vs = AUX;
+  name = "Control Fuse";
+}
+
+isolator KEY_SW : isolator {
+  rating_a = 10A;
+  vs = AUX;
+  lockable = yes;
+  name = "Key Switch";
+}
+
+load_break_switch INERTIA : load_break_switch {
+  rating_a = 10A;
+  vs = AUX;
+  name = "Inertia Switch";
+}
+
+load_break_switch ESTOP : load_break_switch {
+  rating_a = 10A;
+  vs = AUX;
+  name = "E-Stop";
+}
+
+control_relay DOOR_SW : control_relay {
+  name = "Charge Door Switch";
+}
+
+connect HV.bus -> DCDC.in;
+connect DCDC.out -> AUX_BATT.dc_bidi;
+connect AUX_BATT.dc_bidi -> CTRL_FUSE.in;
+connect CTRL_FUSE.out -> KEY_SW.in;
+connect KEY_SW.out -> INERTIA.in;
+connect INERTIA.out -> ESTOP.in;
+connect ESTOP.out -> HV.CON_R.coil;
+connect ESTOP.out -> HV.CON_F.coil;
+connect ESTOP.out -> HV.PRE_CON.coil;
+connect ESTOP.out -> HV.MOTOR_WAY.protection.coil;
+connect ESTOP.out -> DOOR_SW.in;
+
+// ---------- Throttle and vehicle management ----------
+
+pot_box POT : pot_box {
+  ohm = 5kohm;
+  name = "Pot Box";
+}
+
+evms EVMS : evms {
+  name = "EVMS";
+}
+
+connect POT.wiper -- HV.MOTOR_WAY.controller.throttle;
+connect BMS_REAR.signal -- REAR_PACK.dc_bidi;
+connect BMS_FRONT.signal -- FRONT_PACK.dc_bidi;
+connect BMS_REAR.signal -- BMS_MASTER.signal;
+connect BMS_FRONT.signal -- BMS_MASTER.signal;
+connect BMS_MASTER.signal -- EVMS.bms;
+connect HV.PACK_I.signal -- EVMS.current;
+connect EVMS.chg_enable -- CHARGER.enable;
+connect DOOR_SW.out -> EVMS.door;
+
+// ---------- Operation ----------
+
+state "parked" {
+  KEY_SW = open;
+  HV.CON_R = open;
+  HV.CON_F = open;
+  HV.PRE_CON = open;
+  HV.MOTOR_WAY.protection = open;
+}
+
+state "driving" {
+  KEY_SW = closed;
+  HV.CON_R = closed;
+  HV.CON_F = closed;
+  HV.PRE_CON = open;
+  HV.MOTOR_WAY.protection = closed;
+}
+
+state "precharge" {
+  use "driving";
+  HV.PRE_CON = closed;
+  HV.MOTOR_WAY.protection = open;
+}
+
+state "charging" {
+  use "parked";
+  HV.CON_R = closed;
+  HV.CON_F = closed;
+}
+
+interlock "traction contactors need key and safe-stop chain healthy" {
+  require !(HV.MOTOR_WAY.protection = closed) || (KEY_SW = closed && ESTOP = closed && INERTIA = closed);
+}
+
+layout {
+  rank = source_to_load;
+  flow = top_to_bottom;
+}

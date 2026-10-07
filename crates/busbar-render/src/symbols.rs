@@ -48,6 +48,12 @@ pub fn fragment(glyph: crate::Glyph) -> Option<&'static str> {
         crate::Glyph::Reactor => REACTOR,
         crate::Glyph::Resistor => RESISTOR,
         crate::Glyph::DcFuse => DC_FUSE,
+        crate::Glyph::Bms => BMS,
+        crate::Glyph::DcDc => DC_DC,
+        crate::Glyph::MotorController => MOTOR_CONTROLLER,
+        crate::Glyph::Charger => CHARGER,
+        crate::Glyph::Pot => POT,
+        crate::Glyph::Evms => EVMS,
         _ => return None,
     })
 }
@@ -118,3 +124,19 @@ const REACTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-12"/><path d="M 0 -1
 const RESISTOR: &str = r##"<line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/>"##;
 
 const DC_FUSE: &str = r##"<line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text>"##;
+
+// EV device family (corpus/EV): relay-coil proportions (box 40×20, leads
+// ±10..±20). Static-converter marks sit in the quadrants clear of the
+// diagonal: input mark upper-right, output mark lower-left.
+
+const BMS: &str = r##"<rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><text x="0" y="3" text-anchor="middle" font-size="7" fill="#222222">BMS</text>"##;
+
+const DC_DC: &str = r##"<rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><line x1="6" y1="-7" x2="14" y2="-7"/><line x1="6" y1="-4" x2="14" y2="-4"/><line x1="-14" y1="3" x2="-6" y2="3"/><line x1="-14" y1="6" x2="-6" y2="6"/>"##;
+
+const MOTOR_CONTROLLER: &str = r##"<rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><line x1="6" y1="-7" x2="14" y2="-7"/><line x1="6" y1="-4" x2="14" y2="-4"/><text x="-12" y="7" font-size="8" fill="#222222">M</text>"##;
+
+const CHARGER: &str = r##"<rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><text x="8" y="-3" font-size="9" fill="#222222">~</text><line x1="-14" y1="3" x2="-6" y2="3"/><line x1="-14" y1="6" x2="-6" y2="6"/>"##;
+
+const EVMS: &str = r##"<rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><text x="-17" y="7" font-size="6" fill="#222222">EVMS</text>"##;
+
+const POT: &str = r##"<line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-10" y1="14" x2="8" y2="-14"/><line x1="8" y1="-14" x2="3" y2="-12"/><line x1="8" y1="-14" x2="6" y2="-9"/>"##;
