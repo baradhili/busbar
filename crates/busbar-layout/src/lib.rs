@@ -1268,6 +1268,32 @@ pub fn build(ir: &Ir) -> Layout {
             }
             _ => (y1 + y2) / 2.0,
         };
+        // Same-band cells (a control chain stepping sideways through a
+        // rank row): the midpoint horizontal runs INSIDE both cells,
+        // slicing the glyphs. Dip under the band instead — exit the
+        // departure's lower lead, cross in the inter-row gap, enter the
+        // arrival's lower lead (the EV control chain: key → inertia →
+        // e-stop). Sections and boards keep their own tap/channel logic.
+        let same_band = pa.glyph != Glyph::Section
+            && pb.glyph != Glyph::Section
+            && board_of(&a).is_none()
+            && board_of(&b).is_none()
+            && {
+                let span = (pa.y + pa.h).max(pb.y + pb.h) - pa.y.min(pb.y);
+                span < (pa.h + pb.h) + 1.0 // vertical extents overlap
+            };
+        if same_band && (terminal(pa, true).0 - terminal(pb, true).0).abs() > 1.0 {
+            let dip = (pa.y + pa.h).max(pb.y + pb.h) + 10.0;
+            let (dx, dy) = terminal(pa, true);
+            let (ax, ay) = terminal(pb, true);
+            layout.routes.push(Route {
+                points: vec![(dx, dy), (dx, dip), (ax, dip), (ax, ay)],
+                dashed: edge.arrow == busbar_syntax::ast::Arrow::Peer,
+                from_tag: a,
+                to_tag: b,
+            });
+            continue;
+        }
         layout.routes.push(Route {
             points: vec![(x1, y1), (x1, ym), (x2, ym), (x2, y2)],
             dashed: edge.arrow == busbar_syntax::ast::Arrow::Peer,
@@ -1555,10 +1581,12 @@ pub fn build(ir: &Ir) -> Layout {
                 }
                 // Bus taps are perpendicular dots anywhere along the bar —
                 // the ±10 sideways seat would slide them off its end.
-                if layout
+                // Narrow glyphs (blades, dots) keep every wire on the
+                // exact terminal: an offset lands beside a 1px lead.
+                if !layout
                     .places
                     .get(ta.as_str())
-                    .is_some_and(|p| p.glyph == Glyph::Section)
+                    .is_some_and(|p| wide_terminal(p.glyph))
                 {
                     continue;
                 }
@@ -1594,7 +1622,20 @@ pub fn extent(g: Glyph) -> f64 {
     match g {
         Glyph::Junction => 0.0,
         Glyph::Section | Glyph::Board => 20.0, // callers use p.h/2 for these
-        Glyph::Fuse | Glyph::Meter | Glyph::Ct => 30.0,
+        Glyph::Fuse | Glyph::Meter | Glyph::Ct | Glyph::DcFuse => 30.0,
+        // Blade family (sheet lead lengths): fixed-contact bar at −20,
+        // lower lead ends at +20 — wires land ON the contact, not
+        // floating in the cell gap above it.
+        Glyph::Switch
+        | Glyph::Protective
+        | Glyph::Disconnector
+        | Glyph::MainSwitch
+        | Glyph::Contactor
+        | Glyph::Rcbo
+        | Glyph::Rcd
+        | Glyph::DcBreaker
+        | Glyph::DcDisconnector
+        | Glyph::EarthSwitch => 20.0,
         Glyph::Earth => 15.0,
         Glyph::Lamp => 10.0,
         Glyph::Motor => 15.0,
@@ -1613,6 +1654,37 @@ pub fn extent(g: Glyph) -> f64 {
         Glyph::Pot => 14.0,
         _ => 14.0, // generic box family
     }
+}
+
+/// True when the glyph offers a WIDE attachment surface at its terminal
+/// (a frame, a box outline, a battery's horizontal leads): the ±10
+/// terminal-strip relief can seat two wires side by side on it. Bus
+/// sections are excluded — a tap is a perpendicular dot anywhere along
+/// the bar, and the unclamped ±10 would slide it off the bar's end.
+/// Narrow glyphs — blades with a 1px centreline lead, junction dots —
+/// must keep every wire on the exact terminal; two wires there simply
+/// share the trunk, which reads as a tap (guidance §2.2).
+pub fn wide_terminal(g: Glyph) -> bool {
+    matches!(
+        g,
+        Glyph::Board
+            | Glyph::Battery
+            | Glyph::Relay
+            | Glyph::Meter
+            | Glyph::Ups
+            | Glyph::PowerSupply
+            | Glyph::DcCombiner
+            | Glyph::Evse
+            | Glyph::Generator
+            | Glyph::Inverter
+            | Glyph::Pv
+            | Glyph::WindTurbine
+            | Glyph::Bms
+            | Glyph::DcDc
+            | Glyph::MotorController
+            | Glyph::Charger
+            | Glyph::Evms
+    )
 }
 
 pub fn terminal(p: &Place, lower: bool) -> (f64, f64) {

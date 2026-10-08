@@ -167,7 +167,15 @@ fn routes_land_on_their_places() {
                 (last, pb, !down, &route.to_tag),
             ] {
                 let expected = busbar_layout::terminal(place, lower);
+                let other = busbar_layout::terminal(place, !lower);
                 let (_cx, cy) = place.center();
+                // Same-band pairs dip under the row band and meet the
+                // LOWER lead of both cells (the control-chain step).
+                let band_dip = pa.y < pb.y + pb.h + 1.0
+                    && pb.y < pa.y + pa.h + 1.0
+                    && pa.glyph != Glyph::Section
+                    && pb.glyph != Glyph::Section
+                    && point.1 == other.1;
                 let side_form = ((point.0 - place.x).abs() < 0.5
                     || (point.0 - (place.x + place.w)).abs() < 0.5)
                     && (point.1 - cy).abs() < 0.5;
@@ -181,7 +189,7 @@ fn routes_land_on_their_places() {
                         && point.0 <= s.x + s.w + 0.5
                         && s_tag.rsplit_once('.').map(|(b, _)| b) == board_prefix
                 });
-                if !side_form && !bar_landing {
+                if !side_form && !bar_landing && !band_dip {
                     assert_eq!(
                         point.1, expected.1,
                         "{name}: route end y is not a terminal of `{tag}`"
