@@ -1,0 +1,21 @@
+profile "esld/1.0";
+voltsys LV = 230V, 1ph, 50Hz;
+grid GRID_A : grid { vs = LV; }
+grid GRID_B : grid { vs = LV; }
+board MAIN : board {
+  vs = LV;
+  bus A { incomers = [GRID_A.out]; rating_a = 100A; }
+  bus B { incomers = [GRID_B.out]; rating_a = 100A; }
+  circuit FEED {
+    bus = B;
+    protection : mcb { rating_a = 20A; };
+  };
+}
+board SUB : board {
+  vs = LV;
+  incomers = [MAIN.FEED.out];
+  busbar_rating_a = 20A;
+}
+connect GRID_A.out -> MAIN.A;
+connect GRID_B.out -> MAIN.B;
+connect MAIN.FEED.out -> SUB.in;

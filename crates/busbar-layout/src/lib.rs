@@ -1247,7 +1247,7 @@ pub fn build(ir: &Ir) -> Layout {
                 y2 = bar.y;
             }
         }
-        // A feed LEAVING a circuit port departs from ITS board's bar at
+        // A feed LEAVING a circuit port departs from ITS section's bar at
         // the way's column (mirror of the backfeed arrival above): the
         // circuit anchor is the bar tap, and a wire dropping from the
         // anchor's cell would run straight through the way's own
@@ -1257,8 +1257,11 @@ pub fn build(ir: &Ir) -> Layout {
             if let Some(bar) = ir
                 .circuits
                 .get(&a)
-                .and_then(|c| ir.boards.get(&c.board))
-                .and_then(|bd| bd.sections.first())
+                .and_then(|c| {
+                    c.section
+                        .as_ref()
+                        .or_else(|| ir.boards.get(&c.board).and_then(|bd| bd.sections.first()))
+                })
                 .and_then(|s| layout.places.get(s))
             {
                 x1 = x1.clamp(bar.x, bar.x + bar.w);

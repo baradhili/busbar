@@ -556,6 +556,31 @@ async fn tie_sits_between_sections(
     );
 }
 
+#[cucumber::then(
+    regex = r#"^the feed from "([^"]+)" to "([^"]+)" departs from section "([^"]+)"$"#
+)]
+async fn feed_departs_from_section(
+    world: &mut BusbarWorld,
+    circuit: String,
+    target: String,
+    section: String,
+) {
+    let (_, layout) = layout_of(world);
+    let bar = layout.places.get(&section).expect("section placed");
+    let route = layout
+        .routes
+        .iter()
+        .find(|r| r.from_tag == circuit && r.to_tag == target)
+        .expect("feed routed");
+    let &(x, y) = route.points.first().expect("route has a start");
+    assert!(
+        x >= bar.x - LAYOUT_EPS
+            && x <= bar.x + bar.w + LAYOUT_EPS
+            && ((y - bar.y).abs() < LAYOUT_EPS || (y - (bar.y + bar.h)).abs() < LAYOUT_EPS),
+        "feed from `{circuit}` to `{target}` must depart from `{section}`"
+    );
+}
+
 #[cucumber::then(regex = r#"^the chain "([^"]+)" stacks above the bar "([^"]+)" in order$"#)]
 async fn chain_stacks_above_the_bar(world: &mut BusbarWorld, chain: String, bar: String) {
     let (_, layout) = layout_of(world);
