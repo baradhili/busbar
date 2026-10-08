@@ -5,37 +5,37 @@ Feature: Rendering determinism
   Scenario: Identical input renders identical SVG
     Given the document "valid/sample1.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "ebce19c8b942e8a8c3c1ddb670b3e7fbc0864cd6051ac1bdc4c0c55294485faf"
+    Then the SVG hash is "96d4934dd6b2f651b745a5ea0759fd928b93bd6590fb8f2457bb5750cf3c0370"
 
   Scenario: Sample 2 golden SVG
     Given the document "valid/sample2.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "75ba88593ff509216540803e5a195cd6d8e7aaa569a27e18ee3fb783091beafb"
+    Then the SVG hash is "0ef339be08ebe7a8eaeb9b5b5a718c5700a9ebcb5d8a4a6217a389631fb91684"
 
   Scenario: House reference golden SVG
     Given the document "valid/house.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "6279a5e68842e296ab9adc0e0cb48cb323c3d0db0798a47e2a2fb374b1f4fe42"
+    Then the SVG hash is "cd55470ca87e40e0fd448438b45f9a1b30ca0c4a448e9ad2d90fe546903f0baf"
 
   Scenario: Multi-section tie board golden SVG
     Given the document "valid/two-section-tie.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "4087fc42593d80baca4b331983f91aa8a0cc1eb8e47ed85aeea5eb56d936d8c7"
+    Then the SVG hash is "85fe65016c492a84b6ef101d071149012566709ce8033304c88798213064fbec"
 
   Scenario: ESS tour golden SVG
     Given the document "valid/ess-tour.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "ac05c9c40981b20a34205a465312c8c1b13f8101425c6cbc52e961e9fd2ad8b5"
+    Then the SVG hash is "93978c4350f2b38c2b8747ddbc9a2396046b019531fd157b4d210207da10530c"
 
   Scenario: Simple EV conversion golden SVG
     Given the document "EV/simple.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "61393cb4209b400f2c3ca00e7b5dc5bf4704664d466f3bb0a75eaf0b9a57e0ff"
+    Then the SVG hash is "8f3c4abecdc90c44bad3f38033f852da3e782271dd196eb989035344c4e47375"
 
   Scenario: Complex EV conversion golden SVG
     Given the document "EV/complex_preview.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "1fd34e0185a225bb2950b764d2a7edcf95ccf50d142c32b46ee20052515ea406"
+    Then the SVG hash is "3b92448e70a7fe11c313e8c200e1b58fb2d872e07b53eeb2943ad96fd4da65ec"
 
   Scenario: Rendering is byte-deterministic
     Given the document "valid/sample2.esld"

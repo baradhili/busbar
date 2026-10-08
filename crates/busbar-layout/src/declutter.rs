@@ -92,7 +92,19 @@ fn clear_h(
         if blocked.is_empty() {
             return Some(y);
         }
-        let below = blocked.iter().map(|p| p.y + p.h).fold(f64::MIN, f64::max) + M + 6.0;
+        // Under a labelled row the channel must clear the label strip
+        // (label + note lines), not just the cell box.
+        let below = blocked
+            .iter()
+            .map(|p| {
+                p.y + p.h
+                    + if p.label.is_empty() && p.note.is_none() {
+                        M + 6.0
+                    } else {
+                        crate::LABEL_CLEAR
+                    }
+            })
+            .fold(f64::MIN, f64::max);
         let above = blocked.iter().map(|p| p.y).fold(f64::MAX, f64::min) - M - 6.0;
         let next = if (below - y).abs() <= (above - y).abs() {
             below

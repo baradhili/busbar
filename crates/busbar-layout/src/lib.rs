@@ -30,6 +30,10 @@ pub const STACK_GAP: f64 = 34.0;
 /// Height of the board label strip: name plus voltage-system note
 /// (guidance §5.1).
 pub const LABEL_STRIP: f64 = 36.0;
+/// Vertical clearance for a wire channel passing under a labelled row:
+/// the label strip is label (p.h+10) plus note (+20), so a dip or a
+/// gutter trunk clears at +26 to stay off the text.
+pub const LABEL_CLEAR: f64 = 26.0;
 /// Cells per feeder sub-column before long load chains wrap sideways
 /// (guidance §5.4 — the ragged-cascade fix).
 pub const MAX_COL_CELLS: usize = 4;
@@ -1352,11 +1356,32 @@ pub fn build(ir: &Ir) -> Layout {
                 span < (pa.h + pb.h) + 1.0 // vertical extents overlap
             };
         if same_band && (terminal(pa, true).0 - terminal(pb, true).0).abs() > 1.0 {
-            let dip = (pa.y + pa.h).max(pb.y + pb.h) + 10.0;
+            let dip = (pa.y + pa.h).max(pb.y + pb.h) + LABEL_CLEAR;
             let (dx, dy) = terminal(pa, true);
             let (ax, ay) = terminal(pb, true);
             layout.routes.push(Route {
                 points: vec![(dx, dy), (dx, dip), (ax, dip), (ax, ay)],
+                dashed: edge.arrow == busbar_syntax::ast::Arrow::Peer,
+                from_tag: a,
+                to_tag: b,
+            });
+            continue;
+        }
+        // Near-aligned columns (offset by terminal-strip seats on
+        // stacked devices — the EVMS seat above the charger's): a
+        // mid-span horizontal makes the two verticals read as a dogleg
+        // whose upper leg merges with neighbouring approach lanes.
+        // Elbow just before the far terminal instead: one clean run and
+        // a short approach.
+        if (x1 - x2).abs() > 0.5
+            && (x1 - x2).abs() <= 24.0
+            && (y1 - y2).abs() > 60.0
+            && pa.glyph != Glyph::Section
+            && pb.glyph != Glyph::Section
+        {
+            let ye = y2 + (y1 - y2).signum() * 20.0;
+            layout.routes.push(Route {
+                points: vec![(x1, y1), (x1, ye), (x2, ye), (x2, y2)],
                 dashed: edge.arrow == busbar_syntax::ast::Arrow::Peer,
                 from_tag: a,
                 to_tag: b,
@@ -1369,8 +1394,7 @@ pub fn build(ir: &Ir) -> Layout {
             from_tag: a,
             to_tag: b,
         });
-    }
-    // Same-side relief, terminal-strip style: when a departure and an
+    } // Same-side relief, terminal-strip style: when a departure and an
     // arrival share a terminal point (a tie breaker joining two bars
     // that both sit above it, say), seat the departure 10px right of
     // centre and the arrival 10px left — distinct connection points on
@@ -1525,7 +1549,7 @@ pub fn build(ir: &Ir) -> Layout {
                             // stacked ones.
                             let gx = mine.0 + 30.0;
                             let start = route.points[0];
-                            let gy = start.1 + 10.0;
+                            let gy = start.1 + LABEL_CLEAR;
                             let ty = mine.1 - 6.0;
                             route.points =
                                 vec![start, (start.0, gy), (gx, gy), (gx, ty), (mine.0, ty), mine];
@@ -1676,6 +1700,59 @@ pub fn build(ir: &Ir) -> Layout {
         }
     }
 
+    // Seat-offset doglegs: the terminal-strip relief splits the two
+    // ends of an originally-straight vertical route onto ±10 seats,
+    // giving the plain midpoint shape a mid-span jog whose upper leg
+    // merges with neighbouring approach lanes (EVMS seat over the
+    // charger's). Normalize to one clean run with a short elbow at the
+    // far terminal. Shared-departure trunks keep their rail: their
+    // per-route elbows would scatter the fan the rail pass united.
+    let shared_departures: std::collections::BTreeSet<(String, (u64, u64))> = {
+        let mut counts: std::collections::BTreeMap<(String, (u64, u64)), usize> =
+            std::collections::BTreeMap::new();
+        for r in &layout.routes {
+            if let Some(&p0) = r.points.first() {
+                *counts
+                    .entry((r.from_tag.clone(), (p0.0.to_bits(), p0.1.to_bits())))
+                    .or_insert(0) += 1;
+            }
+        }
+        counts
+            .into_iter()
+            .filter(|(_, n)| *n >= 2)
+            .map(|(k, _)| k)
+            .collect()
+    };
+    for route in &mut layout.routes {
+        if let Some(&p0) = route.points.first() {
+            if shared_departures
+                .contains(&(route.from_tag.clone(), (p0.0.to_bits(), p0.1.to_bits())))
+            {
+                continue;
+            }
+        }
+        let p = &route.points;
+        if p.len() == 4
+            && p[0].0 == p[1].0
+            && p[2].0 == p[3].0
+            && p[1].1 == p[2].1
+            && (p[0].0 - p[3].0).abs() > 0.5
+            && (p[0].0 - p[3].0).abs() <= 24.0
+            && (p[0].1 - p[3].1).abs() > 60.0
+            && layout
+                .places
+                .get(&route.to_tag)
+                .is_some_and(|pl| pl.glyph != Glyph::Section)
+            && layout
+                .places
+                .get(&route.from_tag)
+                .is_some_and(|pl| pl.glyph != Glyph::Section)
+        {
+            let ye = p[3].1 + (p[0].1 - p[3].1).signum() * 20.0;
+            route.points = vec![p[0], (p[0].0, ye), (p[3].0, ye), p[3]];
+        }
+    }
+
     // Wire declutter: obstacle-aware lanes for the finished routes.
     declutter::declutter(&mut layout);
 
@@ -1714,7 +1791,8 @@ pub fn extent(g: Glyph) -> f64 {
         Glyph::Socket => 15.0,
         Glyph::Heating => 15.0,
         Glyph::Load => 22.0,
-        Glyph::Battery => 6.0,
+        // Vertical battery: leads end at ±20 (rotated sheet symbol).
+        Glyph::Battery => 20.0,
         // Box glyphs: their rectangles end well inside the cell — a 20px
         // default left wires overlapping the marks (todo item).
         Glyph::Relay => 11.0,
@@ -1729,8 +1807,9 @@ pub fn extent(g: Glyph) -> f64 {
 }
 
 /// True when the glyph offers a WIDE attachment surface at its terminal
-/// (a frame, a box outline, a battery's horizontal leads): the ±10
-/// terminal-strip relief can seat two wires side by side on it. Bus
+/// (a frame, a box outline): the ±10 terminal-strip relief can seat two
+/// wires side by side on it. The vertical battery keeps a centreline
+/// lead like the blades — its in/out wires share a tapped trunk. Bus
 /// sections are excluded — a tap is a perpendicular dot anywhere along
 /// the bar, and the unclamped ±10 would slide it off the bar's end.
 /// Narrow glyphs — blades with a 1px centreline lead, junction dots —
@@ -1740,7 +1819,6 @@ pub fn wide_terminal(g: Glyph) -> bool {
     matches!(
         g,
         Glyph::Board
-            | Glyph::Battery
             | Glyph::Relay
             | Glyph::Meter
             | Glyph::Ups

@@ -232,7 +232,13 @@ fn series_devices_connect_on_opposite_terminals() {
     for path in corpus() {
         let (name, layout) = layout_of(&path);
         for (tag, place) in &layout.places {
-            if place.glyph == Glyph::Junction || place.glyph == Glyph::Section {
+            if matches!(
+                place.glyph,
+                Glyph::Junction | Glyph::Section | Glyph::Battery
+            ) {
+                // A battery taps its rail through one terminal pair —
+                // in and out sharing the lead end is a tapped trunk,
+                // not the through-connection this test guards.
                 continue;
             }
             let mut starts: Vec<(f64, f64)> = Vec::new();

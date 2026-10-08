@@ -93,7 +93,10 @@ const LOAD: &str =
 
 const SOCKET: &str = r##"<g transform="translate(0 -15)"><line x1="-5" y1="13" x2="4" y2="20" stroke-width="0.4"/><line x1="-1" y1="12" x2="-1" y2="19"/><line x1="0" y1="12" x2="0" y2="30"/><line x1="0" y1="9" x2="0" y2="0"/><line x1="1" y1="12" x2="1" y2="19"/><path d="M 3 13 A 3 3 0 0 0 -3 13"/></g>"##;
 
-const BATTERY: &str = r##"<line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/><line x1="5" y1="-10" x2="5" y2="10"/><line x1="5" y1="0" x2="15" y2="0"/>"##;
+// Vertical orientation (SLD power flows top-to-bottom): the sheet's
+// horizontal cell symbol rotated — long plate low, short plate high,
+// leads on the centreline ending at ±20 where wires land.
+const BATTERY: &str = r##"<line x1="0" y1="-20" x2="0" y2="-8"/><line x1="-4" y1="-8" x2="4" y2="-8"/><line x1="-8" y1="-3" x2="8" y2="-3"/><line x1="0" y1="-3" x2="0" y2="20"/>"##;
 
 const INVERTER: &str = r##"<rect x="-20" y="-20" width="40" height="40"/><line x1="-20" y1="-20" x2="20" y2="20"/><line x1="-15" y1="-14" x2="-15" y2="-6"/><line x1="-11" y1="-14" x2="-11" y2="-6"/><path d="M 6 -12 A 4 4 0 0 1 14 -12" fill="#222222"/>"##;
 
