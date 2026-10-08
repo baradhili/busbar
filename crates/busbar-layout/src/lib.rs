@@ -12,6 +12,8 @@ use std::collections::BTreeMap;
 
 use busbar_ir::{Ir, NodeKind};
 
+mod declutter;
+
 pub const CELL: f64 = 40.0;
 /// Width allotted to each circuit feeder column inside a board.
 pub const FEEDER_W: f64 = 96.0;
@@ -383,32 +385,79 @@ pub fn build(ir: &Ir) -> Layout {
         // The bus-hung strip sits BESIDE the feeder columns, at the
         // breaker row (review: SPD/QF1 level with SHED_LOAD, not below
         // the band) — so the bar spans both.
-        let bar_w = if downstream_devs.is_empty() {
-            inner_w.max(BAR_W_MIN)
+
+        // Incomer columns: one column per power CHAIN (guidance §2.3 —
+        // the main incomer gets its own dedicated column; dual feeds get
+        // two). Devices stack within their chain in power order — the
+        // device adjacent to the section lands nearest the bar (§2.4),
+        // ordered by hop distance, tag breaking ties. A single stacked
+        // column interleaves independent chains (front/rear pack feeds)
+        // and every chain's wires then slice the others' cells.
+        //
+        // Chain identity: the topmost ancestor of a device — walk
+        // board-local feeders (anything feeding an upstream member)
+        // until nobody board-local feeds it.
+        let upstream_tags: std::collections::BTreeSet<String> =
+            upstream_devs.iter().map(|n| n.tag.clone()).collect();
+        let chain_root = |start: &str| -> String {
+            let mut cur = start.to_owned();
+            // Visited set: circular feeds (R-108 territory) must not
+            // loop the walk — bail out at the first repeat.
+            let mut seen = std::collections::BTreeSet::from([cur.clone()]);
+            loop {
+                let feeder = ir.edges.iter().find_map(|e| {
+                    let (Some((f, _, _)), Some((t, _, owner))) =
+                        (ir.resolve_endpoint(&e.from), ir.resolve_endpoint(&e.to))
+                    else {
+                        return None;
+                    };
+                    (t == cur
+                        && upstream_tags.contains(&f)
+                        && owner.as_deref() == Some(board.tag.as_str()))
+                    .then_some(f)
+                });
+                match feeder {
+                    Some(f) if seen.insert(f.clone()) => cur = f,
+                    Some(f) => return f,
+                    None => return cur,
+                }
+            }
+        };
+        let mut chains: BTreeMap<String, Vec<&busbar_ir::IrNode>> = BTreeMap::new();
+        for node in &upstream_devs {
+            chains.entry(chain_root(&node.tag)).or_default().push(node);
+        }
+        let incomer_w = if chains.is_empty() {
+            0.0
         } else {
-            (inner_w + STACK_GAP + strip_w(downstream_devs.len())).max(BAR_W_MIN)
+            chains.len() as f64 * FEEDER_W
+        };
+        let bar_w = if downstream_devs.is_empty() {
+            (inner_w + incomer_w).max(BAR_W_MIN)
+        } else {
+            (inner_w + incomer_w + STACK_GAP + strip_w(downstream_devs.len())).max(BAR_W_MIN)
         };
 
-        // Incomer column: upstream devices stack vertically above the bar
-        // in power order — the device adjacent to the section lands nearest
-        // the bar (guidance §2.4). Hop distance from the sections orders
-        // the chain; the tag breaks ties.
         let mut y = BOARD_PAD + LABEL_STRIP;
         let mut band_top: Option<f64> = None;
-        if !upstream_devs.is_empty() {
+        if !chains.is_empty() {
             has_incomer_column.insert(board.tag.clone());
-            let mut ordered = upstream_devs;
+        }
+        for (ci, members) in chains.values().enumerate() {
+            let mut ordered = members.clone();
             ordered.sort_by_key(|n| {
                 let hops = directed_hops_to_section(ir, &n.tag, board).unwrap_or(u32::MAX / 2);
                 (u32::MAX - hops, n.tag.clone())
             });
+            let cx = BOARD_PAD + ci as f64 * FEEDER_W;
+            let mut cy = y;
             for node in ordered {
                 member_list.push(node.tag.clone());
                 layout.places.insert(
                     node.tag.clone(),
                     Place {
-                        x: BOARD_PAD,
-                        y,
+                        x: cx,
+                        y: cy,
                         w: CELL,
                         h: CELL,
                         label: display_label(&node.tag, &node.props),
@@ -416,8 +465,9 @@ pub fn build(ir: &Ir) -> Layout {
                         note: rating_note(&node.props),
                     },
                 );
-                y += CELL + STACK_GAP;
+                cy += CELL + STACK_GAP;
             }
+            y = y.max(cy);
         }
         for section in &board.sections {
             // Bus ties land between the bars: any tie feeding THIS
@@ -1172,7 +1222,7 @@ pub fn build(ir: &Ir) -> Layout {
         // The departure uses the side facing the target, the arrival the
         // side facing the source — a downward wire leaves the source's
         // bottom and lands on the target's top.
-        let (x1, y1) = terminal(pa, down);
+        let (mut x1, mut y1) = terminal(pa, down);
         let (mut x2, mut y2) = terminal(pb, !down);
         // A backfeed from outside the board (the PV inverter onto its
         // way) enters the BUSBAR from above at the way's column (todo:
@@ -1191,6 +1241,25 @@ pub fn build(ir: &Ir) -> Layout {
             {
                 x2 = x2.clamp(bar.x, bar.x + bar.w);
                 y2 = bar.y;
+            }
+        }
+        // A feed LEAVING a circuit port departs from ITS board's bar at
+        // the way's column (mirror of the backfeed arrival above): the
+        // circuit anchor is the bar tap, and a wire dropping from the
+        // anchor's cell would run straight through the way's own
+        // protection (`BOARD.CIRCUIT.out -> X` from the supply point).
+        let to_board = ir.circuits.get(&b).map(|c| c.board.as_str());
+        if ir.circuits.contains_key(&a) && from_board != to_board {
+            if let Some(bar) = ir
+                .circuits
+                .get(&a)
+                .and_then(|c| ir.boards.get(&c.board))
+                .and_then(|bd| bd.sections.first())
+                .and_then(|s| layout.places.get(s))
+            {
+                x1 = x1.clamp(bar.x, bar.x + bar.w);
+                let (_, by) = terminal(bar, down);
+                y1 = by;
             }
         }
         // A busbar tap is perpendicular and ON the bar (guidance
@@ -1607,6 +1676,9 @@ pub fn build(ir: &Ir) -> Layout {
         }
     }
 
+    // Wire declutter: obstacle-aware lanes for the finished routes.
+    declutter::declutter(&mut layout);
+
     layout
 }
 
@@ -1743,6 +1815,12 @@ fn directed_hops_to_section(ir: &Ir, tag: &str, board: &busbar_ir::Board) -> Opt
             return Some(d);
         }
         for e in &ir.edges {
+            // Power paths only: peer edges are signal/control bonds
+            // (CT→EVMS→charger must not promote a sensor into the
+            // incomer chain).
+            if e.arrow == busbar_syntax::ast::Arrow::Peer {
+                continue;
+            }
             let Some((from_e, _, _)) = ir.resolve_endpoint(&e.from) else {
                 continue;
             };

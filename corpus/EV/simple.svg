@@ -12,7 +12,7 @@
 <polyline points="68.00,210.00 68.00,241.00 68.00,241.00 68.00,272.00" fill="none" stroke="#333333" stroke-width="1"/>
 <polyline points="68.00,312.00 68.00,348.00 172.00,348.00 172.00,384.00" fill="none" stroke="#333333" stroke-width="1"/>
 <polyline points="172.00,424.00 172.00,434.00 68.00,434.00 68.00,424.00" fill="none" stroke="#333333" stroke-width="1"/>
-<polyline points="68.00,384.00 68.00,348.00 172.00,348.00 172.00,312.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="68.00,384.00 68.00,358.00 172.00,358.00 172.00,312.00" fill="none" stroke="#333333" stroke-width="1"/>
 <path d="M 65.20 607.00 L 68.00 613.00 L 70.80 607.00" fill="none" stroke="#333333" stroke-width="1"/>
 <g transform="translate(68.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="-10" y1="0" x2="0" y2="0"/><line x1="0" y1="-5" x2="0" y2="5"/><line x1="5" y1="-10" x2="5" y2="10"/><line x1="5" y1="0" x2="15" y2="0"/></g>
 <g transform="translate(68.00 516.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><line x1="6" y1="-7" x2="14" y2="-7"/><line x1="6" y1="-4" x2="14" y2="-4"/><text x="-12" y="7" font-size="8" fill="#222222">M</text></g>
