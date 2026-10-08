@@ -42,6 +42,26 @@ symbol lands.
 | `grid` | "~" supply circle (sheet `L1`) — no longer wears the generator's "G" |
 | `evse` | box + socket detail + "EV" (sheet `ev-charger1`) — no IEC 60617 extract exists |
 | `board`, `bus`, `busbar` | dashed frame / section bar |
+| `bms` (resolved 2026-10) | box with "BMS" legend — first exercised by the EV corpus |
+| EV project types (resolved 2026-10) | see "EV device family" below |
+
+
+## EV device family (corpus/EV, 2026-10)
+
+The EV conversions declare project types (spec §19.1) whose names the
+renderer recognizes in `glyph_for()` — an interim registry until the
+spec grows built-in traction types. All use relay-coil proportions
+(box 40×20, leads ±10..±20, extent 11) with static-converter quadrant
+marks where appropriate:
+
+| Project type | Rendering |
+|---|---|
+| `motor_controller` | converter box, `=` in / M out |
+| `dc_dc` | converter box, `=` in / `=` out |
+| `charger` | converter box, `~` in / `=` out |
+| `pot_box` | resistor with wiper arrow |
+| `evms` | controller box with "EVMS" legend |
+| `resistor` | plain fixed resistor (shares the NGR geometry) |
 
 
 ## Missing or weak — exercised by the corpus today
@@ -63,7 +83,8 @@ symbol lands.
 | (resolved 2026-09) `ngr` | resistor rectangle | done |
 | (resolved 2026-09) `vt` | transformer two-circle | done — a VT is a transformer |
 | `sync_check` | kWh meter circle | distinct sync-check function mark | P4 |
-| `bms`, `dc_load` | default plain square | decide when storage chains land (M6) | P4 |
+| (resolved 2026-10) `bms` | | done — box with "BMS" legend (first exercised by the EV corpus) | |
+| `dc_load` | default plain square | decide when storage chains land (M6) | P4 |
 | `cable`, `line` | no glyph (edge entities) | none needed as a placed symbol — wire annotations are the tracked item (guidance §4.4) | — |
 
 ## Sheet symbols with no ESLD type yet

@@ -1,0 +1,172 @@
+// Simple wiring diagram for DC electric vehicles — ZEVA (Zero Emission
+// Vehicles Australia), 2009. Converted to ESLD from corpus/EV/simple.jpg:
+// the traction loop (pack -> fuse -> contactor, with precharge resistor
+// across the contactor, feeding the controller and series traction motor)
+// plus the 12V control chain (aux battery -> fuse -> key -> inertia
+// switch -> e-stop -> contactor coil) and the pot-box throttle signal.
+// Terminal-level wiring (A1/A2/S1/S2, B-/M-/B+) is below single-line
+// granularity: one line per power path, return conductor implied.
+profile "esld/1.0";
+
+voltsys TRACTION = {
+  nominal = 144V;
+  phases = dc;
+  earthing = isolated;
+};
+
+voltsys AUX = {
+  nominal = 12V;
+  phases = dc;
+  earthing = isolated;
+};
+
+// EV project types (spec §19.1) — renderer symbols from the EV family.
+type motor_controller {
+  ports {
+    in : dc_in;
+    out : dc_out;
+    throttle : signal;
+  }
+  params {
+    kw : quantity(kW);
+  }
+};
+
+type resistor {
+  ports {
+    a : dc_bidi;
+    b : dc_bidi;
+  }
+  params {
+    ohm : quantity(ohm);
+  }
+};
+
+type pot_box {
+  ports {
+    wiper : signal;
+  }
+  params {
+    ohm : quantity(ohm);
+  }
+};
+
+// ---------- Traction loop ----------
+
+battery TRACTION_PACK : battery {
+  vs = TRACTION;
+  kwh = 20kWh;
+  kw_discharge = 60kW;
+  v_nominal = 144V;
+  name = "Traction Battery Pack";
+}
+
+dc_fuse PACK_FUSE : dc_fuse {
+  rating_a = 400A;
+  name = "Pack Fuse";
+}
+
+contactor MAIN_CONTACTOR : contactor {
+  rating_a = 400A;
+  coil_v = 12V;
+  name = "Main Contactor";
+}
+
+resistor PRECHARGE : resistor {
+  ohm = 100ohm;
+  name = "Precharge 100R";
+}
+
+junction J_LOAD : junction {
+  name = "";
+}
+
+motor_controller CTRL : motor_controller {
+  kw = 40kW;
+  name = "Controller";
+}
+
+motor TRACTION_MOTOR : motor {
+  kw = 30kW;
+  starter = rheostat;
+  name = "Traction Motor";
+}
+
+connect TRACTION_PACK.dc_bidi -> PACK_FUSE.in;
+connect PACK_FUSE.out -> MAIN_CONTACTOR.in;
+connect PACK_FUSE.out -> PRECHARGE.a;
+connect MAIN_CONTACTOR.out -> J_LOAD.a;
+connect PRECHARGE.b -> J_LOAD.b;
+connect J_LOAD.c -> CTRL.in;
+connect CTRL.out -> TRACTION_MOTOR.in;
+
+// ---------- Throttle ----------
+
+pot_box POT : pot_box {
+  ohm = 5kohm;
+  name = "Pot Box";
+}
+
+connect POT.wiper -- CTRL.throttle;
+
+// ---------- 12V control chain ----------
+
+battery AUX_BATT : battery {
+  vs = AUX;
+  v_nominal = 12V;
+  name = "Aux Battery";
+}
+
+dc_fuse CTRL_FUSE : dc_fuse {
+  rating_a = 10A;
+  vs = AUX;
+  name = "Control Fuse";
+}
+
+isolator KEY_SW : isolator {
+  rating_a = 10A;
+  vs = AUX;
+  lockable = yes;
+  name = "Key Switch";
+}
+
+load_break_switch INERTIA : load_break_switch {
+  rating_a = 10A;
+  vs = AUX;
+  name = "Inertia Switch";
+}
+
+load_break_switch ESTOP : load_break_switch {
+  rating_a = 10A;
+  vs = AUX;
+  name = "E-Stop";
+}
+
+connect AUX_BATT.dc_bidi -> CTRL_FUSE.in;
+connect CTRL_FUSE.out -> KEY_SW.in;
+connect KEY_SW.out -> INERTIA.in;
+connect INERTIA.out -> ESTOP.in;
+connect ESTOP.out -> MAIN_CONTACTOR.coil;
+
+// Coil suppression diode across the coil is device-internal detail.
+
+// ---------- Operation ----------
+
+state "driving" {
+  KEY_SW = closed;
+  MAIN_CONTACTOR = closed;
+}
+
+state "parked" {
+  KEY_SW = open;
+  MAIN_CONTACTOR = open;
+}
+
+interlock "contactor coil needs key on" {
+  require !(MAIN_CONTACTOR = closed) || KEY_SW = closed;
+}
+
+layout {
+  rank = source_to_load;
+  flow = top_to_bottom;
+}

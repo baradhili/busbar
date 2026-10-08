@@ -5,27 +5,37 @@ Feature: Rendering determinism
   Scenario: Identical input renders identical SVG
     Given the document "valid/sample1.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "c6420936e3d5d1be42e883c12c1ab99630c7400f01280480dfe40247ff4be093"
+    Then the SVG hash is "96d4934dd6b2f651b745a5ea0759fd928b93bd6590fb8f2457bb5750cf3c0370"
 
   Scenario: Sample 2 golden SVG
     Given the document "valid/sample2.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "c3257422d4e1bb11546dea5a4ad21dc4b8457f153baf4b9c3165dbadb2971f61"
+    Then the SVG hash is "0ef339be08ebe7a8eaeb9b5b5a718c5700a9ebcb5d8a4a6217a389631fb91684"
 
   Scenario: House reference golden SVG
     Given the document "valid/house.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "d78c0bcea7887876232a7dd2783c7a3bc39336d827f4d444b5c1c362b8052c0a"
+    Then the SVG hash is "cd55470ca87e40e0fd448438b45f9a1b30ca0c4a448e9ad2d90fe546903f0baf"
 
   Scenario: Multi-section tie board golden SVG
     Given the document "valid/two-section-tie.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "8936eec6c92f3d90a327f02e8068dcf3cbc19d2e3db872813dd5afb92f5b0160"
+    Then the SVG hash is "85fe65016c492a84b6ef101d071149012566709ce8033304c88798213064fbec"
 
   Scenario: ESS tour golden SVG
     Given the document "valid/ess-tour.esld"
     When I render it with symbols "iec"
-    Then the SVG hash is "5ba51395594e43eb6754c6a34e92027ea90fd539c8fcea58dc7fb78b672922d7"
+    Then the SVG hash is "93978c4350f2b38c2b8747ddbc9a2396046b019531fd157b4d210207da10530c"
+
+  Scenario: Simple EV conversion golden SVG
+    Given the document "EV/simple.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "8f3c4abecdc90c44bad3f38033f852da3e782271dd196eb989035344c4e47375"
+
+  Scenario: Complex EV conversion golden SVG
+    Given the document "EV/complex_preview.esld"
+    When I render it with symbols "iec"
+    Then the SVG hash is "3b92448e70a7fe11c313e8c200e1b58fb2d872e07b53eeb2943ad96fd4da65ec"
 
   Scenario: Rendering is byte-deterministic
     Given the document "valid/sample2.esld"
@@ -54,6 +64,8 @@ Feature: Rendering determinism
       | valid/incomer-chain.esld |
       | valid/fed-subboards.esld |
       | valid/long-feeder.esld |
+      | EV/simple.esld |
+      | EV/complex_preview.esld |
 
   Scenario: Unknown symbol registries fail cleanly
     Given the document "valid/minimal.esld"

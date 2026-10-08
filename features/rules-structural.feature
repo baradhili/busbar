@@ -54,3 +54,13 @@ Feature: Structural validation rules (R-1xx)
       | invalid/r112-missing-include.esld | R-112 | error | 3 |
       | invalid/r113-no-bus-on-split-board.esld | R-113 | error | 17 |
       | invalid/r114-position-on-non-switch.esld | R-114 | error | 8 |
+
+  Scenario: Storage is a source for reachability (R-105)
+    An islanded system with no generator — an EV traction pack is the
+    only "incomer" of its system — must not warn every node
+    unreachable. The simple EV conversion is battery-only and checks
+    with zero diagnostics.
+
+    Given the document "EV/simple.esld"
+    When I check it
+    Then there are no diagnostics

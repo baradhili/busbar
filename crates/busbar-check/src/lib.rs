@@ -500,6 +500,9 @@ impl Ctx<'_> {
         for edge in &self.ir.edges {
             if invalid.contains(&(edge.line, edge.col))
                 || edge.arrow == busbar_syntax::ast::Arrow::Peer
+                // Signal-class control wiring (coils, trip, throttle) is
+                // not a power feed — it does not gate on `incomers`.
+                || self.edge_is_signal_class(edge)
             {
                 continue; // R-111 already reported / ties are self-authorized (§9.4)
             }
@@ -719,13 +722,35 @@ impl Ctx<'_> {
             .ir
             .nodes
             .values()
-            .filter(|n| n.kind == Some(NodeKind::Source))
+            // Storage energizes its island exactly as a source does (an
+            // EV traction pack is the only "incomer" of its system).
+            .filter(|n| matches!(n.kind, Some(NodeKind::Source) | Some(NodeKind::Storage)))
             .map(|n| find(&n.tag, &parent))
             .collect();
         vertices
             .into_iter()
             .filter(|v| live.contains(&find(v, &parent)))
             .collect()
+    }
+
+    /// True when either endpoint of the edge lands on a signal-class port:
+    /// a port whose registry direction is None (coil, trip, signal,
+    /// measures) — control wiring, outside the power-system domain checks.
+    fn edge_is_signal_class(&self, edge: &busbar_ir::Edge) -> bool {
+        for text in [&edge.from, &edge.to] {
+            let Some((entity, Some(port), _)) = self.ir.resolve_endpoint(text) else {
+                continue;
+            };
+            let Some(node) = self.ir.nodes.get(&entity) else {
+                continue;
+            };
+            if let Some(def) = busbar_ir::types::lookup(&node.type_name) {
+                if def.port(&port).is_some_and(|pd| pd.dir == PortDir::None) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// True when any explicit edge terminates on `tag` via a power port.
@@ -940,6 +965,13 @@ impl Ctx<'_> {
 
     fn r201_r202_voltage_frequency(&mut self) {
         for edge in &self.ir.edges {
+            // Signal-class ports (coil, trip, measures, signal — registry
+            // direction None) carry control wiring, not the power system:
+            // a 12V contactor coil on a 144V traction contactor is sound
+            // practice, not a voltage mismatch.
+            if self.edge_is_signal_class(edge) {
+                continue;
+            }
             let Some(va) = self.ir.endpoint_vs(&edge.from) else {
                 continue;
             };

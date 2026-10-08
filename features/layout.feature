@@ -35,12 +35,24 @@ Feature: Layout invariants
       | valid/statement-tour.esld |
       | valid/two-section-tie.esld |
       | valid/voltsys-blocks.esld |
+      | EV/simple.esld |
+      | EV/complex_preview.esld |
 
   Scenario: Bus ties render between their sections
     Given the document "valid/two-section-tie.esld"
     When I lay it out
     Then the tie "CB_TIE" sits between section "MSB.A" and section "MSB.B"
     And the tie "CB_TIE2" sits between section "MSB.A" and section "MSB.B"
+
+  Scenario Outline: Circuit ports depart from their selected or default section
+    Given the document "<file>"
+    When I lay it out
+    Then the feed from "<circuit>" to "<target>" departs from section "<section>"
+
+    Examples:
+      | file                        | circuit     | target | section  |
+      | valid/section-departure.esld | MAIN.FEED   | SUB    | MAIN.B   |
+      | valid/fed-subboards.esld     | MAIN.FEED_A | SUB_A  | MAIN.bus |
 
   Scenario: Incomer chains stack above the bar in power order
     Given the document "valid/incomer-chain.esld"

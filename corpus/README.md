@@ -12,9 +12,16 @@ not in sidecar files.
 | `roundtrip/` | `fmt(parse(x))` idempotence fixtures (comments, unknown props) | M1 |
 | `render/` | Documents with golden SVG hashes | M5 |
 | `solve/` | Scenario/state/interlock fixtures | M6 |
+| `EV/` | Image conversions (ZEVA 2009 DC EV wiring diagrams) with their rendered SVGs | M5 |
 
 `valid/sample1.esld` and `valid/sample2.esld` are the converted RSLD seed
 examples (`Design/deepseek.md` §16.1/§16.2, conversion per spec Appendix A).
+
+`EV/simple.esld` and `EV/complex_preview.esld` convert the ZEVA reference
+diagrams (`simple.jpg`, `complex_preview.jpg`) to single-line granularity,
+declaring the EV device vocabulary (motor controller, precharge resistor,
+pot box, DC/DC converter, charger, EVMS) as project types (spec §19.1).
+They carry their own golden SVG hashes in `features/render.feature`.
 
 ## Fixture conventions
 

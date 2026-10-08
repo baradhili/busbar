@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 974.00 1188.00" font-family="Helvetica, Arial, sans-serif" font-size="9">
+<rect x="0" y="0" width="974.00" height="1188.00" fill="#ffffff"/>
+<rect x="360.00" y="160.00" width="566.00" height="644.00" fill="#f8f8f8" stroke="#555555" stroke-width="1.1" stroke-dasharray="7 4"/>
+<text x="366.00" y="175.00" fill="#222222" font-weight="bold">HV</text>
+<text x="366.00" y="188.00" fill="#666666" font-size="8">144V dc</text>
+<rect x="388.00" y="520.00" width="510.00" height="6" fill="#222222"/>
+<text x="392.00" y="538.00" fill="#222222">HV.bus</text>
+<polyline points="484.00,88.00 484.00,342.00 504.00,342.00 504.00,362.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="504.00,422.00 504.00,434.00 504.00,434.00 504.00,446.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="504.00,486.00 504.00,503.00 504.00,503.00 504.00,520.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,88.00 172.00,151.00 408.00,151.00 408.00,214.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="408.00,274.00 408.00,286.00 408.00,286.00 408.00,298.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="408.00,338.00 408.00,429.00 408.00,429.00 408.00,520.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="686.00,528.00 686.00,541.00 686.00,541.00 686.00,554.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="686.00,594.00 686.00,577.00 612.00,577.00 612.00,560.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="612.00,588.00 612.00,542.00 436.00,542.00 436.00,554.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="380.00,82.00 380.00,125.50 68.00,125.50 68.00,169.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="78.00,191.00 78.00,355.50 388.00,355.50 388.00,520.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="388.00,520.00 388.00,355.50 276.00,355.50 276.00,191.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="276.00,169.00 276.00,135.50 68.00,135.50 68.00,88.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="68.00,88.00 68.00,115.50 172.00,115.50 172.00,150.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,210.00 172.00,543.00 172.00,543.00 172.00,876.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,916.00 172.00,952.00 276.00,952.00 276.00,988.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="276.00,1028.00 276.00,1054.00 172.00,1054.00 172.00,1028.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,988.00 172.00,976.00 506.00,976.00 506.00,480.00 504.00,480.00 504.00,486.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,988.00 172.00,976.00 466.00,976.00 466.00,332.00 408.00,332.00 408.00,338.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,988.00 172.00,976.00 716.00,976.00 716.00,588.00 686.00,588.00 686.00,594.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,988.00 172.00,976.00 466.00,976.00 466.00,588.00 436.00,588.00 436.00,594.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="172.00,1028.00 172.00,1054.00 68.00,1054.00 68.00,1019.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="643.00,826.00 643.00,816.00 398.00,816.00 398.00,669.00 426.00,669.00 426.00,659.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="568.00,68.00 536.00,68.00 536.00,68.00 504.00,68.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="256.00,68.00 224.00,68.00 224.00,68.00 192.00,68.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="608.00,68.00 640.00,68.00 640.00,68.00 672.00,68.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="296.00,68.00 306.00,68.00 306.00,36.00 662.00,36.00 662.00,68.00 672.00,68.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="692.00,79.00 692.00,512.00 58.00,512.00 58.00,885.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="538.00,604.00 538.00,768.00 68.00,768.00 68.00,885.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="78.00,885.00 78.00,211.00 58.00,211.00 58.00,191.00" fill="none" stroke="#333333" stroke-width="1" stroke-dasharray="4 3"/>
+<polyline points="68.00,997.00 68.00,952.00 68.00,952.00 68.00,907.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="436.00,528.00 436.00,541.00 436.00,541.00 436.00,554.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="436.00,594.00 436.00,615.50 436.00,615.50 436.00,637.00" fill="none" stroke="#333333" stroke-width="1"/>
+<polyline points="446.00,659.00 446.00,683.00 436.00,683.00 436.00,707.00" fill="none" stroke="#333333" stroke-width="1"/>
+<circle cx="504.00" cy="520.00" r="3" fill="#333333"/>
+<circle cx="408.00" cy="520.00" r="3" fill="#333333"/>
+<circle cx="686.00" cy="528.00" r="3" fill="#333333"/>
+<circle cx="388.00" cy="520.00" r="3" fill="#333333"/>
+<circle cx="388.00" cy="520.00" r="3" fill="#333333"/>
+<circle cx="436.00" cy="528.00" r="3" fill="#333333"/>
+<path d="M 433.20 701.00 L 436.00 707.00 L 438.80 701.00" fill="none" stroke="#333333" stroke-width="1"/>
+<g transform="translate(68.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-8"/><line x1="-4" y1="-8" x2="4" y2="-8"/><line x1="-8" y1="-3" x2="8" y2="-3"/><line x1="0" y1="-3" x2="0" y2="20"/></g>
+<g transform="translate(276.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><text x="0" y="3" text-anchor="middle" font-size="7" fill="#222222">BMS</text></g>
+<g transform="translate(692.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><text x="0" y="3" text-anchor="middle" font-size="7" fill="#222222">BMS</text></g>
+<g transform="translate(588.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><text x="0" y="3" text-anchor="middle" font-size="7" fill="#222222">BMS</text></g>
+<g transform="translate(68.00 180.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><text x="8" y="-3" font-size="9" fill="#222222">~</text><line x1="-14" y1="3" x2="-6" y2="3"/><line x1="-14" y1="6" x2="-6" y2="6"/></g>
+<g transform="translate(408.00 318.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><path d="M 0 -24.5 A 2.5 2.5 0 0 0 0 -19.5"/></g>
+<g transform="translate(504.00 466.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><path d="M 0 -24.5 A 2.5 2.5 0 0 0 0 -19.5"/></g>
+<g transform="translate(172.00 180.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text></g>
+<g transform="translate(276.00 180.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><line x1="6" y1="-7" x2="14" y2="-7"/><line x1="6" y1="-4" x2="14" y2="-4"/><line x1="-14" y1="3" x2="-6" y2="3"/><line x1="-14" y1="6" x2="-6" y2="6"/></g>
+<g transform="translate(68.00 1008.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20" rx="0" ry="0"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/></g>
+<g transform="translate(172.00 1008.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/></g>
+<g transform="translate(68.00 896.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><text x="-17" y="7" font-size="6" fill="#222222">EVMS</text></g>
+<g transform="translate(172.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-8"/><line x1="-4" y1="-8" x2="4" y2="-8"/><line x1="-8" y1="-3" x2="8" y2="-3"/><line x1="0" y1="-3" x2="0" y2="20"/></g>
+<g transform="translate(408.00 244.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text></g>
+<g transform="translate(504.00 392.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-30" x2="0" y2="30"/><rect x="-5" y="-15" width="10" height="30"/><text x="8" y="2" font-size="7" fill="#222222">=</text></g>
+<circle cx="436.00" cy="554.00" r="3" fill="#222222"/>
+<g transform="translate(436.00 648.00)" fill="none" stroke="#222222" stroke-width="1"><rect x="-20" y="-10" width="40" height="20"/><line x1="0" y1="-20" x2="0" y2="-10"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-20" y1="-10" x2="20" y2="10"/><line x1="6" y1="-7" x2="14" y2="-7"/><line x1="6" y1="-4" x2="14" y2="-4"/><text x="-12" y="7" font-size="8" fill="#222222">M</text></g>
+<g transform="translate(436.00 574.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><path d="M 0 -24.5 A 2.5 2.5 0 0 0 0 -19.5"/></g>
+<g transform="translate(276.00 1008.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/></g>
+<g transform="translate(172.00 896.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><line x1="-3" y1="-20" x2="3" y2="-20"/></g>
+<g transform="translate(380.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><circle cx="0" cy="-15" r="14"/><text x="0" y="-12" text-anchor="middle" font-size="14" fill="#222222">~</text><line x1="0" y1="-1" x2="0" y2="20"/></g>
+<g transform="translate(538.00 574.00)" fill="none" stroke="#222222" stroke-width="1"><g transform="translate(30 30)\"><line x1="-30" y1="-60" x2="-30" y2="0"/><line x1="-20" y1="-30" x2="10" y2="-30"/><ellipse cx="-30" cy="-30" rx="10" ry="10"/><line x1="-10" y1="-20" x2="0" y2="-40"/><line x1="-5" y1="-20" x2="5" y2="-40"/></g></g>
+<g transform="translate(643.00 840.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/><line x1="-10" y1="14" x2="8" y2="-14"/><line x1="8" y1="-14" x2="3" y2="-12"/><line x1="8" y1="-14" x2="6" y2="-9"/></g>
+<g transform="translate(612.00 574.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-10"/><rect x="-14" y="-10" width="28" height="20"/><line x1="0" y1="10" x2="0" y2="20"/></g>
+<g transform="translate(686.00 574.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-23"/><line x1="0" y1="0" x2="0" y2="20"/><line x1="0" y1="0" x2="-8" y2="-23"/><path d="M 0 -24.5 A 2.5 2.5 0 0 0 0 -19.5"/></g>
+<g transform="translate(484.00 68.00)" fill="none" stroke="#222222" stroke-width="1"><line x1="0" y1="-20" x2="0" y2="-8"/><line x1="-4" y1="-8" x2="4" y2="-8"/><line x1="-8" y1="-3" x2="8" y2="-3"/><line x1="0" y1="-3" x2="0" y2="20"/></g>
+<circle cx="436.00" cy="722.00" r="14.00" stroke="#222222" stroke-width="1.4" fill="none"/>
+<text x="436.00" y="723.00" text-anchor="middle" dominant-baseline="middle" fill="#222222" font-size="8">M</text>
+<text x="68.00" y="98.00" text-anchor="middle" fill="#222222">AUX_BATT</text>
+<text x="276.00" y="98.00" text-anchor="middle" fill="#222222">BMS_FRONT</text>
+<text x="692.00" y="98.00" text-anchor="middle" fill="#222222">BMS_MASTER</text>
+<text x="588.00" y="98.00" text-anchor="middle" fill="#222222">BMS_REAR</text>
+<text x="68.00" y="210.00" text-anchor="middle" fill="#222222">CHARGER</text>
+<text x="68.00" y="220.00" text-anchor="middle" fill="#666666">2kW</text>
+<text x="408.00" y="348.00" text-anchor="middle" fill="#222222">Front Contactor</text>
+<text x="408.00" y="358.00" text-anchor="middle" fill="#666666">250A</text>
+<text x="504.00" y="496.00" text-anchor="middle" fill="#222222">Rear Contactor</text>
+<text x="504.00" y="506.00" text-anchor="middle" fill="#666666">250A</text>
+<text x="172.00" y="210.00" text-anchor="middle" fill="#222222">CTRL_FUSE</text>
+<text x="172.00" y="220.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="276.00" y="210.00" text-anchor="middle" fill="#222222">DCDC</text>
+<text x="276.00" y="220.00" text-anchor="middle" fill="#666666">0.4kW</text>
+<text x="68.00" y="1038.00" text-anchor="middle" fill="#222222">DOOR_SW</text>
+<text x="172.00" y="1038.00" text-anchor="middle" fill="#222222">ESTOP</text>
+<text x="172.00" y="1048.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="68.00" y="926.00" text-anchor="middle" fill="#222222">EVMS</text>
+<text x="172.00" y="98.00" text-anchor="middle" fill="#222222">FRONT_PACK</text>
+<text x="172.00" y="108.00" text-anchor="middle" fill="#666666">10kWh</text>
+<text x="408.00" y="274.00" text-anchor="middle" fill="#222222">Front Fuse</text>
+<text x="408.00" y="284.00" text-anchor="middle" fill="#666666">250A</text>
+<text x="504.00" y="422.00" text-anchor="middle" fill="#222222">Rear Fuse</text>
+<text x="504.00" y="432.00" text-anchor="middle" fill="#666666">250A</text>
+<text x="436.00" y="564.00" text-anchor="middle" fill="#222222"></text>
+<text x="436.00" y="678.00" text-anchor="middle" fill="#222222">MOTOR_WAY</text>
+<text x="436.00" y="604.00" text-anchor="middle" fill="#222222">MOTOR_WAY</text>
+<text x="436.00" y="614.00" text-anchor="middle" fill="#666666">400A</text>
+<text x="276.00" y="1038.00" text-anchor="middle" fill="#222222">INERTIA</text>
+<text x="276.00" y="1048.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="172.00" y="926.00" text-anchor="middle" fill="#222222">KEY_SW</text>
+<text x="172.00" y="936.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="380.00" y="98.00" text-anchor="middle" fill="#222222">MAINS</text>
+<text x="538.00" y="604.00" text-anchor="middle" fill="#222222">Current Sensor</text>
+<text x="643.00" y="870.00" text-anchor="middle" fill="#222222">POT</text>
+<text x="643.00" y="880.00" text-anchor="middle" fill="#666666">5kohm</text>
+<text x="612.00" y="604.00" text-anchor="middle" fill="#222222">Precharge 100R</text>
+<text x="612.00" y="614.00" text-anchor="middle" fill="#666666">100ohm</text>
+<text x="686.00" y="604.00" text-anchor="middle" fill="#222222">Precharge Contactor</text>
+<text x="686.00" y="614.00" text-anchor="middle" fill="#666666">10A</text>
+<text x="484.00" y="98.00" text-anchor="middle" fill="#222222">REAR_PACK</text>
+<text x="484.00" y="108.00" text-anchor="middle" fill="#666666">10kWh</text>
+<text x="436.00" y="752.00" text-anchor="middle" fill="#222222">Traction Motor</text>
+<text x="436.00" y="762.00" text-anchor="middle" fill="#666666">30kW</text>
+</svg>

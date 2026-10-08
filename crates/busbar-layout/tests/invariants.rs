@@ -11,12 +11,21 @@ use busbar_layout::{FEEDER_W, Glyph, Layout, Place};
 const COL_EPS: f64 = 1.0;
 
 fn corpus() -> Vec<PathBuf> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus/valid");
-    let mut files: Vec<PathBuf> = std::fs::read_dir(root)
-        .expect("corpus/valid")
-        .flatten()
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == "esld"))
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    // Every directory whose documents must hold the drafting contract.
+    const DIRS: [&str; 2] = ["valid", "EV"];
+    let mut files: Vec<PathBuf> = DIRS
+        .iter()
+        .flat_map(|d| {
+            let mut v: Vec<PathBuf> = std::fs::read_dir(root.join(d))
+                .unwrap_or_else(|e| panic!("corpus/{d}: {e}"))
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.extension().is_some_and(|e| e == "esld"))
+                .collect();
+            v.sort();
+            v
+        })
         .collect();
     files.sort();
     files
@@ -158,7 +167,15 @@ fn routes_land_on_their_places() {
                 (last, pb, !down, &route.to_tag),
             ] {
                 let expected = busbar_layout::terminal(place, lower);
+                let other = busbar_layout::terminal(place, !lower);
                 let (_cx, cy) = place.center();
+                // Same-band pairs dip under the row band and meet the
+                // LOWER lead of both cells (the control-chain step).
+                let band_dip = pa.y < pb.y + pb.h + 1.0
+                    && pb.y < pa.y + pa.h + 1.0
+                    && pa.glyph != Glyph::Section
+                    && pb.glyph != Glyph::Section
+                    && point.1 == other.1;
                 let side_form = ((point.0 - place.x).abs() < 0.5
                     || (point.0 - (place.x + place.w)).abs() < 0.5)
                     && (point.1 - cy).abs() < 0.5;
@@ -167,12 +184,12 @@ fn routes_land_on_their_places() {
                 let board_prefix = tag.rsplit_once('.').map(|(b, _)| b);
                 let bar_landing = layout.places.iter().any(|(s_tag, s)| {
                     s.glyph == Glyph::Section
-                        && (point.1 - s.y).abs() < 0.5
+                        && ((point.1 - s.y).abs() < 0.5 || (point.1 - (s.y + s.h)).abs() < 0.5)
                         && point.0 >= s.x - 0.5
                         && point.0 <= s.x + s.w + 0.5
                         && s_tag.rsplit_once('.').map(|(b, _)| b) == board_prefix
                 });
-                if !side_form && !bar_landing {
+                if !side_form && !bar_landing && !band_dip {
                     assert_eq!(
                         point.1, expected.1,
                         "{name}: route end y is not a terminal of `{tag}`"
@@ -215,7 +232,13 @@ fn series_devices_connect_on_opposite_terminals() {
     for path in corpus() {
         let (name, layout) = layout_of(&path);
         for (tag, place) in &layout.places {
-            if place.glyph == Glyph::Junction || place.glyph == Glyph::Section {
+            if matches!(
+                place.glyph,
+                Glyph::Junction | Glyph::Section | Glyph::Battery
+            ) {
+                // A battery taps its rail through one terminal pair —
+                // in and out sharing the lead end is a tapped trunk,
+                // not the through-connection this test guards.
                 continue;
             }
             let mut starts: Vec<(f64, f64)> = Vec::new();
@@ -237,6 +260,79 @@ fn series_devices_connect_on_opposite_terminals() {
                     starts[0], ends[0],
                     "{name}: `{tag}` in and out wires share a point"
                 );
+            }
+        }
+    }
+}
+
+/// Wires must not run through glyph cores (guidance §3): every route
+/// segment is tested against every placed cell with a 6px exclusion
+/// zone — boards, bars and junction dots excepted (frame/bar crossing
+/// is legitimate; a dot is a connection), and the route's own
+/// endpoints excepted (the terminal approach enters its cell).
+#[test]
+fn wires_avoid_glyph_cores() {
+    const M: f64 = 6.0;
+    for path in corpus() {
+        let (name, layout) = layout_of(&path);
+        let blockers: Vec<(&String, &Place)> = layout
+            .places
+            .iter()
+            .filter(|(_, p)| {
+                p.w > 0.0 && !matches!(p.glyph, Glyph::Board | Glyph::Section | Glyph::Junction)
+            })
+            .collect();
+        for route in &layout.routes {
+            let skip = [&route.from_tag, &route.to_tag];
+            for si in 0..route.points.len() - 1 {
+                let (a, b) = (route.points[si], route.points[si + 1]);
+                let horizontal = (a.1 - b.1).abs() < 0.5 && (a.0 - b.0).abs() > 0.5;
+                let vertical = (a.0 - b.0).abs() < 0.5 && (a.1 - b.1).abs() > 0.5;
+                if !horizontal && !vertical {
+                    continue;
+                }
+                for (tag, p) in &blockers {
+                    if skip.contains(tag) {
+                        continue;
+                    }
+                    let (lo, hi, lane, c_lo, c_hi, l_lo, l_hi) = if horizontal {
+                        (
+                            a.0.min(b.0),
+                            a.0.max(b.0),
+                            a.1,
+                            p.x - M,
+                            p.x + p.w + M,
+                            p.y - M,
+                            p.y + p.h + M,
+                        )
+                    } else {
+                        (
+                            a.1.min(b.1),
+                            a.1.max(b.1),
+                            a.0,
+                            p.y - M,
+                            p.y + p.h + M,
+                            p.x - M,
+                            p.x + p.w + M,
+                        )
+                    };
+                    assert!(
+                        !(lo < c_hi - 1.0
+                            && hi > c_lo + 1.0
+                            && l_lo + 1.0 < lane
+                            && lane < l_hi - 1.0),
+                        "{name}: route {} -> {} segment {si} runs through `{tag}` \
+                         ({}) at lane {:.1}",
+                        route.from_tag,
+                        route.to_tag,
+                        if horizontal {
+                            "horizontally"
+                        } else {
+                            "vertically"
+                        },
+                        lane
+                    );
+                }
             }
         }
     }
